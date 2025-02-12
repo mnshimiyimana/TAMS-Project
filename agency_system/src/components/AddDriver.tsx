@@ -1,28 +1,22 @@
 "use client";
 
 import { useState } from "react";
-
-import { Button } from "../../../Frontend/src/components/ui/button";
-import { Input } from "../../../Frontend/src/components/ui/input";
-import { Label } from "../../../Frontend/src/components/ui/label";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import { Label } from "./ui/label";
+import { Input } from "./ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../../../Frontend/src/components/ui/select";
-import { Calendar } from "../../../Frontend/src/components/ui/calendar";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "sonner";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "../../../Frontend/src/components/ui/dialog";
+} from "./ui/select";
+import { Calendar } from "./ui/calendar";
+import { Button } from "./ui/button";
 
 // Zod validation schema
 const driverSchema = z.object({

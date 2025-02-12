@@ -1,18 +1,14 @@
 "use client";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "../../../Frontend/src/components/ui/dialog";
-import { Button } from "../../../Frontend/src/components/ui/button";
-import { Input } from "../../../Frontend/src/components/ui/input";
-import { Label } from "../../../Frontend/src/components/ui/label";
+
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import { Label } from "./ui/label";
+import { Input } from "./ui/input";
+import { Button } from "./ui/button";
 
 // Zod validation schema for the Add Shift form
 const shiftSchema = z.object({

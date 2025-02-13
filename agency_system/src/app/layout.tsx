@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   title: "TAMS",
   description: "Transport Agencies Management System",
   icons :{
-    icon: "/bus-icon.png",
+    icon: "/bus-icon.svg",
     shortcut: "/bus-icon.png",
     apple: "/bus-icon.png",
   },
@@ -26,7 +26,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href="/bus-icon.png" type="image/png" />
+        <link rel="icon" href="bus-icon/.svg" type="image/x-icon" />
       </head>
       <body
         className={` ${workSans.variable} antialiased`}

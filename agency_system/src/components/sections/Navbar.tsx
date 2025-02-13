@@ -10,9 +10,17 @@ import bgImage from "../../../public/bg_image.png";
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
 
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth" });
+    }
+    setIsOpen(false);
+  };
+
   return (
     <nav
-      className="relative w-full h-screen bg-cover bg-center py-4 px-16"
+      className="relative w-full h-screen bg-cover bg-center py-4 lg:px-16 px-8 max-w-screen-2xl mx-auto"
       style={{ backgroundImage: `url(${bgImage.src})` }}
     >
       <div className="absolute inset-0 bg-black opacity-30"></div>
@@ -22,48 +30,47 @@ const Navbar = () => {
         </Link>
 
         <ul className="hidden md:flex space-x-8 font-normal text-white text-base">
+          <Link
+            href="/"
+            onClick={() => setIsOpen(false)}
+            className="hover:underline decoration-4 hover:decoration-green-500 "
+          >
+            Home
+          </Link>
           <li>
-            <Link
-              href="/"
-              className="hover:underline decoration-4 hover:decoration-green-500"
-            >
-              Home
-            </Link>
-          </li>
-          <li>
-            <Link
-              href="/about"
-              className="hover:underline decoration-4 hover:decoration-green-500"
-            >
-              About Us
-            </Link>
-          </li>
-          <li>
-            <Link
-              href="/services"
+            <button
+              onClick={() => scrollToSection("services")}
               className="hover:underline decoration-4 hover:decoration-green-500"
             >
               Services
-            </Link>
+            </button>
           </li>
           <li>
-            <Link
-              href="/contact"
+            <button
+              onClick={() => scrollToSection("about")}
+              className="hover:underline decoration-4 hover:decoration-green-500"
+            >
+              About Us
+            </button>
+          </li>
+          <li>
+            <button
+              onClick={() => scrollToSection("contact")}
               className="hover:underline decoration-4 hover:decoration-green-500"
             >
               Contact
-            </Link>
+            </button>
           </li>
         </ul>
 
         <div className="hidden md:flex items-center space-x-4">
-          <Link href="/login">
+          <Link href="/auth/sign-in">
             <button className="text-green-500 bg-white rounded-lg font-medium px-4 py-2">
               Login
             </button>
           </Link>
 
-          <Link href="/signup">
+          <Link href="/auth/sign-up">
             <button className="bg-green-500 text-white px-6 py-2 rounded-lg">
               Sign Up
             </button>
@@ -89,7 +96,10 @@ const Navbar = () => {
             booking system on top. Join us and experience the fastest services
             ever.
           </p>
-          <button className="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-700">
+          <button
+            className="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-700"
+            onClick={() => scrollToSection("Discover")}
+          >
             Discover More
           </button>
         </div>
@@ -101,25 +111,18 @@ const Navbar = () => {
           <Link href="/" onClick={() => setIsOpen(false)}>
             Home
           </Link>
-          <Link href="/services" onClick={() => setIsOpen(false)}>
-            Services
-          </Link>
-          <Link href="/about" onClick={() => setIsOpen(false)}>
-            About
-          </Link>
-          <Link href="/contact" onClick={() => setIsOpen(false)}>
-            Contact
-          </Link>
+          <button onClick={() => scrollToSection("services")}>Services</button>
+          <button onClick={() => scrollToSection("about")}>About</button>
+          <button onClick={() => scrollToSection("contact")}>Contact</button>
 
-          {/* Mobile Login Button */}
-          <Link href="/login" onClick={() => setIsOpen(false)}>
+
+          <Link href="/auth/sign-in" onClick={() => setIsOpen(false)}>
             <button className="text-green-500  bg-white rounded-lg font-medium px-4 py-2 w-full">
               Login
             </button>
           </Link>
 
-          {/* Mobile Signup Button */}
-          <Link href="/signup" onClick={() => setIsOpen(false)}>
+          <Link href="/auth/sign-up" onClick={() => setIsOpen(false)}>
             <button className="bg-green-500 text-white px-6 py-2 w-full rounded-lg">
               Sign Up
             </button>

@@ -8,8 +8,17 @@ import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
+import BgImage from "../../../../public/auth/bgImage.png";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-// Zod validation schema for sign-up
+
 const signUpSchema = z
   .object({
     agencyName: z.string().min(3, "Agency name must be at least 3 characters"),
@@ -19,6 +28,9 @@ const signUpSchema = z
     location: z.string().min(5, "Location is required"),
     password: z.string().min(6, "Password must be at least 6 characters"),
     confirmPassword: z.string().min(6, "Password confirmation is required"),
+    role: z.enum(["admin", "manager", "fuel"], {
+      required_error: "Role is required",
+    }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
@@ -31,9 +43,20 @@ export default function SignUp() {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<SignUpFormData>({
     resolver: zodResolver(signUpSchema),
+    defaultValues: {
+      agencyName: "",
+      username: "",
+      email: "",
+      phone: "",
+      location: "",
+      password: "",
+      confirmPassword: "",
+      role: undefined,
+    },
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -50,103 +73,166 @@ export default function SignUp() {
       if (!response.ok) throw new Error("Failed to sign up");
 
       toast.success("Sign-up successful! Please log in.");
-      // Redirect or reset form
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        console.error(error.message); // Now TypeScript knows that `error` is an instance of `Error`
-      } else {
-        console.error("An unknown error occurred");
-      }
+    } catch (error) {
+      console.error(error);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+    <div className="flex min-h-screen">
       {/* Image Section */}
-      <div
-        className="w-2/5 h-full bg-cover bg-center"
-        style={{ backgroundImage: 'url("/path/to/image.jpg")' }}
-      ></div>
+      <div className="hidden lg:flex w-1/2 relative">
+        <Image
+          src={BgImage}
+          alt="Authentication Background"
+          layout="fill"
+          objectFit="cover"
+          quality={100}
+          priority
+          sizes="(max-width: 768px) 100vw, 50vw"
+        />
+        <div className="absolute inset-0 flex items-center justify-center text-center text-white p-6">
+          <div className="text-center px-32">
+            <h1 className="text-5xl font-semibold text-start pb-2">
+              Transport Agencies Management System
+            </h1>
+            <p className="text-sm text-start">
+              Real-time ticketing capabilities, route planning, and fleet
+              management
+            </p>
+          </div>
+        </div>
+      </div>
 
-      {/* Form Section */}
-      <div className="w-3/5 p-8 bg-white shadow-md">
-        <h1 className="text-2xl font-bold text-center mb-6">Sign Up</h1>
+      {/* Right Side - Sign-Up Form */}
+      <div className="w-full lg:w-1/2 lg:px-20 px-10  items-center justify-center pt-40 ">
+        <div className="mb-10">
+          <h1 className="text-2xl font-bold">Sign Up</h1>
+          <p className="text-sm text-gray-700">This information will be displayed on your profile.</p>
+        </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {/* Agency Name */}
-          <div>
-            <Label htmlFor="agencyName">Agency Name</Label>
-            <Input id="agencyName" {...register("agencyName")} />
-            {errors.agencyName && (
-              <p className="text-red-500 text-sm">
-                {errors.agencyName.message}
-              </p>
-            )}
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 text-gray-700">
+          {/* First Row: Agency Name & Username */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="agencyName">Agency Name</Label>
+              <Input
+                id="agencyName"
+                {...register("agencyName")}
+                placeholder="Agency name"
+              />
+              {errors.agencyName && (
+                <p className="text-red-500 text-sm">
+                  {errors.agencyName.message}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="username">Username</Label>
+              <Input
+                id="username"
+                {...register("username")}
+                placeholder="Username"
+              />
+              {errors.username && (
+                <p className="text-red-500 text-sm">
+                  {errors.username.message}
+                </p>
+              )}
+            </div>
           </div>
 
-          {/* Username */}
-          <div>
-            <Label htmlFor="username">Username</Label>
-            <Input id="username" {...register("username")} />
-            {errors.username && (
-              <p className="text-red-500 text-sm">{errors.username.message}</p>
-            )}
+          {/* Second Row: Email & Phone */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                {...register("email")}
+                placeholder="Email"
+              />
+              {errors.email && (
+                <p className="text-red-500 text-sm">{errors.email.message}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="phone">Phone Number</Label>
+              <Input
+                id="phone"
+                type="tel"
+                {...register("phone")}
+                placeholder="Phone number"
+              />
+              {errors.phone && (
+                <p className="text-red-500 text-sm">{errors.phone.message}</p>
+              )}
+            </div>
           </div>
 
-          {/* Email */}
-          <div>
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" {...register("email")} />
-            {errors.email && (
-              <p className="text-red-500 text-sm">{errors.email.message}</p>
-            )}
+          {/* Third Row: Location & Password */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                {...register("password")}
+                placeholder="Password"
+              />
+              {errors.password && (
+                <p className="text-red-500 text-sm">
+                  {errors.password.message}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                {...register("confirmPassword")}
+                placeholder="Confirm Password"
+              />
+              {errors.confirmPassword && (
+                <p className="text-red-500 text-sm">
+                  {errors.confirmPassword.message}
+                </p>
+              )}
+            </div>
           </div>
 
-          {/* Phone */}
-          <div>
-            <Label htmlFor="phone">Phone Number</Label>
-            <Input id="phone" type="tel" {...register("phone")} />
-            {errors.phone && (
-              <p className="text-red-500 text-sm">{errors.phone.message}</p>
-            )}
+          {/* Fourth Row: Confirm Password */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="role">Role</Label>
+              <Select
+                onValueChange={(value) =>
+                  setValue("role", value as "admin" | "manager" | "fuel")
+                }
+              >
+                <SelectTrigger id="role">
+                  <SelectValue placeholder="Select a role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="manager">Manager</SelectItem>
+                  <SelectItem value="fuel">Fuel</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.role && (
+                <p className="text-red-500 text-sm">{errors.role.message}</p>
+              )}
+            </div>
           </div>
 
-          {/* Location */}
-          <div>
-            <Label htmlFor="location">Location</Label>
-            <Input id="location" {...register("location")} />
-            {errors.location && (
-              <p className="text-red-500 text-sm">{errors.location.message}</p>
-            )}
-          </div>
-
-          {/* Password */}
-          <div>
-            <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" {...register("password")} />
-            {errors.password && (
-              <p className="text-red-500 text-sm">{errors.password.message}</p>
-            )}
-          </div>
-
-          {/* Confirm Password */}
-          <div>
-            <Label htmlFor="confirmPassword">Confirm Password</Label>
-            <Input
-              id="confirmPassword"
-              type="password"
-              {...register("confirmPassword")}
-            />
-            {errors.confirmPassword && (
-              <p className="text-red-500 text-sm">
-                {errors.confirmPassword.message}
-              </p>
-            )}
-          </div>
-
-          <div className="flex justify-between mt-4">
+          {/* Buttons */}
+          <div className="flex justify-between py-8">
             <Button
               variant="outline"
               type="button"
@@ -160,7 +246,7 @@ export default function SignUp() {
               disabled={isLoading}
               className="w-1/3 bg-green-600"
             >
-              {isLoading ? "Signing Up..." : "Save"}
+              {isLoading ? "Signing Up..." : "Sign up"}
             </Button>
           </div>
         </form>

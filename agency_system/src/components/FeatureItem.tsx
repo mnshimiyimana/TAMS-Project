@@ -15,14 +15,14 @@ const FeatureItem: React.FC<FeatureItemProps> = ({
   bgColor = "bg-blue-500",
 }) => {
   return (
-    <div className="flex items-center gap-4 p-4 rounded-lg md:w-1/2 bg-white">
-      <div className={`p-3 rounded-md ${bgColor} flex justify-center items-center`}>
-        <Image src={icon} alt={title} width={24} height={24} />
+    <div className="flex items-center gap-4 p-4 rounded-lg  bg-white">
+      <div className={`p-4 rounded-md ${bgColor} flex justify-center items-center`}>
+        <Image src={icon} alt={title} width={48} height={28} />
       </div>
 
       <div>
         <h3 className="text-lg font-semibold">{title}</h3>
-        <p className="text-gray-600">{description}</p>
+        <p className="text-gray-600 md:text-base text-sm">{description}</p>
       </div>
     </div>
   );

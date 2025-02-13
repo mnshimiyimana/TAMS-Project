@@ -11,7 +11,7 @@ interface CardProps {
   icon: string;
   title: string;
   description: string;
-  width?: string; // Make width optional and allow passing custom widths
+  width?: string;
   centered?: boolean;
   bolded?: boolean;
 }
@@ -20,7 +20,7 @@ const Cards: React.FC<CardProps> = ({
   title,
   description,
   icon,
-  width = "md:w-96 w-96",
+  width = "lg:w-96 w-80",
   centered = false,
   bolded = false,
 }) => {

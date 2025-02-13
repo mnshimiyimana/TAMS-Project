@@ -30,9 +30,9 @@ export default function page() {
   ];
   return (
     <div>
-      <div className="flex flex-col items-center gap-8 py-20">
+      <div className="flex flex-col items-center gap-8 py-28 md:px-12">
         <h1 className="text-3xl font-bold">Our Services</h1>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-16">
           {services.map((service, index) => (
             <Cards
               key={index}

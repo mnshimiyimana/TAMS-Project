@@ -86,3 +86,15 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+.bg-radiant-blue {
+  background: radial-gradient(ellipse 60% 70% at center, rgba(191, 219, 254, 0.6) 30%, transparent 80%);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+
+
+

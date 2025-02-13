@@ -1,17 +1,26 @@
-
 import React from "react";
 import Navbar from "@/components/sections/Navbar";
 import Services from "@/components/sections/Services";
 import About from "@/components/sections/About";
-
+import { Testimonial } from "@/components/sections/Testimonial";
+import { Subscribe } from "@/components/sections/Subscribe";
+import { Footer } from "@/components/sections/Footer";
 
 export default function page() {
-  
   return (
     <div>
-      <Navbar/>
-      <Services />
-      <About />
+      <Navbar />
+      <section id="services">
+        <Services />
+      </section>
+      <section id="about">
+        <About />
+      </section>
+      <Testimonial />
+      <Subscribe />
+      <section id="contact">
+        <Footer />
+      </section>
     </div>
   );
 }

@@ -200,7 +200,7 @@ export default function SignUp() {
                 <SelectContent>
                   <SelectItem value="admin">Admin</SelectItem>
                   <SelectItem value="manager">Manager</SelectItem>
-                  <SelectItem value="fuel">Fuel</SelectItem>
+                  {/* <SelectItem value="fuel">Fuel</SelectItem> */}
                 </SelectContent>
               </Select>
               {errors.role && (

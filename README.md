@@ -46,7 +46,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 
 ## The Figma Mockup
-[Figma](https://www.figma.com/design/5SRZjQWpoCjwKKEMFl5Bh0/Agencies-Management-System?node-id=5-293&t=1eySzK1MvcRmY3u4-0)
+[ The Figma Design](https://www.figma.com/design/5SRZjQWpoCjwKKEMFl5Bh0/Agencies-Management-System?node-id=5-293&t=1eySzK1MvcRmY3u4-0)
 
 
 

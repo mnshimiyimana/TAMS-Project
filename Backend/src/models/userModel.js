@@ -11,7 +11,7 @@ const userSchema = new mongoose.Schema(
     userPreferences: [{ type: String }], 
     agency: { type: mongoose.Schema.Types.ObjectId, ref: "Agency", required: true },
     role: { type: String, enum: ["admin", "manager", "fuels"], required: true },
-    role: { type: String, enum: ["admin", "manager"], required: true },
+    // role: { type: String, enum: ["admin", "manager"], required: true },
   },
   { timestamps: true }
 );

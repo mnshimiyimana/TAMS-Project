@@ -28,6 +28,7 @@ export default function page() {
       icon: plane,
     },
   ];
+  
   return (
     <div>
       <div className="flex flex-col items-center gap-8 py-28 md:px-12">

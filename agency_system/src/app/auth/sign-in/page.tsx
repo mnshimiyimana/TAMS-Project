@@ -9,8 +9,7 @@ import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import Image from "next/image";
-import BgImage from "../../../../public/auth/bgImage.png";
+import AuthBackground from "@/components/sections/AuthBackground";
 
 const signInSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -58,29 +57,7 @@ export default function SignIn() {
   return (
     <div className="min-h-screen flex">
       {/* Background Image */}
-      <div className="hidden lg:flex w-1/2 relative">
-        <Image
-          src={BgImage}
-          alt="Authentication Background"
-          layout="fill"
-          objectFit="cover"
-          quality={100}
-          priority
-          sizes="(max-width: 768px) 100vw, 50vw"
-          className=""
-        />
-        <div className="absolute inset-0 flex items-center justify-center text-center text-white p-6">
-          <div className=" text-center px-32">
-            <h1 className="text-5xl font-semibold text-start pb-2">
-              Transport Agencies Management System
-            </h1>
-            <p className="text-sm text-start">
-              Real-time ticketing capabilities, route planning, and fleet
-              management
-            </p>
-          </div>
-        </div>
-      </div>
+      <AuthBackground />
 
       {/* Form Section */}
       <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-10">

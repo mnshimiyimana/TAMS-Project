@@ -25,7 +25,7 @@ const Cards: React.FC<CardProps> = ({
   bolded = false,
 }) => {
   return (
-    <Card className={`${width} shadow-lg`}>
+    <Card className={`${width} shadow-lg `}>
       <CardHeader className={`md:p-5 p-4 space-y-4 ${centered ? "text-center flex justify-center items-center flex-col" : ""}`}>
         <Image src={icon} alt={title} width={50} height={50} />
         <CardTitle className={`${bolded ? "text-xl text-bold" : ""}`}>{title}</CardTitle>

@@ -1,6 +1,5 @@
 import Agency from "../models/agencyModel.js";
 
-// Create a new agency
 export const createAgency = async (req, res) => {
   try {
     const agency = new Agency(req.body);
@@ -11,7 +10,6 @@ export const createAgency = async (req, res) => {
   }
 };
 
-// Get all agencies
 export const getAgencies = async (req, res) => {
   try {
     const agencies = await Agency.find();
@@ -21,7 +19,6 @@ export const getAgencies = async (req, res) => {
   }
 };
 
-// Get agency by ID
 export const getAgencyById = async (req, res) => {
   try {
     const agency = await Agency.findById(req.params.id);
@@ -34,7 +31,7 @@ export const getAgencyById = async (req, res) => {
   }
 };
 
-// Update agency by ID
+
 export const updateAgency = async (req, res) => {
   try {
     const agency = await Agency.findByIdAndUpdate(req.params.id, req.body, {
@@ -49,7 +46,7 @@ export const updateAgency = async (req, res) => {
   }
 };
 
-// Delete agency by ID
+
 export const deleteAgency = async (req, res) => {
   try {
     const agency = await Agency.findByIdAndDelete(req.params.id);

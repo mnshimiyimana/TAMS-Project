@@ -1,6 +1,5 @@
 import FuelManagement from "../models/fuelManagementModel.js";
 
-// Create a new fuel transaction
 export const createFuelTransaction = async (req, res) => {
   try {
     const fuelTransaction = new FuelManagement(req.body);
@@ -11,7 +10,6 @@ export const createFuelTransaction = async (req, res) => {
   }
 };
 
-// Get all fuel transactions
 export const getFuelTransactions = async (req, res) => {
   try {
     const fuelTransactions = await FuelManagement.find();
@@ -21,7 +19,6 @@ export const getFuelTransactions = async (req, res) => {
   }
 };
 
-// Get fuel transaction by ID
 export const getFuelTransactionById = async (req, res) => {
   try {
     const fuelTransaction = await FuelManagement.findById(req.params.id);
@@ -34,7 +31,6 @@ export const getFuelTransactionById = async (req, res) => {
   }
 };
 
-// Update fuel transaction by ID
 export const updateFuelTransaction = async (req, res) => {
   try {
     const fuelTransaction = await FuelManagement.findByIdAndUpdate(
@@ -51,10 +47,11 @@ export const updateFuelTransaction = async (req, res) => {
   }
 };
 
-// Delete fuel transaction by ID
 export const deleteFuelTransaction = async (req, res) => {
   try {
-    const fuelTransaction = await FuelManagement.findByIdAndDelete(req.params.id);
+    const fuelTransaction = await FuelManagement.findByIdAndDelete(
+      req.params.id
+    );
     if (!fuelTransaction) {
       return res.status(404).json({ message: "Fuel transaction not found" });
     }

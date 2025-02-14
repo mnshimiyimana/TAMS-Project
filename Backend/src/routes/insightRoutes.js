@@ -10,10 +10,10 @@ import {
 
 const router = express.Router();
 
-router.post('/', protect, createInsight); // Protected route
+router.post('/', protect, createInsight); 
 router.get('/', getInsights);
 router.get('/:id', getInsightById);
-router.put('/:id', protect, updateInsight); // Protected route
-router.delete('/:id', protect, deleteInsight); // Protected route
+router.put('/:id', protect, updateInsight); 
+router.delete('/:id', protect, deleteInsight); 
 
 export default router;

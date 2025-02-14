@@ -10,10 +10,10 @@ import {
 
 const router = express.Router();
 
-router.post('/', protect, createDriver); // Protected route
+router.post('/', protect, createDriver); 
 router.get('/', getDrivers);
 router.get('/:id', getDriverById);
-router.put('/:id', protect, updateDriver); // Protected route
-router.delete('/:id', protect, deleteDriver); // Protected route
+router.put('/:id', protect, updateDriver);
+router.delete('/:id', protect, deleteDriver);
 
 export default router;

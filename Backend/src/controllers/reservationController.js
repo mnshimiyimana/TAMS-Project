@@ -1,6 +1,5 @@
 import Reservation from "../models/reservationModel.js";
 
-// Create a new reservation
 export const createReservation = async (req, res) => {
   try {
     const reservation = new Reservation(req.body);
@@ -11,7 +10,6 @@ export const createReservation = async (req, res) => {
   }
 };
 
-// Get all reservations
 export const getReservations = async (req, res) => {
   try {
     const reservations = await Reservation.find();
@@ -21,7 +19,6 @@ export const getReservations = async (req, res) => {
   }
 };
 
-// Get reservation by ID
 export const getReservationById = async (req, res) => {
   try {
     const reservation = await Reservation.findById(req.params.id);
@@ -34,12 +31,15 @@ export const getReservationById = async (req, res) => {
   }
 };
 
-// Update reservation by ID
 export const updateReservation = async (req, res) => {
   try {
-    const reservation = await Reservation.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-    });
+    const reservation = await Reservation.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      {
+        new: true,
+      }
+    );
     if (!reservation) {
       return res.status(404).json({ message: "Reservation not found" });
     }
@@ -49,7 +49,6 @@ export const updateReservation = async (req, res) => {
   }
 };
 
-// Delete reservation by ID
 export const deleteReservation = async (req, res) => {
   try {
     const reservation = await Reservation.findByIdAndDelete(req.params.id);

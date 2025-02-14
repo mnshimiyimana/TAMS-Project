@@ -6,7 +6,7 @@ const driverSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   phoneNumber: { type: String, required: true },
   status: { type: String, enum: ["On leave", "On Shift", "Off shift"], default: "Off shift" },
-  lastShift: { type: Date } // Stores the last shift timestamp
+  lastShift: { type: Date } 
 }, { timestamps: true });
 
 export default mongoose.model("Driver", driverSchema);

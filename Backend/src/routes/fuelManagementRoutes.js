@@ -10,10 +10,10 @@ import {
 
 const router = express.Router();
 
-router.post('/', protect, createFuelTransaction); // Protected route
+router.post('/', protect, createFuelTransaction); 
 router.get('/', getFuelTransactions);
 router.get('/:id', getFuelTransactionById);
-router.put('/:id', protect, updateFuelTransaction); // Protected route
-router.delete('/:id', protect, deleteFuelTransaction); // Protected route
+router.put('/:id', protect, updateFuelTransaction); 
+router.delete('/:id', protect, deleteFuelTransaction); 
 
 export default router;

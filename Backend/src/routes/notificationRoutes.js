@@ -10,10 +10,10 @@ import {
 
 const router = express.Router();
 
-router.post('/', protect, createNotification); // Protected route
+router.post('/', protect, createNotification); 
 router.get('/', getNotifications);
 router.get('/:id', getNotificationById);
-router.put('/:id', protect, updateNotification); // Protected route
-router.delete('/:id', protect, deleteNotification); // Protected route
+router.put('/:id', protect, updateNotification); 
+router.delete('/:id', protect, deleteNotification); 
 
 export default router;

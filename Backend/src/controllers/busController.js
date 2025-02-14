@@ -1,6 +1,5 @@
 import Bus from "../models/busModel.js";
 
-// Create a new bus
 export const createBus = async (req, res) => {
   try {
     const bus = new Bus(req.body);
@@ -11,7 +10,6 @@ export const createBus = async (req, res) => {
   }
 };
 
-// Get all buses
 export const getBuses = async (req, res) => {
   try {
     const buses = await Bus.find();
@@ -21,7 +19,6 @@ export const getBuses = async (req, res) => {
   }
 };
 
-// Get bus by ID
 export const getBusById = async (req, res) => {
   try {
     const bus = await Bus.findById(req.params.id);
@@ -34,10 +31,11 @@ export const getBusById = async (req, res) => {
   }
 };
 
-// Update bus by ID
 export const updateBus = async (req, res) => {
   try {
-    const bus = await Bus.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const bus = await Bus.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
     if (!bus) {
       return res.status(404).json({ message: "Bus not found" });
     }
@@ -47,7 +45,6 @@ export const updateBus = async (req, res) => {
   }
 };
 
-// Delete bus by ID
 export const deleteBus = async (req, res) => {
   try {
     const bus = await Bus.findByIdAndDelete(req.params.id);

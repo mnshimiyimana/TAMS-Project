@@ -10,10 +10,10 @@ import {
 
 const router = express.Router();
 
-router.post('/', protect, createReservation); // Protected route
+router.post('/', protect, createReservation); 
 router.get('/', getReservations);
 router.get('/:id', getReservationById);
-router.put('/:id', protect, updateReservation); // Protected route
-router.delete('/:id', protect, deleteReservation); // Protected route
+router.put('/:id', protect, updateReservation);
+router.delete('/:id', protect, deleteReservation); 
 
 export default router;

@@ -3,11 +3,10 @@ import {
   getUserProfile,
   updateUserProfile,
 } from "../controllers/userController.js";
-import { protect } from "../middlewares/authMiddleware.js"; // Protect route
+import { protect } from "../middlewares/authMiddleware.js"; 
 
 const router = express.Router();
 
-// Profile routes (requires authentication)
 router.get("/profile", protect, getUserProfile);
 router.put("/profile", protect, updateUserProfile);
 

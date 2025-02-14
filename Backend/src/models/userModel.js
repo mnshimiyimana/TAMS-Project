@@ -8,7 +8,9 @@ const userSchema = new mongoose.Schema(
     lastName: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     phoneNumber: { type: String, required: true, unique: true },
-    userPreferences: [{ type: String }], // List of user preferences
+    userPreferences: [{ type: String }], 
+    agency: { type: mongoose.Schema.Types.ObjectId, ref: "Agency", required: true },
+    role: { type: String, enum: ["admin", "manager", "fuels"], required: true },
   },
   { timestamps: true }
 );

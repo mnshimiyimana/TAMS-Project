@@ -1,6 +1,5 @@
 import Driver from "../models/driverModel.js";
 
-// Create a new driver
 export const createDriver = async (req, res) => {
   try {
     const driver = new Driver(req.body);
@@ -11,7 +10,6 @@ export const createDriver = async (req, res) => {
   }
 };
 
-// Get all drivers
 export const getDrivers = async (req, res) => {
   try {
     const drivers = await Driver.find();
@@ -21,7 +19,6 @@ export const getDrivers = async (req, res) => {
   }
 };
 
-// Get driver by ID
 export const getDriverById = async (req, res) => {
   try {
     const driver = await Driver.findById(req.params.id);
@@ -34,7 +31,6 @@ export const getDriverById = async (req, res) => {
   }
 };
 
-// Update driver by ID
 export const updateDriver = async (req, res) => {
   try {
     const driver = await Driver.findByIdAndUpdate(req.params.id, req.body, {
@@ -49,7 +45,6 @@ export const updateDriver = async (req, res) => {
   }
 };
 
-// Delete driver by ID
 export const deleteDriver = async (req, res) => {
   try {
     const driver = await Driver.findByIdAndDelete(req.params.id);

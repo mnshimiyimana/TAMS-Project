@@ -1,6 +1,5 @@
 import Insights from "../models/insightsModel.js";
 
-// Create a new insight
 export const createInsight = async (req, res) => {
   try {
     const insight = new Insights(req.body);
@@ -11,7 +10,6 @@ export const createInsight = async (req, res) => {
   }
 };
 
-// Get all insights
 export const getInsights = async (req, res) => {
   try {
     const insights = await Insights.find();
@@ -21,7 +19,6 @@ export const getInsights = async (req, res) => {
   }
 };
 
-// Get insight by ID
 export const getInsightById = async (req, res) => {
   try {
     const insight = await Insights.findById(req.params.id);
@@ -34,10 +31,11 @@ export const getInsightById = async (req, res) => {
   }
 };
 
-// Update insight by ID
 export const updateInsight = async (req, res) => {
   try {
-    const insight = await Insights.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const insight = await Insights.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
     if (!insight) {
       return res.status(404).json({ message: "Insight not found" });
     }
@@ -47,7 +45,6 @@ export const updateInsight = async (req, res) => {
   }
 };
 
-// Delete insight by ID
 export const deleteInsight = async (req, res) => {
   try {
     const insight = await Insights.findByIdAndDelete(req.params.id);

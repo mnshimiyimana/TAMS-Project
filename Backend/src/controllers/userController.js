@@ -1,6 +1,5 @@
 import User from "../models/userModel.js";
 
-// Get user profile
 export const getUserProfile = async (req, res) => {
   try {
     const user = await User.findById(req.userId); // Assuming 'req.userId' is set via authentication middleware
@@ -13,7 +12,7 @@ export const getUserProfile = async (req, res) => {
   }
 };
 
-// Update user profile
+
 export const updateUserProfile = async (req, res) => {
   try {
     const { firstName, lastName, email, phoneNumber } = req.body;

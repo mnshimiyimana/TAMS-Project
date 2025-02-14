@@ -1,5 +1,5 @@
 import express from "express";
-import { protect } from "../middlewares/authMiddleware.js"; // Protect routes
+import { protect } from "../middlewares/authMiddleware.js";
 import {
   createAgency,
   getAgencies,
@@ -10,10 +10,10 @@ import {
 
 const router = express.Router();
 
-router.post("/", protect, createAgency); // Protected route
+router.post("/", protect, createAgency); 
 router.get("/", getAgencies);
 router.get("/:id", getAgencyById);
-router.put("/:id", protect, updateAgency); // Protected route
-router.delete("/:id", protect, deleteAgency); // Protected route
+router.put("/:id", protect, updateAgency); 
+router.delete("/:id", protect, deleteAgency);
 
 export default router;

@@ -10,10 +10,10 @@ import {
 
 const router = express.Router();
 
-router.post('/', protect, createBus); // Protected route
+router.post('/', protect, createBus); 
 router.get('/', getBuses);
 router.get('/:id', getBusById);
-router.put('/:id', protect, updateBus); // Protected route
-router.delete('/:id', protect, deleteBus); // Protected route
+router.put('/:id', protect, updateBus); 
+router.delete('/:id', protect, deleteBus);
 
 export default router;

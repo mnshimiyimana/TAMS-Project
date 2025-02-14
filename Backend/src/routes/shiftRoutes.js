@@ -10,10 +10,10 @@ import {
 
 const router = express.Router();
 
-router.post('/', protect, createShift); // Protected route
+router.post('/', protect, createShift);
 router.get('/', getShifts);
 router.get('/:id', getShiftById);
-router.put('/:id', protect, updateShift); // Protected route
-router.delete('/:id', protect, deleteShift); // Protected route
+router.put('/:id', protect, updateShift); 
+router.delete('/:id', protect, deleteShift); 
 
 export default router;

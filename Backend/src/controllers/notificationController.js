@@ -1,6 +1,5 @@
 import Notification from "../models/notificationModel.js";
 
-// Create a new notification
 export const createNotification = async (req, res) => {
   try {
     const notification = new Notification(req.body);
@@ -11,7 +10,6 @@ export const createNotification = async (req, res) => {
   }
 };
 
-// Get all notifications
 export const getNotifications = async (req, res) => {
   try {
     const notifications = await Notification.find();
@@ -21,7 +19,6 @@ export const getNotifications = async (req, res) => {
   }
 };
 
-// Get notification by ID
 export const getNotificationById = async (req, res) => {
   try {
     const notification = await Notification.findById(req.params.id);
@@ -34,12 +31,15 @@ export const getNotificationById = async (req, res) => {
   }
 };
 
-// Update notification by ID
 export const updateNotification = async (req, res) => {
   try {
-    const notification = await Notification.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-    });
+    const notification = await Notification.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      {
+        new: true,
+      }
+    );
     if (!notification) {
       return res.status(404).json({ message: "Notification not found" });
     }
@@ -49,7 +49,6 @@ export const updateNotification = async (req, res) => {
   }
 };
 
-// Delete notification by ID
 export const deleteNotification = async (req, res) => {
   try {
     const notification = await Notification.findByIdAndDelete(req.params.id);

@@ -1,6 +1,5 @@
 import Shift from "../models/shiftModel.js";
 
-// Create a new shift
 export const createShift = async (req, res) => {
   try {
     const shift = new Shift(req.body);
@@ -11,7 +10,6 @@ export const createShift = async (req, res) => {
   }
 };
 
-// Get all shifts
 export const getShifts = async (req, res) => {
   try {
     const shifts = await Shift.find();
@@ -21,7 +19,6 @@ export const getShifts = async (req, res) => {
   }
 };
 
-// Get shift by ID
 export const getShiftById = async (req, res) => {
   try {
     const shift = await Shift.findById(req.params.id);
@@ -34,10 +31,11 @@ export const getShiftById = async (req, res) => {
   }
 };
 
-// Update shift by ID
 export const updateShift = async (req, res) => {
   try {
-    const shift = await Shift.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const shift = await Shift.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
     if (!shift) {
       return res.status(404).json({ message: "Shift not found" });
     }
@@ -47,7 +45,6 @@ export const updateShift = async (req, res) => {
   }
 };
 
-// Delete shift by ID
 export const deleteShift = async (req, res) => {
   try {
     const shift = await Shift.findByIdAndDelete(req.params.id);

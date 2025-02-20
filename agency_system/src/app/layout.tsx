@@ -1,22 +1,16 @@
-import type { Metadata } from "next";
-import { Work_Sans } from "next/font/google";
-import "./globals.css";
+"use client";
 
+import { Provider } from 'react-redux';
+import store from '../redux/store'; // import your Redux store
+import { Work_Sans } from 'next/font/google';
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import { AppSidebar } from "@/components/dashboard/Sidebar"
+import './globals.css';
 
-const workSans = Work_Sans({ 
-  subsets: ["latin"],
-  variable: "--font-work-sans", 
+const workSans = Work_Sans({
+  subsets: ['latin'],
+  variable: '--font-work-sans',
 });
-
-export const metadata: Metadata = {
-  title: "TAMS",
-  description: "Transport Agencies Management System",
-  icons :{
-    icon: "/bus-icon.svg",
-    shortcut: "/bus-icon.png",
-    apple: "/bus-icon.png",
-  },
-};
 
 export default function RootLayout({
   children,
@@ -26,12 +20,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href="bus-icon/.svg" type="image/x-icon" />
+        <link rel="icon" href="/bus-icon.svg" type="image/x-icon" />
       </head>
-      <body
-        className={` ${workSans.variable} antialiased`}
-      >
-        {children}
+      <body className={`${workSans.variable} antialiased`}>
+        {/* Wrap the entire app with Redux Provider */}
+        <Provider store={store}>
+          {children}
+        </Provider>
       </body>
     </html>
   );

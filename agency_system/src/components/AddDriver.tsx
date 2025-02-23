@@ -5,7 +5,14 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import { format } from "date-fns";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import {
@@ -17,6 +24,7 @@ import {
 } from "./ui/select";
 import { Calendar } from "./ui/calendar";
 import { Button } from "./ui/button";
+import { Popover, PopoverTrigger, PopoverContent } from "./ui/popover";
 
 // Zod validation schema
 const driverSchema = z.object({
@@ -40,6 +48,7 @@ export default function AddDriverDialog({
   onClose,
 }: AddDriverDialogProps) {
   const [lastShift, setLastShift] = useState<Date | undefined>(new Date());
+
   const {
     register,
     handleSubmit,
@@ -50,7 +59,7 @@ export default function AddDriverDialog({
   });
 
   const onSubmit = (data: DriverFormData) => {
-    console.log("Driver Data:", data);
+    console.log("Driver Data:", { ...data, lastShift });
     toast.success("Driver added successfully!");
     reset();
     onClose();
@@ -58,11 +67,9 @@ export default function AddDriverDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <div>
-        <p className="text-[#005F15] ">Driver</p>
-      </div>
       <DialogContent className="max-w-md">
         <DialogHeader>
+          <h1 className="text-green-500 font-medium">Drivers</h1>
           <DialogTitle>Add New Driver</DialogTitle>
           <p>Record Your Driver Details</p>
         </DialogHeader>
@@ -71,57 +78,29 @@ export default function AddDriverDialog({
           {/* First Name */}
           <div>
             <Label htmlFor="first-name">First Name</Label>
-            <Input
-              id="first-name"
-              type="text"
-              placeholder="Enter first name"
-              {...register("firstName")}
-            />
-            {errors.firstName && (
-              <p className="text-red-500 text-sm">{errors.firstName.message}</p>
-            )}
+            <Input id="first-name" {...register("firstName")} placeholder="Enter first name" />
+            {errors.firstName && <p className="text-red-500 text-sm">{errors.firstName.message}</p>}
           </div>
 
           {/* Last Name */}
           <div>
             <Label htmlFor="last-name">Last Name</Label>
-            <Input
-              id="last-name"
-              type="text"
-              placeholder="Enter last name"
-              {...register("lastName")}
-            />
-            {errors.lastName && (
-              <p className="text-red-500 text-sm">{errors.lastName.message}</p>
-            )}
+            <Input id="last-name" {...register("lastName")} placeholder="Enter last name" />
+            {errors.lastName && <p className="text-red-500 text-sm">{errors.lastName.message}</p>}
           </div>
 
           {/* Email */}
           <div>
             <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="Enter email"
-              {...register("email")}
-            />
-            {errors.email && (
-              <p className="text-red-500 text-sm">{errors.email.message}</p>
-            )}
+            <Input id="email" type="email" {...register("email")} placeholder="Enter email" />
+            {errors.email && <p className="text-red-500 text-sm">{errors.email.message}</p>}
           </div>
 
           {/* Phone Number */}
           <div>
             <Label htmlFor="phone">Phone Number</Label>
-            <Input
-              id="phone"
-              type="tel"
-              placeholder="Enter phone number"
-              {...register("phone")}
-            />
-            {errors.phone && (
-              <p className="text-red-500 text-sm">{errors.phone.message}</p>
-            )}
+            <Input id="phone" type="tel" {...register("phone")} placeholder="Enter phone number" />
+            {errors.phone && <p className="text-red-500 text-sm">{errors.phone.message}</p>}
           </div>
 
           {/* Status */}
@@ -133,23 +112,38 @@ export default function AddDriverDialog({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="OnShift">On-Shift</SelectItem>
-                <SelectItem value="OffShift">Off-shift</SelectItem>
-                <SelectItem value="OnLeave">OnLeave</SelectItem>
+                <SelectItem value="OffShift">Off-Shift</SelectItem>
+                <SelectItem value="OnLeave">On Leave</SelectItem>
               </SelectContent>
             </Select>
-            {errors.status && (
-              <p className="text-red-500 text-sm">{errors.status.message}</p>
-            )}
+            {errors.status && <p className="text-red-500 text-sm">{errors.status.message}</p>}
           </div>
 
           {/* Last Shift Date */}
           <div>
-            <Label>Last Shift Date</Label>
-            <Calendar
-              mode="single"
-              selected={lastShift}
-              onSelect={(date) => setLastShift(date)}
-            />
+            <Label htmlFor="last-shift">Last Shift Date</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <div className="relative">
+                  <Input
+                    id="last-shift"
+                    type="text"
+                    value={lastShift ? format(lastShift, "PPP") : ""}
+                    placeholder="Select last shift date"
+                    readOnly
+                  />
+                  {/* <CalendarIcon className="absolute right-3 top-3 w-5 h-5 text-gray-500 cursor-pointer" /> */}
+                </div>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={lastShift}
+                  onSelect={setLastShift}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* Buttons */}
@@ -157,10 +151,7 @@ export default function AddDriverDialog({
             <Button variant="outline" type="button" onClick={onClose}>
               Go Back
             </Button>
-            <Button
-              className="bg-[#005F15] hover:bg-[#004A12] text-white"
-              type="submit"
-            >
+            <Button className="bg-[#005F15] hover:bg-[#004A12] text-white" type="submit">
               Save
             </Button>
           </div>

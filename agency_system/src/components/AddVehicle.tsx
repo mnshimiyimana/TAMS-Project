@@ -1,40 +1,56 @@
 "use client";
 
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-
-
-
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
-import { Button } from "./ui/button";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+import { Button } from "./ui/button";
 
-// Vehicle Schema Validation
+// Zod validation schema
 const vehicleSchema = z.object({
-  plateNumber: z.string().min(5, "Plate number is too short"),
-  type: z.enum(["Bus", "Mini-Bus", "Van"], {
-    errorMap: () => ({ message: "Select a valid vehicle type" }),
+  busId: z.string().min(1, "Bus ID is required"),
+  plateNumber: z.string().min(1, "Plate number is required"),
+  type: z.string().min(1, "Vehicle type is required"),
+  agencyName: z.string().min(1, "Agency name is required"),
+  status: z.enum(["Active", "Inactive", "Maintenance"], {
+    errorMap: () => ({ message: "Status is required" }),
   }),
-  agency: z.string().min(2, "Agency name is required"),
-  status: z.enum(["Active", "Inactive", "Under Maintenance"]),
   capacity: z.coerce.number().min(1, "Capacity must be at least 1"),
-  history: z.string().optional(),
+  busHistory: z.string().min(1, "Bus history is required"),
 });
 
 type VehicleFormData = z.infer<typeof vehicleSchema>;
 
-export default function AddVehicleDialog() {
-  const [open, setOpen] = useState(false);
+interface AddVehicleDialogProps {
+  open: boolean;
+  onClose: () => void;
+}
+
+export default function AddVehiclesDialog({
+  open,
+  onClose,
+}: AddVehicleDialogProps) {
   const {
     register,
     handleSubmit,
-    reset,
     formState: { errors },
+    reset,
   } = useForm<VehicleFormData>({
     resolver: zodResolver(vehicleSchema),
   });
@@ -43,62 +59,45 @@ export default function AddVehicleDialog() {
     console.log("Vehicle Data:", data);
     toast.success("Vehicle added successfully!");
     reset();
-    setOpen(false);
+    onClose();
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <div>
-        <p className="text-[#005F15] ">Vehicle</p>
-      </div>
-      <DialogTrigger asChild>
-        <Button variant="default">Add Vehicle</Button>
-        <p>Record Your Vehicle Details</p>
-      </DialogTrigger>
-
-      <DialogContent>
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Add Vehicle</DialogTitle>
+          <h1 className="text-green-500 font-medium">Vehicles</h1>
+          <DialogTitle>Add New Vehicle</DialogTitle>
+          <p>Record Vehicle Details</p>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <Label>Plate Number</Label>
-            <Input {...register("plateNumber")} placeholder="ABC-1234" />
-            {errors.plateNumber && (
-              <p className="text-red-500 text-sm">
-                {errors.plateNumber.message}
-              </p>
-            )}
+            <Label htmlFor="bus-id">Bus ID</Label>
+            <Input id="bus-id" {...register("busId")} placeholder="Enter bus ID" />
+            {errors.busId && <p className="text-red-500 text-sm">{errors.busId.message}</p>}
           </div>
 
           <div>
-            <Label>Vehicle Type</Label>
-            <Select {...register("type")}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Bus">Bus</SelectItem>
-                <SelectItem value="Mini-Bus">Mini-Bus</SelectItem>
-                <SelectItem value="Van">Van</SelectItem>
-              </SelectContent>
-            </Select>
-            {errors.type && (
-              <p className="text-red-500 text-sm">{errors.type.message}</p>
-            )}
+            <Label htmlFor="plate-number">Plate Number</Label>
+            <Input id="plate-number" {...register("plateNumber")} placeholder="Enter plate number" />
+            {errors.plateNumber && <p className="text-red-500 text-sm">{errors.plateNumber.message}</p>}
           </div>
 
           <div>
-            <Label>Agency Name</Label>
-            <Input {...register("agency")} placeholder="Agency XYZ" />
-            {errors.agency && (
-              <p className="text-red-500 text-sm">{errors.agency.message}</p>
-            )}
+            <Label htmlFor="type">Type</Label>
+            <Input id="type" {...register("type")} placeholder="Enter vehicle type" />
+            {errors.type && <p className="text-red-500 text-sm">{errors.type.message}</p>}
           </div>
 
           <div>
-            <Label>Status</Label>
+            <Label htmlFor="agency-name">Agency Name</Label>
+            <Input id="agency-name" {...register("agencyName")} placeholder="Enter agency name" />
+            {errors.agencyName && <p className="text-red-500 text-sm">{errors.agencyName.message}</p>}
+          </div>
+
+          <div>
+            <Label htmlFor="status">Status</Label>
             <Select {...register("status")}>
               <SelectTrigger>
                 <SelectValue placeholder="Select status" />
@@ -106,45 +105,29 @@ export default function AddVehicleDialog() {
               <SelectContent>
                 <SelectItem value="Active">Active</SelectItem>
                 <SelectItem value="Inactive">Inactive</SelectItem>
-                <SelectItem value="Under Maintenance">
-                  Under Maintenance
-                </SelectItem>
+                <SelectItem value="Maintenance">Maintenance</SelectItem>
               </SelectContent>
             </Select>
-            {errors.status && (
-              <p className="text-red-500 text-sm">{errors.status.message}</p>
-            )}
+            {errors.status && <p className="text-red-500 text-sm">{errors.status.message}</p>}
           </div>
 
           <div>
-            <Label>Capacity</Label>
-            <Input type="number" {...register("capacity")} placeholder="50" />
-            {errors.capacity && (
-              <p className="text-red-500 text-sm">{errors.capacity.message}</p>
-            )}
+            <Label htmlFor="capacity">Capacity</Label>
+            <Input id="capacity" type="number" {...register("capacity")} placeholder="Enter capacity" />
+            {errors.capacity && <p className="text-red-500 text-sm">{errors.capacity.message}</p>}
           </div>
 
           <div>
-            <Label>Bus History</Label>
-            <Input
-              {...register("history")}
-              placeholder="Last serviced on 01/01/2024"
-            />
+            <Label htmlFor="bus-history">Bus History</Label>
+            <Input id="bus-history" {...register("busHistory")} placeholder="Enter bus history" />
+            {errors.busHistory && <p className="text-red-500 text-sm">{errors.busHistory.message}</p>}
           </div>
 
-          {/* Button Row */}
-          <div className="flex justify-between">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-            >
+          <div className="flex justify-between mt-4">
+            <Button variant="outline" type="button" onClick={onClose}>
               Go Back
             </Button>
-            <Button
-              type="submit"
-              className="bg-[#005F15] hover:bg-[#004A12] text-white"
-            >
+            <Button className="bg-[#005F15] hover:bg-[#004A12] text-white" type="submit">
               Save
             </Button>
           </div>

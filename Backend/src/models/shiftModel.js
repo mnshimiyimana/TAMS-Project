@@ -8,6 +8,7 @@ const shiftSchema = new mongoose.Schema(
     endTime: { type: Date },
     destination: { type: String, required: true },
     origin: { type: String, required: true },
+    Date: { type: String, required: true },
   },
   { timestamps: true }
 );

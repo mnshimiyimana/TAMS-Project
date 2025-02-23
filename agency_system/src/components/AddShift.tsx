@@ -1,6 +1,5 @@
 "use client";
 
-
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -46,11 +45,9 @@ export default function AddShiftDialog({ open, onClose }: AddShiftDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <div>
-        <p className="text-[#005F15] ">Shifts</p>
-      </div>
       <DialogContent className="max-w-md">
         <DialogHeader>
+          <h1 className="text-[#005F15] font-medium">Shifts</h1>
           <DialogTitle>Add New Shift</DialogTitle>
           <p>Record Your Shift Details</p>
         </DialogHeader>

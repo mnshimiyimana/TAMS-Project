@@ -21,7 +21,7 @@ const items = [
   { title: "Profile", key: "profile", icon: UserPen },
 ];
 
-export function AppSidebar({ onSelect }: { onSelect: (key: string) => void }) {
+export function AppSidebar({ onSelect, selected }: { onSelect: (key: string) => void, selected: string }) {
   const handleLogout = () => {
     localStorage.removeItem("token");
     window.location.href = "/auth/sign-in";
@@ -39,8 +39,13 @@ export function AppSidebar({ onSelect }: { onSelect: (key: string) => void }) {
                 {items.map((item) => (
                   <SidebarMenuItem key={item.key}>
                     <SidebarMenuButton asChild>
-                      <button onClick={() => onSelect(item.key)} className="flex items-center gap-3 w-full text-left">
-                        <item.icon />
+                    <button
+                      onClick={() => onSelect(item.key)}
+                      className={`flex items-center gap-3 w-full text-left px-4 py-2 rounded-lg transition ${
+                        selected === item.key ? "text-green-500 font-semibold" : ""
+                      }`}
+                    >
+                      <item.icon className={selected === item.key ? "text-green-500" : ""} />
                         <span>{item.title}</span>
                       </button>
                     </SidebarMenuButton>

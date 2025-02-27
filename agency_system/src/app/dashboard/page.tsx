@@ -13,7 +13,7 @@ export default function DashboardPage() {
   return (
     <SidebarProvider className="flex">
       <div className="flex h-screen  ">
-        <AppSidebar onSelect={setSelectedComponent} />
+        <AppSidebar onSelect={setSelectedComponent} selected={selectedComponent} />
         <SidebarTrigger />
         <div>
           <div className="flex justify-end p-7">

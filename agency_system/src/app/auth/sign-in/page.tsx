@@ -38,7 +38,7 @@ export default function SignIn() {
       <AuthBackground />
 
       
-      <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-10">
+      <div className="w-full lg:w-1/2 flex flex-col justify-center items-center">
         <div className="w-full max-w-md">
           <div className="py-8">
             <h1 className="text-2xl font-semibold text-gray-800 mb-2">Sign In</h1>
@@ -76,7 +76,7 @@ export default function SignIn() {
 
             
             <div className="text-right">
-              <Link href="/auth/forgot-password">
+              <Link href="/auth/reset">
                 <span className="text-green-600 hover:underline cursor-pointer">Forgot Password?</span>
               </Link>
             </div>

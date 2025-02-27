@@ -29,8 +29,10 @@ app.use(express.json()); // JSON parsing
 app.use(cors()); // Enable CORS
 app.use(helmet()); // Security headers
 app.use(morgan("dev")); // Logging
+
+// Register routes
 app.use("/api/auth", authRoutes);
-app.use("/api/agencies", agencyRoutes);
+app.use("/api/agencies", agencyRoutes); // Make sure this is registered only once
 app.use("/api/drivers", driverRoutes);
 app.use("/api/buses", busRoutes);
 app.use("/api/fuel-management", fuelManagementRoutes);
@@ -39,13 +41,14 @@ app.use("/api/shifts", shiftRoutes);
 app.use("/api/insights", insightRoutes);
 // app.use('/api/dashboard', dashboardRoutes);
 app.use("/api/superadmin", superadminRoutes);
-app.use("/api/agencies", agencyRoutes);
+// REMOVE THIS DUPLICATE: app.use("/api/agencies", agencyRoutes);
 
 // Test route
 app.get("/", (req, res) => {
   res.send("API is running...");
 });
 
+// Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({

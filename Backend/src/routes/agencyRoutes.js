@@ -1,5 +1,5 @@
 import express from "express";
-import { protect } from "../middlewares/authMiddleware.js";
+import { protect, authorize } from "../middlewares/authMiddleware.js";
 import {
   createAgency,
   getAgencies,
@@ -10,10 +10,11 @@ import {
 
 const router = express.Router();
 
-router.post("/", protect, createAgency); 
-router.get("/", getAgencies);
-router.get("/:id", getAgencyById);
-router.put("/:id", protect, updateAgency); 
+// Important: Apply the protect middleware to all routes
+router.post("/", protect, authorize("superadmin"), createAgency);
+router.get("/", protect, getAgencies); // This was missing the protect middleware
+router.get("/:id", protect, getAgencyById);
+router.put("/:id", protect, updateAgency);
 router.delete("/:id", protect, deleteAgency);
 
 export default router;

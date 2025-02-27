@@ -14,11 +14,9 @@ export const login = async (req, res) => {
 
     // Check if user is active
     if (!user.isActive) {
-      return res
-        .status(403)
-        .json({
-          message: "Account is deactivated. Please contact your administrator.",
-        });
+      return res.status(403).json({
+        message: "Account is deactivated. Please contact your administrator.",
+      });
     }
 
     // Compare password
@@ -27,10 +25,11 @@ export const login = async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // Generate JWT token
+    // Generate JWT token - keeping both id and userId for compatibility
     const token = jwt.sign(
       {
         id: user._id,
+        userId: user._id, // Adding userId for redundancy
         role: user.role,
         agencyName: user.agencyName,
       },

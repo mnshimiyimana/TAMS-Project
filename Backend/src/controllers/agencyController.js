@@ -42,7 +42,14 @@ export const createAgency = async (req, res) => {
 // Get all agencies (with proper filtering)
 export const getAgencies = async (req, res) => {
   try {
+    console.log("GetAgencies called with userId:", req.userId);
+
+    // Try to find the user
     const user = await User.findById(req.userId);
+    console.log(
+      "User lookup result:",
+      user ? `Found (role: ${user.role})` : "Not found"
+    );
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -56,6 +63,7 @@ export const getAgencies = async (req, res) => {
 
     // Superadmin can see all agencies
     const agencies = await Agency.find();
+    console.log(`Found ${agencies.length} agencies for superadmin`);
     res.status(200).json(agencies);
   } catch (error) {
     console.error("Error fetching agencies:", error);

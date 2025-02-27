@@ -1,5 +1,15 @@
 "use client";
 
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useDispatch, useSelector } from "react-redux";
+import { signUp, clearError } from "@/redux/slices/authSlice";
+import { AppDispatch, RootState } from "@/redux/store";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import AuthBackground from "@/components/sections/AuthBackground";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -10,56 +20,133 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import AuthBackground from "@/components/sections/AuthBackground";
-import { useSignUpForm } from "@/hooks/use-SignUp";
+import Link from "next/link";
+
+// Enhanced validation schema
+const signUpSchema = z.object({
+  agencyName: z.string().min(3, "Agency name must be at least 3 characters"),
+  username: z.string().min(3, "Username must be at least 3 characters"),
+  email: z.string().email("Please enter a valid email address"),
+  phone: z.string().min(10, "Phone number must be at least 10 digits").regex(/^\+?[0-9\s]+$/, "Phone number can only contain numbers"),
+  location: z.string().min(3, "Location must be at least 3 characters"),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number"),
+  confirmPassword: z.string(),
+  role: z.enum(["admin", "manager", "fuel"], {
+    required_error: "Please select a role",
+  }),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
+type SignUpFormData = z.infer<typeof signUpSchema>;
 
 export default function SignUp() {
-  const { register, handleSubmit, setValue, errors, isLoading, onSubmit } =
-    useSignUpForm();
+  const dispatch = useDispatch<AppDispatch>();
+  const { isLoading, error } = useSelector((state: RootState) => state.auth);
+  const router = useRouter();
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    formState: { errors },
+    reset,
+  } = useForm<SignUpFormData>({
+    resolver: zodResolver(signUpSchema),
+    defaultValues: {
+      agencyName: "",
+      username: "",
+      email: "",
+      phone: "",
+      location: "",
+      password: "",
+      confirmPassword: "",
+      role: undefined,
+    },
+  });
+
+  useEffect(() => {
+    // Clear any previous errors
+    dispatch(clearError());
+    
+    // Check if user is already logged in
+    const token = localStorage.getItem("token");
+    if (token) {
+      router.push("/dashboard");
+    }
+  }, [dispatch, router]);
+
+  // Display error toast when error changes
+  useEffect(() => {
+    if (error) {
+      toast.error(error);
+    }
+  }, [error]);
+
+  const onSubmit = async (data: SignUpFormData) => {
+    try {
+      await dispatch(signUp(data)).unwrap();
+      toast.success("Sign-up successful! Please log in.");
+      reset(); // Clear form
+      setTimeout(() => {
+        router.push("/auth/sign-in");
+      }, 1500);
+    } catch (err) {
+      // Error is handled by the thunk and will be in the state
+      console.error("Sign-up failed");
+    }
+  };
 
   return (
     <div className="flex min-h-screen">
-      
       <AuthBackground />
 
-      
-      <div className="w-full lg:w-1/2 lg:px-20 px-10 items-center justify-center pt-40">
-        <div className="mb-10">
+      <div className="w-full lg:w-1/2 px-8 lg:px-16 py-10 overflow-y-auto">
+        <div className="mb-6">
           <h1 className="text-2xl font-bold">Sign Up</h1>
           <p className="text-sm text-gray-700">
-            This information will be displayed on your profile.
+            Create an account to manage your transport agency
           </p>
         </div>
+
+        {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
         <form
           onSubmit={handleSubmit(onSubmit)}
           className="space-y-4 text-gray-700"
         >
-          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Agency Name */}
             <div>
-              <Label htmlFor="agencyName">Agency Name</Label>
+              <Label htmlFor="agencyName">Agency Name *</Label>
               <Input
                 id="agencyName"
                 {...register("agencyName")}
-                placeholder="Agency name"
+                placeholder="Enter agency name"
               />
               {errors.agencyName && (
-                <p className="text-red-500 text-sm">
+                <p className="text-red-500 text-sm mt-1">
                   {errors.agencyName.message}
                 </p>
               )}
             </div>
 
+            {/* Username */}
             <div>
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="username">Username *</Label>
               <Input
                 id="username"
                 {...register("username")}
-                placeholder="Username"
+                placeholder="Enter username"
               />
               {errors.username && (
-                <p className="text-red-500 text-sm">
+                <p className="text-red-500 text-sm mt-1">
                   {errors.username.message}
                 </p>
               )}
@@ -67,83 +154,56 @@ export default function SignUp() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Email */}
             <div>
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email *</Label>
               <Input
                 id="email"
                 type="email"
                 {...register("email")}
-                placeholder="Email"
+                placeholder="Enter email"
+                autoComplete="email"
               />
               {errors.email && (
-                <p className="text-red-500 text-sm">{errors.email.message}</p>
+                <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
               )}
             </div>
 
+            {/* Phone Number */}
             <div>
-              <Label htmlFor="phone">Phone Number</Label>
+              <Label htmlFor="phone">Phone Number *</Label>
               <Input
                 id="phone"
                 type="tel"
                 {...register("phone")}
-                placeholder="Phone number"
+                placeholder="+123 456 7890"
+                autoComplete="tel"
               />
               {errors.phone && (
-                <p className="text-red-500 text-sm">{errors.phone.message}</p>
+                <p className="text-red-500 text-sm mt-1">{errors.phone.message}</p>
               )}
             </div>
           </div>
 
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Location */}
             <div>
-              <Label htmlFor="location">Location</Label>
+              <Label htmlFor="location">Location *</Label>
               <Input
                 id="location"
                 {...register("location")}
-                placeholder="Location"
+                placeholder="Enter location"
               />
               {errors.location && (
-                <p className="text-red-500 text-sm">
+                <p className="text-red-500 text-sm mt-1">
                   {errors.location.message}
                 </p>
               )}
             </div>
 
+            {/* Role */}
             <div>
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                {...register("password")}
-                placeholder="Password"
-              />
-              {errors.password && (
-                <p className="text-red-500 text-sm">
-                  {errors.password.message}
-                </p>
-              )}
-            </div>
-          </div>
-
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                {...register("confirmPassword")}
-                placeholder="Confirm Password"
-              />
-              {errors.confirmPassword && (
-                <p className="text-red-500 text-sm">
-                  {errors.confirmPassword.message}
-                </p>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="role">Role</Label>
+              <Label htmlFor="role">Role *</Label>
               <Select
                 onValueChange={(value) =>
                   setValue("role", value as "admin" | "manager" | "fuel")
@@ -159,30 +219,68 @@ export default function SignUp() {
                 </SelectContent>
               </Select>
               {errors.role && (
-                <p className="text-red-500 text-sm">{errors.role.message}</p>
+                <p className="text-red-500 text-sm mt-1">{errors.role.message}</p>
               )}
             </div>
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Password */}
+            <div>
+              <Label htmlFor="password">Password *</Label>
+              <Input
+                id="password"
+                type="password"
+                {...register("password")}
+                placeholder="Enter password"
+                autoComplete="new-password"
+              />
+              {errors.password && (
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.password.message}
+                </p>
+              )}
+            </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            {/* Confirm Password */}
+            <div>
+              <Label htmlFor="confirmPassword">Confirm Password *</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                {...register("confirmPassword")}
+                placeholder="Confirm password"
+                autoComplete="new-password"
+              />
+              {errors.confirmPassword && (
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.confirmPassword.message}
+                </p>
+              )}
+            </div>
+          </div>
 
+          {/* Password requirements hint */}
+          <p className="text-xs text-gray-500">
+            Password must be at least 8 characters and include uppercase, lowercase letters and numbers.
+          </p>
 
-          <div className="flex justify-between py-8">
-            <Button
-              variant="outline"
-              type="button"
-              className="w-1/3"
-              onClick={() => window.history.back()}
-            >
-              Go Back
-            </Button>
+          <div className="flex justify-between py-4">
+            <Link href="/auth/sign-in">
+              <Button
+                variant="outline"
+                type="button"
+                className="w-auto px-6"
+              >
+                Back to Login
+              </Button>
+            </Link>
             <Button
               type="submit"
               disabled={isLoading}
-              className="w-1/3 bg-green-600"
+              className="w-auto px-6 bg-green-600 hover:bg-green-700"
             >
-              {isLoading ? "Signing Up..." : "Sign up"}
+              {isLoading ? "Signing Up..." : "Sign Up"}
             </Button>
           </div>
         </form>

@@ -1,212 +1,72 @@
 "use client";
-import React, { useState } from "react";
-import AuthBackground from "@/components/sections/AuthBackground";
-import { Fingerprint, ArrowLeft } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
 
-export default function ResetPass() {
-  const [step, setStep] = useState(1);
-  const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+import React, { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { AppSidebar } from "@/components/dashboard/Sidebar";
+import { BellIcon, UserRound } from "lucide-react";
+import { useSelectedComponent } from "@/hooks/useSelectedComponent";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { useAuthProtection } from "@/hooks/useAuthProtection";
+import { useDispatch } from "react-redux";
+import { AppDispatch } from "@/redux/store";
+import { signOut } from "@/redux/slices/authSlice";
+import { toast } from "sonner";
 
-  const API_URL = "http://localhost:5000/api/auth";
+export default function DashboardPage() {
+  const { selectedComponent, setSelectedComponent, ComponentToRender } =
+    useSelectedComponent();
+  const { isLoading, isAuthenticated } = useAuthProtection("/auth/sign-in");
+  const router = useRouter();
+  const dispatch = useDispatch<AppDispatch>();
 
-  const handleSubmitEmail = async () => {
-    setLoading(true);
-    setError("");
-
-    try {
-      const response = await fetch(`${API_URL}/send-reset-code`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setStep(2); // Move to next step
-      } else {
-        setError(data.error || "Failed to send reset code.");
-      }
-    } catch (err) {
-      setError("Something went wrong.");
-    } finally {
-      setLoading(false);
-    }
+  const handleLogout = () => {
+    dispatch(signOut());
+    toast.success("Logged out successfully");
+    router.push("/auth/sign-in");
   };
 
-  // Step 2: Verify code
-  const handleSubmitCode = async () => {
-    setLoading(true);
-    setError("");
+  // Display loading state or redirect if not authenticated
+  if (isLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-green-500"></div>
+      </div>
+    );
+  }
 
-    try {
-      const response = await fetch(`${API_URL}/verify-reset-code`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, code }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setStep(3); // Move to next step
-      } else {
-        setError(data.error || "Invalid verification code.");
-      }
-    } catch (err) {
-      setError("Something went wrong.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Step 3: Reset password
-  const handleResetPassword = async () => {
-    if (newPassword !== confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-
-    try {
-      const response = await fetch(`${API_URL}/reset-password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, newPassword }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        alert("Password reset successful! Please log in.");
-        window.location.href = "/auth/sign-in"; 
-      } else {
-        setError(data.error || "Failed to reset password.");
-      }
-    } catch (err) {
-      setError("Something went wrong.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (!isAuthenticated) {
+    return null; // The useAuthProtection hook will handle redirection
+  }
 
   return (
-    <div className="min-h-screen flex">
-      <AuthBackground />
-
-      <div className="flex flex-col gap-6 justify-center px-16 pr-40 w-full lg:w-1/2">
-        <Fingerprint className="w-20 h-12" />
-        <div>
-          <h1 className="text-xl font-semibold">Forgot Password?</h1>
-          <p className="text-sm text-gray-800">
-            {step === 1 && "No worries! We’ll send you reset instructions."}
-            {step === 2 && "Enter the verification code sent to your email."}
-            {step === 3 && "Enter your new password."}
-          </p>
-        </div>
-
-        {error && <p className="text-red-500 text-sm">{error}</p>}
-
-        {step === 1 && (
-          <div className="space-y-4 w-full">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              type="email"
-              id="email"
-              placeholder="Enter your registered email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="py-3 text-lg w-full"
-            />
-            <Button
-              className="bg-[#00a651] w-full py-3 hover:bg-green-500"
-              onClick={handleSubmitEmail}
-              disabled={loading}
-            >
-              {loading ? "Sending..." : "Reset Password"}
-            </Button>
-          </div>
-        )}
-
-        {step === 2 && (
-          <div className="space-y-4 w-full">
-            <Label htmlFor="code">Enter Code</Label>
-            <Input
-              type="text"
-              id="code"
-              placeholder="Verification Code"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              className="py-3 text-lg w-full"
-            />
-            <div className="flex justify-between gap-16">
-              <Button
-                className="bg-[#00a651] hover:bg-green-500 w-full"
-                onClick={handleSubmitCode}
-                disabled={loading}
-              >
-                {loading ? "Verifying..." : "Continue"}
-              </Button>
-              <Button
-                className="text-green-500 hover:bg-[#00a651] hover:text-white bg-white w-full"
-                onClick={handleSubmitEmail}
-              >
-                Resend Code
-              </Button>
+    <SidebarProvider className="flex">
+      <div className="flex h-screen">
+        <AppSidebar onSelect={setSelectedComponent} selected={selectedComponent} />
+        <SidebarTrigger />
+        <div className="flex-1 bg-gray-50">
+          <div className="flex justify-end p-5 bg-white shadow-sm">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <BellIcon className="cursor-pointer text-gray-600 hover:text-green-500 transition-colors" />
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                  2
+                </span>
+              </div>
+              <div className="flex items-center gap-2 cursor-pointer">
+                <UserRound className="text-gray-600" />
+                <div className="hidden md:block">
+                  <p className="text-sm font-medium">Admin User</p>
+                  <p className="text-xs text-gray-500">Admin</p>
+                </div>
+              </div>
             </div>
           </div>
-        )}
 
-        {step === 3 && (
-          <div className="space-y-4 w-full">
-            <Label htmlFor="newPassword">New Password</Label>
-            <Input
-              type="password"
-              id="newPassword"
-              placeholder="Enter new password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              className="py-3 text-lg w-full"
-            />
-            <Label htmlFor="confirmPassword">Confirm Password</Label>
-            <Input
-              type="password"
-              id="confirmPassword"
-              placeholder="Confirm new password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="py-3 text-lg w-full"
-            />
-            <Button
-              className="bg-[#00a651] w-full py-3 hover:bg-green-500"
-              onClick={handleResetPassword}
-              disabled={loading}
-            >
-              {loading ? "Resetting..." : "Reset Password"}
-            </Button>
+          <div className="p-6">
+            <ComponentToRender />
           </div>
-        )}
-
-        <div className="mt-4 text-sm text-gray-600">
-          <Link href="/auth/sign-in">
-            <span className="flex items-center gap-2 hover:underline">
-              <ArrowLeft className="w-4 h-4" />
-              Go to Login
-            </span>
-          </Link>
         </div>
       </div>
-    </div>
+    </SidebarProvider>
   );
 }

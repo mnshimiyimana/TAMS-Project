@@ -42,12 +42,11 @@ export default function Drivers() {
     try {
       setIsExporting(true);
 
-      // Fetch all drivers for export (without pagination)
       const response = await getDrivers({
-        limit: 1000, // A large number to get all drivers
+        limit: 1000,
         search: searchQuery,
         status: statusFilter,
-        // Add shift filter to export if needed
+
         ...(shiftFilter && { shift: shiftFilter }),
       });
 
@@ -56,7 +55,6 @@ export default function Drivers() {
         return;
       }
 
-      // Define columns for Excel
       const columns = [
         { header: "Driver ID", key: "driverId", width: 15 },
         { header: "Name", key: "names", width: 25 },
@@ -66,7 +64,6 @@ export default function Drivers() {
         { header: "Last Shift", key: "lastShift", width: 20 },
       ];
 
-      // Process dates for better Excel formatting
       const processedData = response.drivers.map((driver) => ({
         ...driver,
         lastShift: driver.lastShift
@@ -74,7 +71,6 @@ export default function Drivers() {
           : "N/A",
       }));
 
-      // Export to Excel
       exportToExcel(
         processedData,
         columns,
@@ -102,7 +98,6 @@ export default function Drivers() {
 
       <div className="flex justify-between py-8">
         <div className="flex gap-10 font-medium border-b-2 border-gray-300 pb-2">
-          {/* Enrolled Drivers */}
           <p
             className={`relative cursor-pointer ${
               activeTab === "enrolled" ? "text-green-500" : "text-gray-700"
@@ -115,7 +110,6 @@ export default function Drivers() {
             )}
           </p>
 
-          {/* Scheduled Drivers */}
           <p
             className={`relative cursor-pointer ${
               activeTab === "scheduled" ? "text-green-500" : "text-gray-700"
@@ -173,12 +167,11 @@ export default function Drivers() {
         <DriversTable
           searchQuery={searchQuery}
           statusFilter={statusFilter}
-          shiftFilter={shiftFilter} // Pass the shift filter value
+          shiftFilter={shiftFilter}
           refreshTrigger={refreshTrigger}
         />
       </div>
 
-      {/* Add Driver Dialog */}
       <AddDriverDialog
         open={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}

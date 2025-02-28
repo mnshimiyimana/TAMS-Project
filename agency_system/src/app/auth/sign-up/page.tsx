@@ -21,28 +21,31 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import Link from "next/link";
-
-// Enhanced validation schema
-const signUpSchema = z.object({
-  agencyName: z.string().min(3, "Agency name must be at least 3 characters"),
-  username: z.string().min(3, "Username must be at least 3 characters"),
-  email: z.string().email("Please enter a valid email address"),
-  phone: z.string().min(10, "Phone number must be at least 10 digits").regex(/^\+?[0-9\s]+$/, "Phone number can only contain numbers"),
-  location: z.string().min(3, "Location must be at least 3 characters"),
-  password: z
-    .string()
-    .min(8, "Password must be at least 8 characters")
-    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-    .regex(/[0-9]/, "Password must contain at least one number"),
-  confirmPassword: z.string(),
-  role: z.enum(["admin", "manager", "fuel"], {
-    required_error: "Please select a role",
-  }),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
+const signUpSchema = z
+  .object({
+    agencyName: z.string().min(3, "Agency name must be at least 3 characters"),
+    username: z.string().min(3, "Username must be at least 3 characters"),
+    email: z.string().email("Please enter a valid email address"),
+    phone: z
+      .string()
+      .min(10, "Phone number must be at least 10 digits")
+      .regex(/^\+?[0-9\s]+$/, "Phone number can only contain numbers"),
+    location: z.string().min(3, "Location must be at least 3 characters"),
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+      .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+      .regex(/[0-9]/, "Password must contain at least one number"),
+    confirmPassword: z.string(),
+    role: z.enum(["admin", "manager", "fuel"], {
+      required_error: "Please select a role",
+    }),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
 
 type SignUpFormData = z.infer<typeof signUpSchema>;
 
@@ -72,10 +75,7 @@ export default function SignUp() {
   });
 
   useEffect(() => {
-    // Clear any previous errors
     dispatch(clearError());
-    
-    // Check if user is already logged in
     const token = localStorage.getItem("token");
     if (token) {
       router.push("/dashboard");
@@ -93,12 +93,11 @@ export default function SignUp() {
     try {
       await dispatch(signUp(data)).unwrap();
       toast.success("Sign-up successful! Please log in.");
-      reset(); // Clear form
+      reset();
       setTimeout(() => {
         router.push("/auth/sign-in");
       }, 1500);
     } catch (err) {
-      // Error is handled by the thunk and will be in the state
       console.error("Sign-up failed");
     }
   };
@@ -122,7 +121,6 @@ export default function SignUp() {
           className="space-y-4 text-gray-700"
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Agency Name */}
             <div>
               <Label htmlFor="agencyName">Agency Name *</Label>
               <Input
@@ -137,7 +135,6 @@ export default function SignUp() {
               )}
             </div>
 
-            {/* Username */}
             <div>
               <Label htmlFor="username">Username *</Label>
               <Input
@@ -154,7 +151,6 @@ export default function SignUp() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Email */}
             <div>
               <Label htmlFor="email">Email *</Label>
               <Input
@@ -165,11 +161,12 @@ export default function SignUp() {
                 autoComplete="email"
               />
               {errors.email && (
-                <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.email.message}
+                </p>
               )}
             </div>
 
-            {/* Phone Number */}
             <div>
               <Label htmlFor="phone">Phone Number *</Label>
               <Input
@@ -180,13 +177,14 @@ export default function SignUp() {
                 autoComplete="tel"
               />
               {errors.phone && (
-                <p className="text-red-500 text-sm mt-1">{errors.phone.message}</p>
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.phone.message}
+                </p>
               )}
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Location */}
             <div>
               <Label htmlFor="location">Location *</Label>
               <Input
@@ -201,7 +199,6 @@ export default function SignUp() {
               )}
             </div>
 
-            {/* Role */}
             <div>
               <Label htmlFor="role">Role *</Label>
               <Select
@@ -219,13 +216,14 @@ export default function SignUp() {
                 </SelectContent>
               </Select>
               {errors.role && (
-                <p className="text-red-500 text-sm mt-1">{errors.role.message}</p>
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.role.message}
+                </p>
               )}
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Password */}
             <div>
               <Label htmlFor="password">Password *</Label>
               <Input
@@ -242,7 +240,6 @@ export default function SignUp() {
               )}
             </div>
 
-            {/* Confirm Password */}
             <div>
               <Label htmlFor="confirmPassword">Confirm Password *</Label>
               <Input
@@ -260,18 +257,14 @@ export default function SignUp() {
             </div>
           </div>
 
-          {/* Password requirements hint */}
           <p className="text-xs text-gray-500">
-            Password must be at least 8 characters and include uppercase, lowercase letters and numbers.
+            Password must be at least 8 characters and include uppercase,
+            lowercase letters and numbers.
           </p>
 
           <div className="flex justify-between py-4">
             <Link href="/auth/sign-in">
-              <Button
-                variant="outline"
-                type="button"
-                className="w-auto px-6"
-              >
+              <Button variant="outline" type="button" className="w-auto px-6">
                 Back to Login
               </Button>
             </Link>

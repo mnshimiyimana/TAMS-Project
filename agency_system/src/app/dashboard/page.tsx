@@ -28,7 +28,6 @@ export default function DashboardPage() {
     router.push("/auth/sign-in");
   };
 
-  // Display loading state or redirect if not authenticated
   if (isLoading) {
     return (
       <div className="h-screen flex items-center justify-center">
@@ -38,7 +37,7 @@ export default function DashboardPage() {
   }
 
   if (!isAuthenticated) {
-    return null; // The useAuthProtection hook will handle redirection
+    return null;
   }
 
   return (
@@ -61,7 +60,6 @@ export default function DashboardPage() {
               <div className="flex items-center gap-2 cursor-pointer">
                 <UserRound className="text-gray-600" />
                 <div className="hidden md:block">
-                  {/* Display the username and role dynamically */}
                   <p className="text-sm font-medium">{user?.username}</p>
                   <p className="text-xs text-gray-500">{user?.role}</p>
                 </div>

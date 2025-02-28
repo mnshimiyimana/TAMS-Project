@@ -25,7 +25,6 @@ export default function DashboardPage() {
     router.push("/auth/sign-in");
   };
 
-  // Display loading state or redirect if not authenticated
   if (isLoading) {
     return (
       <div className="h-screen flex items-center justify-center">
@@ -35,13 +34,16 @@ export default function DashboardPage() {
   }
 
   if (!isAuthenticated) {
-    return null; // The useAuthProtection hook will handle redirection
+    return null;
   }
 
   return (
     <SidebarProvider className="flex">
       <div className="flex h-screen">
-        <AppSidebar onSelect={setSelectedComponent} selected={selectedComponent} />
+        <AppSidebar
+          onSelect={setSelectedComponent}
+          selected={selectedComponent}
+        />
         <SidebarTrigger />
         <div className="flex-1 bg-gray-50">
           <div className="flex justify-end p-5 bg-white shadow-sm">

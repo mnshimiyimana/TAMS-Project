@@ -1,4 +1,3 @@
-// src/redux/slices/vehiclesSlice.ts
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import { vehiclesAPI } from "@/services/api";
 
@@ -128,7 +127,7 @@ const vehiclesSlice = createSlice({
   reducers: {
     setSearchQuery: (state, action: PayloadAction<string>) => {
       state.searchQuery = action.payload;
-      state.currentPage = 1; // Reset to first page on search
+      state.currentPage = 1;
       applyFiltersAndSearch(state);
     },
     setFilter: (
@@ -139,8 +138,8 @@ const vehiclesSlice = createSlice({
       }>
     ) => {
       const { key, value } = action.payload;
-      state.filters[key] = value;
-      state.currentPage = 1; // Reset to first page on filter change
+      state.filters[key] = value === "all" ? null : value;
+      state.currentPage = 1;
       applyFiltersAndSearch(state);
     },
     setPage: (state, action: PayloadAction<number>) => {
@@ -163,7 +162,7 @@ const vehiclesSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Fetch vehicles cases
+
       .addCase(fetchVehicles.pending, (state) => {
         state.status = "loading";
         state.isLoading = true;
@@ -182,7 +181,6 @@ const vehiclesSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // Add vehicle cases
       .addCase(addVehicle.pending, (state) => {
         state.isLoading = true;
       })
@@ -195,7 +193,6 @@ const vehiclesSlice = createSlice({
         state.isLoading = false;
       })
 
-      // Update vehicle cases
       .addCase(updateVehicle.pending, (state) => {
         state.isLoading = true;
       })
@@ -216,7 +213,6 @@ const vehiclesSlice = createSlice({
         state.isLoading = false;
       })
 
-      // Delete vehicle cases
       .addCase(deleteVehicle.fulfilled, (state, action) => {
         state.vehicles = state.vehicles.filter(
           (vehicle) => vehicle._id !== action.payload
@@ -229,11 +225,9 @@ const vehiclesSlice = createSlice({
   },
 });
 
-// Helper function to apply filters and search
 function applyFiltersAndSearch(state: VehiclesState) {
   let filtered = [...state.vehicles];
 
-  // Apply search
   if (state.searchQuery) {
     const query = state.searchQuery.toLowerCase();
     filtered = filtered.filter(
@@ -245,14 +239,13 @@ function applyFiltersAndSearch(state: VehiclesState) {
     );
   }
 
-  // Apply status filter
   if (state.filters.status) {
     filtered = filtered.filter(
       (vehicle) => vehicle.status === state.filters.status
     );
   }
 
-  // Apply capacity filter
+
   if (state.filters.capacity) {
     const capacity = parseInt(state.filters.capacity);
     if (!isNaN(capacity)) {

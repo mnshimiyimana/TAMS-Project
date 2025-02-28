@@ -1,7 +1,6 @@
-// src/components/Dropdowns/Vehicles.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/redux/store";
 import {
@@ -19,31 +18,30 @@ export default function VehiclesDropdowns() {
     (state: RootState) => state.vehicles
   );
 
-  // Extract unique status values
-  const [statusOptions, setStatusOptions] = useState<string[]>([]);
-  // Extract unique capacity values
-  const [capacityOptions, setCapacityOptions] = useState<number[]>([]);
-
-  useEffect(() => {
-    // Get unique status values
-    const uniqueStatuses = Array.from(
+  // Extract unique status values and sort
+  const statusOptions = useMemo(() => {
+    return Array.from(
       new Set(vehicles.map((vehicle) => vehicle.status))
-    );
-    setStatusOptions(uniqueStatuses);
+    ).sort();
+  }, [vehicles]);
 
-    // Get unique capacity values
-    const uniqueCapacities = Array.from(
+  // Extract unique capacity values and sort
+  const capacityOptions = useMemo(() => {
+    return Array.from(
       new Set(vehicles.map((vehicle) => vehicle.capacity))
-    );
-    setCapacityOptions(uniqueCapacities.sort((a, b) => a - b));
+    ).sort((a, b) => a - b);
   }, [vehicles]);
 
   const handleStatusChange = (value: string | null) => {
-    dispatch(setFilter({ key: "status", value }));
+    dispatch(
+      setFilter({ key: "status", value: value === "all" ? null : value })
+    );
   };
 
   const handleCapacityChange = (value: string | null) => {
-    dispatch(setFilter({ key: "capacity", value }));
+    dispatch(
+      setFilter({ key: "capacity", value: value === "all" ? null : value })
+    );
   };
 
   return (
@@ -58,7 +56,7 @@ export default function VehiclesDropdowns() {
             <span>{filters.status || "Status"}</span>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Statuses</SelectItem>
+            <SelectItem value="all">All Statuses</SelectItem>
             {statusOptions.map((status) => (
               <SelectItem key={status} value={status}>
                 {status}
@@ -78,7 +76,7 @@ export default function VehiclesDropdowns() {
             <span>{filters.capacity || "Capacity"}</span>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Capacities</SelectItem>
+            <SelectItem value="all">All Capacities</SelectItem>
             {capacityOptions.map((capacity) => (
               <SelectItem key={capacity} value={capacity.toString()}>
                 {capacity}

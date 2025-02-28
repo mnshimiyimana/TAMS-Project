@@ -88,18 +88,13 @@ body {
 }
 
 .bg-radiant-blue {
-  background: radial-gradient(ellipse 60% 70% at center, rgba(191, 219, 254, 0.6) 30%, transparent 80%);
+  background: radial-gradient(
+    ellipse 60% 70% at center,
+    rgba(191, 219, 254, 0.6) 30%,
+    transparent 80%
+  );
 }
 
 html {
   scroll-behavior: smooth;
 }
-
-.table-wrapper {
-  max-height: 900px; /* Or any height that fits your design */
-  overflow-y: auto; /* Enables scrolling when content overflows */
-}
-
-
-
-

@@ -1,4 +1,3 @@
-// src/components/AddVehicle.tsx
 "use client";
 
 import { useEffect } from "react";
@@ -27,7 +26,6 @@ import {
   Vehicle,
 } from "@/redux/slices/vehiclesSlice";
 
-// Zod validation schema
 const vehicleSchema = z.object({
   busId: z.string().min(1, "Bus ID is required"),
   plateNumber: z.string().min(1, "Plate number is required"),
@@ -76,7 +74,6 @@ export default function AddVehiclesDialog({
     },
   });
 
-  // Set form values when editing
   useEffect(() => {
     if (selectedVehicle) {
       setValue("busId", selectedVehicle.busId);
@@ -105,7 +102,6 @@ export default function AddVehiclesDialog({
 
   const onSubmit = async (data: VehicleFormData) => {
     try {
-      // If editing, update the vehicle; otherwise, add a new one
       if (isEditing && selectedVehicle) {
         await dispatch(
           updateVehicle({

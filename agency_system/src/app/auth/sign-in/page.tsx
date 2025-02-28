@@ -49,14 +49,12 @@ export default function SignIn() {
   }, [dispatch, router]);
 
   useEffect(() => {
-    // If user logs in successfully, redirect
     if (user) {
       toast.success("Signed in successfully!");
       router.push("/dashboard");
     }
   }, [user, router]);
 
-  // Display error toast when error changes
   useEffect(() => {
     if (error) {
       toast.error(error);
@@ -90,7 +88,6 @@ export default function SignIn() {
             onSubmit={handleSubmit(onSubmit)}
             className="space-y-5 text-gray-700"
           >
-            {/* Email */}
             <div>
               <Label htmlFor="email">Email address</Label>
               <Input
@@ -107,7 +104,6 @@ export default function SignIn() {
               )}
             </div>
 
-            {/* Password */}
             <div>
               <Label htmlFor="password">Password</Label>
               <Input
@@ -124,7 +120,6 @@ export default function SignIn() {
               )}
             </div>
 
-            {/* Forgot Password Link */}
             <div className="text-right">
               <Link href="/auth/reset">
                 <span className="text-green-600 hover:underline cursor-pointer">
@@ -133,7 +128,6 @@ export default function SignIn() {
               </Link>
             </div>
 
-            {/* Submit Button */}
             <Button
               type="submit"
               disabled={isLoading}
@@ -143,7 +137,6 @@ export default function SignIn() {
             </Button>
           </form>
 
-          {/* Sign Up Link */}
           <p className="text-center mt-4 text-gray-600">
             Don't have an account?{" "}
             <Link href="/auth/sign-up">

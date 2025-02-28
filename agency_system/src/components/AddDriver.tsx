@@ -23,7 +23,6 @@ import { Calendar } from "./ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { createDriver } from "@/services/driverService";
 
-// Zod validation schema with date validation
 const driverSchema = z.object({
   driverId: z.string().min(1, "Driver ID is required"),
   names: z.string().min(1, "Driver name is required"),
@@ -40,7 +39,7 @@ interface AddDriverDialogProps {
   open: boolean;
   onClose: () => void;
   onDriverUpdated: () => void;
-  vehicle?: any; // Added to maintain compatibility with the EditVehicleDialog props
+  vehicle?: any;
 }
 
 export default function AddDriverDialog({
@@ -74,7 +73,6 @@ export default function AddDriverDialog({
     try {
       setIsSubmitting(true);
 
-      // Use the selected date or current date if not selected
       const driverData = {
         ...data,
         lastShift: lastShiftDate
@@ -85,10 +83,10 @@ export default function AddDriverDialog({
       await createDriver(driverData);
 
       toast.success("Driver added successfully!");
-      reset(); // Reset form
-      setLastShiftDate(new Date()); // Reset date picker to today
-      onClose(); // Close dialog
-      onDriverUpdated(); // Call callback to refresh driver list
+      reset();
+      setLastShiftDate(new Date());
+      onClose();
+      onDriverUpdated();
     } catch (err: any) {
       console.error("Error creating driver:", err);
       toast.error(err?.response?.data?.message || "Failed to add driver");
@@ -99,7 +97,7 @@ export default function AddDriverDialog({
 
   const handleDialogClose = () => {
     reset();
-    setLastShiftDate(new Date()); // Reset date to today
+    setLastShiftDate(new Date());
     onClose();
   };
 
@@ -189,7 +187,6 @@ export default function AddDriverDialog({
             )}
           </div>
 
-          {/* Date Picker for Last Shift */}
           <div className="space-y-2">
             <Label htmlFor="lastShift">Last Shift Date</Label>
             <Popover>

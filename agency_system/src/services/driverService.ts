@@ -1,7 +1,5 @@
-// src/services/driverService.ts
 import axios from "axios";
 
-// Create a new axios instance for driver-related API calls
 const driverAPI = axios.create({
   baseURL: "http://localhost:5000/api",
   headers: {
@@ -9,10 +7,9 @@ const driverAPI = axios.create({
   },
 });
 
-// Request interceptor for adding auth token
 driverAPI.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("token"); // Get token from localStorage
+    const token = localStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -30,7 +27,7 @@ export interface Driver {
   email: string;
   phoneNumber: string;
   status: "On leave" | "On Shift" | "Off shift";
-  lastShift?: string; // Make lastShift optional
+  lastShift?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -49,7 +46,6 @@ export interface DriverParams {
   status?: string;
 }
 
-// Function to get drivers with pagination and filtering
 export const getDrivers = async (
   params: DriverParams = {}
 ): Promise<DriverResponse> => {
@@ -77,14 +73,13 @@ export const getDrivers = async (
   }
 };
 
-// Interface for creating a driver that matches the schema
 export interface CreateDriverData {
   driverId: string;
   names: string;
   email: string;
   phoneNumber: string;
   status: "On leave" | "On Shift" | "Off shift";
-  lastShift?: string | Date; // Optional, matches the schema
+  lastShift?: string | Date;
 }
 
 export const createDriver = async (driverData: CreateDriverData) => {
@@ -92,7 +87,7 @@ export const createDriver = async (driverData: CreateDriverData) => {
     console.log("Request URL:", "/drivers");
     console.log("Request Data:", driverData);
 
-    const response = await driverAPI.post("/drivers", driverData); // Send request to backend
+    const response = await driverAPI.post("/drivers", driverData);
     return response.data;
   } catch (error: any) {
     console.error("Error creating driver:", error.response || error);
@@ -100,7 +95,6 @@ export const createDriver = async (driverData: CreateDriverData) => {
   }
 };
 
-// Function to update an existing driver
 export const updateDriver = async (
   id: string,
   driverData: Partial<Driver>
@@ -114,7 +108,6 @@ export const updateDriver = async (
   }
 };
 
-// Function to delete a driver
 export const deleteDriver = async (id: string): Promise<void> => {
   try {
     await driverAPI.delete(`/drivers/${id}`);
@@ -124,7 +117,6 @@ export const deleteDriver = async (id: string): Promise<void> => {
   }
 };
 
-// Function to get a single driver by ID
 export const getDriverById = async (id: string): Promise<Driver> => {
   try {
     const response = await driverAPI.get(`/drivers/${id}`);

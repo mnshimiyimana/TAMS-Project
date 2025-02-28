@@ -52,7 +52,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// Define allowed statuses for stricter TypeScript enforcement
 type Status = "On Shift" | "Off shift" | "On leave";
 
 const tableHeaders = [
@@ -78,14 +77,14 @@ const defaultStatusStyle = "bg-gray-100 text-gray-600";
 interface DriversTableProps {
   searchQuery: string;
   statusFilter: string;
-  shiftFilter?: string; // Make shiftFilter optional
+  shiftFilter?: string;
   refreshTrigger: number;
 }
 
 export default function DriversTable({
   searchQuery,
   statusFilter,
-  shiftFilter, // Include this prop
+  shiftFilter,
   refreshTrigger,
 }: DriversTableProps) {
   const [drivers, setDrivers] = useState<Driver[]>([]);
@@ -118,14 +117,12 @@ export default function DriversTable({
 
       const response = await getDrivers(params);
 
-      // Add defensive checks to ensure properties exist
       if (response && response.drivers) {
         const fetchedDrivers = response.drivers;
         setDrivers(fetchedDrivers);
         setTotalPages(response.totalPages || 1);
         setTotalDrivers(response.totalDrivers || 0);
 
-        // Apply shift filter if provided
         if (shiftFilter) {
           const filtered = applyShiftFilter(fetchedDrivers);
           setFilteredDrivers(filtered);
@@ -133,7 +130,6 @@ export default function DriversTable({
           setFilteredDrivers(fetchedDrivers);
         }
       } else {
-        // If response doesn't have expected structure, set defaults
         setDrivers([]);
         setFilteredDrivers([]);
         setTotalPages(1);
@@ -143,7 +139,7 @@ export default function DriversTable({
     } catch (err) {
       console.error("Error fetching drivers:", err);
       setError("Failed to load drivers. Please try again.");
-      setDrivers([]); // Ensure drivers is an empty array on error
+      setDrivers([]);
       setFilteredDrivers([]);
       toast.error("Could not load drivers data");
     } finally {
@@ -151,7 +147,6 @@ export default function DriversTable({
     }
   };
 
-  // Function to apply shift filter
   const applyShiftFilter = (driversData: Driver[]) => {
     if (!shiftFilter) {
       return driversData;
@@ -195,12 +190,10 @@ export default function DriversTable({
     });
   };
 
-  // Fetch drivers when dependencies change
   useEffect(() => {
     fetchDrivers();
   }, [currentPage, searchQuery, statusFilter, refreshTrigger]);
 
-  // Update filtered drivers when shift filter changes
   useEffect(() => {
     if (drivers.length > 0) {
       if (shiftFilter) {
@@ -213,7 +206,6 @@ export default function DriversTable({
   }, [shiftFilter, drivers]);
 
   const handleEdit = (id: string) => {
-    // This will be implemented with the edit driver dialog
     toast.info(`Edit driver functionality coming soon for ID: ${id}`);
   };
 
@@ -228,7 +220,7 @@ export default function DriversTable({
     try {
       await deleteDriver(driverToDelete);
       toast.success("Driver deleted successfully");
-      fetchDrivers(); // Refresh the list
+      fetchDrivers();
     } catch (error) {
       toast.error("Failed to delete driver");
     } finally {
@@ -249,7 +241,6 @@ export default function DriversTable({
     }
   };
 
-  // Helper function to safely get status style
   const getStatusStyle = (status: string | undefined): string => {
     if (!status) return defaultStatusStyle;
     return statusStyles[status as Status] || defaultStatusStyle;
@@ -266,7 +257,6 @@ export default function DriversTable({
     );
   }
 
-  // Ensure we use filteredDrivers for display
   const driversToDisplay = filteredDrivers || [];
 
   return (
@@ -284,7 +274,6 @@ export default function DriversTable({
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              // Loading skeleton
               Array.from({ length: 5 }).map((_, index) => (
                 <TableRow key={`skeleton-${index}`}>
                   {Array.from({ length: 7 }).map((_, cellIndex) => (
@@ -308,7 +297,6 @@ export default function DriversTable({
               </TableRow>
             ) : (
               driversToDisplay.map((driver) => {
-                // Safely destructure driver with defaults in case any property is undefined
                 const {
                   _id = "",
                   driverId = "",
@@ -366,7 +354,6 @@ export default function DriversTable({
           </TableBody>
         </Table>
 
-        {/* Pagination */}
         {!isLoading && driversToDisplay.length > 0 && (
           <div className="flex items-center justify-between px-5 py-4 border-t">
             <div className="text-sm text-gray-500">
@@ -399,7 +386,6 @@ export default function DriversTable({
         )}
       </div>
 
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

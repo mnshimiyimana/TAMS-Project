@@ -42,7 +42,6 @@ export default function Vehicles() {
   };
 
   const handleExport = () => {
-    // Logic for exporting data to CSV
     alert("Export functionality to be implemented");
   };
 

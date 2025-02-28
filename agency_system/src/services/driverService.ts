@@ -30,7 +30,7 @@ export interface Driver {
   email: string;
   phoneNumber: string;
   status: "On leave" | "On Shift" | "Off shift";
-  lastShift: string;
+  lastShift?: string; // Make lastShift optional
   createdAt?: string;
   updatedAt?: string;
 }
@@ -77,15 +77,24 @@ export const getDrivers = async (
   }
 };
 
+// Interface for creating a driver that matches the schema
+export interface CreateDriverData {
+  driverId: string;
+  names: string;
+  email: string;
+  phoneNumber: string;
+  status: "On leave" | "On Shift" | "Off shift";
+  lastShift?: string | Date; // Optional, matches the schema
+}
 
-export const createDriver = async (driverData: { lastShift: string; status: "On leave" | "On Shift" | "Off shift"; driverId: string; names: string; email: string; phoneNumber: string; }) => {
+export const createDriver = async (driverData: CreateDriverData) => {
   try {
-    console.log('Request URL:', '/drivers');
-    console.log('Request Data:', driverData);
+    console.log("Request URL:", "/drivers");
+    console.log("Request Data:", driverData);
 
-    const response = await driverAPI.post('/drivers', driverData); // Send request to backend
+    const response = await driverAPI.post("/drivers", driverData); // Send request to backend
     return response.data;
-  } catch (error:any) {
+  } catch (error: any) {
     console.error("Error creating driver:", error.response || error);
     throw error;
   }

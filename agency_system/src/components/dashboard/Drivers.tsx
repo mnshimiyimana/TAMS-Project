@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import React, { useState } from "react";
 import { Button } from "../ui/button";
@@ -16,18 +16,22 @@ export default function Drivers() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [shiftFilter, setShiftFilter] = useState(""); // Add state for shift filter
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isExporting, setIsExporting] = useState(false);
 
   const handleDriverUpdated = () => {
     // Trigger a refresh of the drivers list
-    setRefreshTrigger(prev => prev + 1);
+    setRefreshTrigger((prev) => prev + 1);
   };
-
-  
 
   const handleStatusFilterChange = (status: string) => {
     setStatusFilter(status);
+  };
+
+  // Add handler for shift filter
+  const handleShiftFilterChange = (shift: string) => {
+    setShiftFilter(shift);
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -37,19 +41,21 @@ export default function Drivers() {
   const handleExportToExcel = async () => {
     try {
       setIsExporting(true);
-      
+
       // Fetch all drivers for export (without pagination)
       const response = await getDrivers({
         limit: 1000, // A large number to get all drivers
         search: searchQuery,
-        status: statusFilter
+        status: statusFilter,
+        // Add shift filter to export if needed
+        ...(shiftFilter && { shift: shiftFilter }),
       });
-      
+
       if (response.drivers.length === 0) {
         toast.warning("No data to export");
         return;
       }
-      
+
       // Define columns for Excel
       const columns = [
         { header: "Driver ID", key: "driverId", width: 15 },
@@ -59,22 +65,22 @@ export default function Drivers() {
         { header: "Status", key: "status", width: 15 },
         { header: "Last Shift", key: "lastShift", width: 20 },
       ];
-      
+
       // Process dates for better Excel formatting
-      const processedData = response.drivers.map(driver => ({
+      const processedData = response.drivers.map((driver) => ({
         ...driver,
-        lastShift: driver.lastShift 
-          ? new Date(driver.lastShift).toLocaleDateString() 
-          : "N/A"
+        lastShift: driver.lastShift
+          ? new Date(driver.lastShift).toLocaleDateString()
+          : "N/A",
       }));
-      
+
       // Export to Excel
       exportToExcel(
         processedData,
         columns,
-        `Drivers_Export_${new Date().toISOString().split('T')[0]}`
+        `Drivers_Export_${new Date().toISOString().split("T")[0]}`
       );
-      
+
       toast.success("Drivers exported successfully");
     } catch (error) {
       console.error("Export error:", error);
@@ -83,7 +89,6 @@ export default function Drivers() {
       setIsExporting(false);
     }
   };
-  
 
   return (
     <div>
@@ -130,7 +135,7 @@ export default function Drivers() {
           >
             + Add Driver
           </Button>
-          <Button 
+          <Button
             className="bg-[#005F15] hover:bg-[#004A12] text-white"
             onClick={handleExportToExcel}
             disabled={isExporting}
@@ -158,21 +163,25 @@ export default function Drivers() {
             onChange={handleSearchChange}
           />
         </div>
-        <DriversDropdowns onStatusChange={handleStatusFilterChange} />
+        <DriversDropdowns
+          onStatusChange={handleStatusFilterChange}
+          onShiftChange={handleShiftFilterChange} // Pass the new handler
+        />
       </div>
 
       <div>
-        <DriversTable 
-          searchQuery={searchQuery} 
-          statusFilter={statusFilter} 
-          refreshTrigger={refreshTrigger} 
+        <DriversTable
+          searchQuery={searchQuery}
+          statusFilter={statusFilter}
+          shiftFilter={shiftFilter} // Pass the shift filter value
+          refreshTrigger={refreshTrigger}
         />
       </div>
 
       {/* Add Driver Dialog */}
-      <AddDriverDialog 
-        open={isDialogOpen} 
-        onClose={() => setIsDialogOpen(false)} 
+      <AddDriverDialog
+        open={isDialogOpen}
+        onClose={() => setIsDialogOpen(false)}
         onDriverUpdated={handleDriverUpdated}
       />
     </div>

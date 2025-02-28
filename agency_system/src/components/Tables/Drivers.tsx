@@ -1,7 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { format } from "date-fns";
+import {
+  format,
+  isWithinInterval,
+  startOfDay,
+  endOfDay,
+  subDays,
+  subWeeks,
+  subMonths,
+} from "date-fns";
 import {
   Table,
   TableBody,
@@ -70,15 +78,18 @@ const defaultStatusStyle = "bg-gray-100 text-gray-600";
 interface DriversTableProps {
   searchQuery: string;
   statusFilter: string;
+  shiftFilter?: string; // Make shiftFilter optional
   refreshTrigger: number;
 }
 
 export default function DriversTable({
   searchQuery,
   statusFilter,
+  shiftFilter, // Include this prop
   refreshTrigger,
 }: DriversTableProps) {
   const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [filteredDrivers, setFilteredDrivers] = useState<Driver[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [driverToDelete, setDriverToDelete] = useState<string | null>(null);
@@ -109,12 +120,22 @@ export default function DriversTable({
 
       // Add defensive checks to ensure properties exist
       if (response && response.drivers) {
-        setDrivers(response.drivers);
+        const fetchedDrivers = response.drivers;
+        setDrivers(fetchedDrivers);
         setTotalPages(response.totalPages || 1);
         setTotalDrivers(response.totalDrivers || 0);
+
+        // Apply shift filter if provided
+        if (shiftFilter) {
+          const filtered = applyShiftFilter(fetchedDrivers);
+          setFilteredDrivers(filtered);
+        } else {
+          setFilteredDrivers(fetchedDrivers);
+        }
       } else {
         // If response doesn't have expected structure, set defaults
         setDrivers([]);
+        setFilteredDrivers([]);
         setTotalPages(1);
         setTotalDrivers(0);
         console.warn("Unexpected API response structure:", response);
@@ -123,15 +144,73 @@ export default function DriversTable({
       console.error("Error fetching drivers:", err);
       setError("Failed to load drivers. Please try again.");
       setDrivers([]); // Ensure drivers is an empty array on error
+      setFilteredDrivers([]);
       toast.error("Could not load drivers data");
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Function to apply shift filter
+  const applyShiftFilter = (driversData: Driver[]) => {
+    if (!shiftFilter) {
+      return driversData;
+    }
+
+    const now = new Date();
+    const today = startOfDay(now);
+    const yesterday = startOfDay(subDays(now, 1));
+    const lastWeekStart = startOfDay(subWeeks(now, 1));
+    const lastMonthStart = startOfDay(subMonths(now, 1));
+
+    return driversData.filter((driver) => {
+      if (!driver.lastShift) return false;
+
+      const lastShiftDate = new Date(driver.lastShift);
+
+      switch (shiftFilter) {
+        case "today":
+          return isWithinInterval(lastShiftDate, {
+            start: today,
+            end: endOfDay(now),
+          });
+        case "yesterday":
+          return isWithinInterval(lastShiftDate, {
+            start: yesterday,
+            end: endOfDay(yesterday),
+          });
+        case "last-week":
+          return isWithinInterval(lastShiftDate, {
+            start: lastWeekStart,
+            end: now,
+          });
+        case "last-month":
+          return isWithinInterval(lastShiftDate, {
+            start: lastMonthStart,
+            end: now,
+          });
+        default:
+          return true;
+      }
+    });
+  };
+
+  // Fetch drivers when dependencies change
   useEffect(() => {
     fetchDrivers();
   }, [currentPage, searchQuery, statusFilter, refreshTrigger]);
+
+  // Update filtered drivers when shift filter changes
+  useEffect(() => {
+    if (drivers.length > 0) {
+      if (shiftFilter) {
+        const filtered = applyShiftFilter(drivers);
+        setFilteredDrivers(filtered);
+      } else {
+        setFilteredDrivers(drivers);
+      }
+    }
+  }, [shiftFilter, drivers]);
 
   const handleEdit = (id: string) => {
     // This will be implemented with the edit driver dialog
@@ -187,8 +266,8 @@ export default function DriversTable({
     );
   }
 
-  // Ensure drivers is always an array
-  const driversToDisplay = drivers || [];
+  // Ensure we use filteredDrivers for display
+  const driversToDisplay = filteredDrivers || [];
 
   return (
     <div className="w-full ">
@@ -222,7 +301,7 @@ export default function DriversTable({
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-10">
                   No drivers found.{" "}
-                  {searchQuery || statusFilter
+                  {searchQuery || statusFilter || shiftFilter
                     ? "Try adjusting your filters."
                     : ""}
                 </TableCell>

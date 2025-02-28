@@ -11,10 +11,12 @@ import {
 
 interface DriversDropdownsProps {
   onStatusChange: (status: string) => void;
+  onShiftChange?: (shift: string) => void; // Make this optional for backward compatibility
 }
 
 export default function DriversDropdowns({
   onStatusChange,
+  onShiftChange,
 }: DriversDropdownsProps) {
   const [status, setStatus] = useState("all");
   const [shift, setShift] = useState("all");
@@ -24,6 +26,15 @@ export default function DriversDropdowns({
     // Only pass the actual status value to the parent component
     // If "all" is selected, pass an empty string to show all statuses
     onStatusChange(value === "all" ? "" : value);
+  };
+
+  const handleShiftChange = (value: string) => {
+    setShift(value);
+    // Only call onShiftChange if it's provided
+    if (onShiftChange) {
+      // Pass empty string for "all"
+      onShiftChange(value === "all" ? "" : value);
+    }
   };
 
   return (
@@ -45,7 +56,7 @@ export default function DriversDropdowns({
 
       {/* Last Shift Dropdown */}
       <div className="w-40">
-        <Select onValueChange={(value) => setShift(value)} value={shift}>
+        <Select onValueChange={handleShiftChange} value={shift}>
           <SelectTrigger className="flex items-center justify-between">
             <span>Last Shift</span>
           </SelectTrigger>

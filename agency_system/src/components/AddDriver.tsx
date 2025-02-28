@@ -4,9 +4,9 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { useDispatch, useSelector } from "react-redux";
-import { useEffect } from "react";
-
+import { useState } from "react";
+import { format } from "date-fns";
+import { Calendar as CalendarIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
@@ -18,47 +18,40 @@ import {
   SelectValue,
 } from "./ui/select";
 import { Button } from "./ui/button";
-import { updateVehicle, Status, Vehicle } from "../redux/slices/vehiclesSlice";
-import { RootState, AppDispatch } from "../redux/store";
+import { cn } from "@/lib/utils";
+import { Calendar } from "./ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { createDriver } from "@/services/driverService";
 
-// Zod validation schema
-const vehicleSchema = z.object({
-  busId: z.string().min(1, "Bus ID is required"),
-  plateNumber: z.string().min(1, "Plate number is required"),
-  type: z.string().min(1, "Vehicle type is required"),
-  agencyName: z.string().min(1, "Agency name is required"),
-  status: z.enum(
-    [
-      "Active",
-      "Inactive",
-      "Maintenance",
-      "Assigned",
-      "Available",
-      "Under Maintenance",
-    ],
-    {
-      errorMap: () => ({ message: "Status is required" }),
-    }
-  ),
-  capacity: z.coerce.number().min(1, "Capacity must be at least 1"),
-  busHistory: z.string().min(1, "Bus history is required"),
+// Zod validation schema with date validation
+const driverSchema = z.object({
+  driverId: z.string().min(1, "Driver ID is required"),
+  names: z.string().min(1, "Driver name is required"),
+  email: z.string().email("Invalid email format"),
+  phoneNumber: z.string().min(1, "Phone number is required"),
+  status: z.enum(["On leave", "On Shift", "Off shift"], {
+    errorMap: () => ({ message: "Status is required" }),
+  }),
 });
 
-type VehicleFormData = z.infer<typeof vehicleSchema>;
+type DriverFormData = z.infer<typeof driverSchema>;
 
-interface EditVehicleDialogProps {
+interface AddDriverDialogProps {
   open: boolean;
   onClose: () => void;
-  vehicle: Vehicle;
+  onDriverUpdated: () => void;
+  vehicle?: any; // Added to maintain compatibility with the EditVehicleDialog props
 }
 
-export default function EditVehicleDialog({
+export default function AddDriverDialog({
   open,
   onClose,
-  vehicle,
-}: EditVehicleDialogProps) {
-  const dispatch = useDispatch<AppDispatch>();
-  const { isLoading } = useSelector((state: RootState) => state.vehicles);
+  onDriverUpdated,
+}: AddDriverDialogProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lastShiftDate, setLastShiftDate] = useState<Date | undefined>(
+    new Date()
+  );
 
   const {
     register,
@@ -66,128 +59,107 @@ export default function EditVehicleDialog({
     formState: { errors },
     reset,
     setValue,
-  } = useForm<VehicleFormData>({
-    resolver: zodResolver(vehicleSchema),
+  } = useForm<DriverFormData>({
+    resolver: zodResolver(driverSchema),
     defaultValues: {
-      busId: vehicle.busId,
-      plateNumber: vehicle.plateNumber,
-      type: vehicle.type,
-      agencyName: vehicle.agencyName,
-      status: vehicle.status as Status,
-      capacity: vehicle.capacity,
-      busHistory: Array.isArray(vehicle.busHistory)
-        ? vehicle.busHistory.join(", ")
-        : vehicle.busHistory,
+      driverId: "",
+      names: "",
+      email: "",
+      phoneNumber: "",
+      status: "Off shift",
     },
   });
 
-  // Reset the form when the vehicle prop changes
-  useEffect(() => {
-    if (vehicle) {
-      setValue("busId", vehicle.busId);
-      setValue("plateNumber", vehicle.plateNumber);
-      setValue("type", vehicle.type);
-      setValue("agencyName", vehicle.agencyName);
-      setValue("status", vehicle.status as Status);
-      setValue("capacity", vehicle.capacity);
-      setValue(
-        "busHistory",
-        Array.isArray(vehicle.busHistory)
-          ? vehicle.busHistory.join(", ")
-          : vehicle.busHistory
-      );
-    }
-  }, [vehicle, setValue]);
-
-  const onSubmit = async (data: VehicleFormData) => {
+  const onSubmit = async (data: DriverFormData) => {
     try {
-      // Map form status to backend status if needed
-      const mappedStatus =
-        data.status === "Active"
-          ? "Available"
-          : data.status === "Inactive"
-          ? "Under Maintenance"
-          : data.status === "Maintenance"
-          ? "Under Maintenance"
-          : data.status;
+      setIsSubmitting(true);
 
-      const vehicleData = {
+      // Use the selected date or current date if not selected
+      const driverData = {
         ...data,
-        status: mappedStatus as Status,
+        lastShift: lastShiftDate
+          ? lastShiftDate.toISOString()
+          : new Date().toISOString(),
       };
 
-      await dispatch(
-        updateVehicle({
-          id: vehicle._id || "",
-          vehicleData,
-        })
-      ).unwrap();
+      await createDriver(driverData);
 
-      toast.success("Vehicle updated successfully!");
-      onClose();
+      toast.success("Driver added successfully!");
+      reset(); // Reset form
+      setLastShiftDate(new Date()); // Reset date picker to today
+      onClose(); // Close dialog
+      onDriverUpdated(); // Call callback to refresh driver list
     } catch (err: any) {
-      toast.error(err || "Failed to update vehicle");
+      console.error("Error creating driver:", err);
+      toast.error(err?.response?.data?.message || "Failed to add driver");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
+  const handleDialogClose = () => {
+    reset();
+    setLastShiftDate(new Date()); // Reset date to today
+    onClose();
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={handleDialogClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <h1 className="text-green-500 font-medium">Vehicles</h1>
-          <DialogTitle>Edit Vehicle</DialogTitle>
-          <p>Update Vehicle Details</p>
+          <h1 className="text-green-500 font-medium">Drivers</h1>
+          <DialogTitle>Add New Driver</DialogTitle>
+          <p>Record Driver Details</p>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <Label htmlFor="bus-id">Bus ID</Label>
+            <Label htmlFor="driver-id">Driver ID</Label>
             <Input
-              id="bus-id"
-              {...register("busId")}
-              placeholder="Enter bus ID"
+              id="driver-id"
+              {...register("driverId")}
+              placeholder="Enter driver ID"
             />
-            {errors.busId && (
-              <p className="text-red-500 text-sm">{errors.busId.message}</p>
+            {errors.driverId && (
+              <p className="text-red-500 text-sm">{errors.driverId.message}</p>
             )}
           </div>
 
           <div>
-            <Label htmlFor="plate-number">Plate Number</Label>
+            <Label htmlFor="names">Full Name</Label>
             <Input
-              id="plate-number"
-              {...register("plateNumber")}
-              placeholder="Enter plate number"
+              id="names"
+              {...register("names")}
+              placeholder="Enter full name"
             />
-            {errors.plateNumber && (
+            {errors.names && (
+              <p className="text-red-500 text-sm">{errors.names.message}</p>
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              {...register("email")}
+              placeholder="Enter email address"
+            />
+            {errors.email && (
+              <p className="text-red-500 text-sm">{errors.email.message}</p>
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="phone">Phone Number</Label>
+            <Input
+              id="phone"
+              {...register("phoneNumber")}
+              placeholder="Enter phone number"
+            />
+            {errors.phoneNumber && (
               <p className="text-red-500 text-sm">
-                {errors.plateNumber.message}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <Label htmlFor="type">Type</Label>
-            <Input
-              id="type"
-              {...register("type")}
-              placeholder="Enter vehicle type"
-            />
-            {errors.type && (
-              <p className="text-red-500 text-sm">{errors.type.message}</p>
-            )}
-          </div>
-
-          <div>
-            <Label htmlFor="agency-name">Agency Name</Label>
-            <Input
-              id="agency-name"
-              {...register("agencyName")}
-              placeholder="Enter agency name"
-            />
-            {errors.agencyName && (
-              <p className="text-red-500 text-sm">
-                {errors.agencyName.message}
+                {errors.phoneNumber.message}
               </p>
             )}
           </div>
@@ -195,21 +167,21 @@ export default function EditVehicleDialog({
           <div>
             <Label htmlFor="status">Status</Label>
             <Select
-              onValueChange={(value) => setValue("status", value as Status)}
-              defaultValue={vehicle.status}
+              onValueChange={(value) =>
+                setValue(
+                  "status",
+                  value as "On leave" | "On Shift" | "Off shift"
+                )
+              }
+              defaultValue="Off shift"
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Active">Active</SelectItem>
-                <SelectItem value="Inactive">Inactive</SelectItem>
-                <SelectItem value="Maintenance">Maintenance</SelectItem>
-                <SelectItem value="Assigned">Assigned</SelectItem>
-                <SelectItem value="Available">Available</SelectItem>
-                <SelectItem value="Under Maintenance">
-                  Under Maintenance
-                </SelectItem>
+                <SelectItem value="On leave">On Leave</SelectItem>
+                <SelectItem value="On Shift">On Shift</SelectItem>
+                <SelectItem value="Off shift">Off Shift</SelectItem>
               </SelectContent>
             </Select>
             {errors.status && (
@@ -217,43 +189,47 @@ export default function EditVehicleDialog({
             )}
           </div>
 
-          <div>
-            <Label htmlFor="capacity">Capacity</Label>
-            <Input
-              id="capacity"
-              type="number"
-              {...register("capacity")}
-              placeholder="Enter capacity"
-            />
-            {errors.capacity && (
-              <p className="text-red-500 text-sm">{errors.capacity.message}</p>
-            )}
-          </div>
-
-          <div>
-            <Label htmlFor="bus-history">Bus History</Label>
-            <Input
-              id="bus-history"
-              {...register("busHistory")}
-              placeholder="Enter bus history"
-            />
-            {errors.busHistory && (
-              <p className="text-red-500 text-sm">
-                {errors.busHistory.message}
-              </p>
-            )}
+          {/* Date Picker for Last Shift */}
+          <div className="space-y-2">
+            <Label htmlFor="lastShift">Last Shift Date</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={"outline"}
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !lastShiftDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {lastShiftDate ? (
+                    format(lastShiftDate, "PPP")
+                  ) : (
+                    <span>Pick a date</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={lastShiftDate}
+                  onSelect={setLastShiftDate}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="flex justify-between mt-4">
-            <Button variant="outline" type="button" onClick={onClose}>
+            <Button variant="outline" type="button" onClick={handleDialogClose}>
               Cancel
             </Button>
             <Button
               className="bg-[#005F15] hover:bg-[#004A12] text-white"
               type="submit"
-              disabled={isLoading}
+              disabled={isSubmitting}
             >
-              {isLoading ? "Updating..." : "Update Vehicle"}
+              {isSubmitting ? "Adding..." : "Add Driver"}
             </Button>
           </div>
         </form>

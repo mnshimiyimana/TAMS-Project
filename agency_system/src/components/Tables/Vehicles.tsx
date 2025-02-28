@@ -1,6 +1,9 @@
+// src/components/Tables/Vehicles.tsx
 "use client";
 
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "@/redux/store";
 import {
   Table,
   TableBody,
@@ -17,9 +20,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  fetchVehicles,
+  deleteVehicle,
+  selectVehicle,
+  setPage,
+  Vehicle,
+} from "@/redux/slices/vehiclesSlice";
+import { toast } from "sonner";
+import PaginationComponent from "@/components/common/Pagination";
 
 // Define allowed statuses for stricter TypeScript enforcement
-type Status = "Assigned" | "Under Maintenance" | "Available";
+type Status = "Available" | "Assigned" | "Under Maintenance";
 
 const tableHeaders = [
   "Bus ID",
@@ -34,59 +46,78 @@ const tableHeaders = [
 
 // Define status styles using a Record type for better TypeScript support
 const statusStyles: Record<Status, string> = {
-  "Assigned": "bg-[#E9F6F2] text-[#3CD278]",
+  Available: "bg-[#DEEDFE] text-[#00A651]",
+  Assigned: "bg-[#E9F6F2] text-[#3CD278]",
   "Under Maintenance": "bg-[#FEF5D3] text-[#F7953B]",
-  "Available": "bg-[#DEEDFE] text-[#00A651]",
 };
 
-// Vehicle data structure
-interface Vehicle {
-  busId: string;
-  plateNumber: string;
-  type: string;
-  agencyName: string;
-  status: Status;
-  capacity: number;
-  busHistory: string;
+interface VehiclesTableProps {
+  onEdit: (id: string) => void;
 }
 
-// Initial vehicle data
-const initialVehicles: Vehicle[] = [
-  {
-    busId: "B001",
-    plateNumber: "RAA 123 A",
-    type: "Minibus",
-    agencyName: "Express Transport",
-    status: "Available",
-    capacity: 18,
-    busHistory: "Serviced last month",
-  },
-  {
-    busId: "B002",
-    plateNumber: "RBB 456 B",
-    type: "Coach",
-    agencyName: "City Lines",
-    status: "Assigned",
-    capacity: 50,
-    busHistory: "In continuous operation",
-  },
-  {
-    busId: "B003",
-    plateNumber: "RCC 789 C",
-    type: "Shuttle",
-    agencyName: "Quick Move",
-    status: "Under Maintenance",
-    capacity: 12,
-    busHistory: "Needs tire replacement",
-  },
-];
+export default function VehiclesTable({ onEdit }: VehiclesTableProps) {
+  const dispatch = useDispatch<AppDispatch>();
+  const { filteredVehicles, status, error, currentPage, totalCount } =
+    useSelector((state: RootState) => state.vehicles);
 
-export default function VehiclesTable() {
-  const [vehicles, setVehicles] = useState<Vehicle[]>(initialVehicles);
+  const pageSize = 5; // Number of items per page
 
-  const handleEdit = (id: string) => console.log("Edit Vehicle:", id);
-  const handleDelete = (id: string) =>
-    setVehicles((prev) => prev.filter((v) => v.busId !== id));
+  useEffect(() => {
+    if (status === "idle") {
+      dispatch(fetchVehicles());
+    }
+  }, [dispatch, status]);
+
+  // Calculate paginated data
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedData = filteredVehicles.slice(startIndex, endIndex);
+
+  const handleEdit = (id: string) => {
+    dispatch(selectVehicle(id));
+    onEdit(id);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (window.confirm("Are you sure you want to delete this vehicle?")) {
+      try {
+        await dispatch(deleteVehicle(id)).unwrap();
+        toast.success("Vehicle deleted successfully");
+      } catch (error) {
+        toast.error(
+          typeof error === "string" ? error : "Failed to delete vehicle"
+        );
+      }
+    }
+  };
+
+  const handlePageChange = (page: number) => {
+    dispatch(setPage(page));
+  };
+
+  if (status === "loading" && filteredVehicles.length === 0) {
+    return (
+      <div className="w-full py-6 bg-white rounded-lg text-center">
+        Loading vehicles...
+      </div>
+    );
+  }
+
+  if (status === "failed") {
+    return (
+      <div className="w-full py-6 bg-white rounded-lg text-center text-red-500">
+        Error: {error}
+      </div>
+    );
+  }
+
+  if (filteredVehicles.length === 0) {
+    return (
+      <div className="w-full py-6 bg-white rounded-lg text-center">
+        No vehicles found.
+      </div>
+    );
+  }
 
   return (
     <div className="w-full py-6 bg-white rounded-lg overflow-x-auto">
@@ -101,49 +132,58 @@ export default function VehiclesTable() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {vehicles.map(
-            ({ busId, plateNumber, type, agencyName, status, capacity, busHistory }) => (
-              <TableRow key={busId}>
-                <TableCell className="px-5 py-4">{busId}</TableCell>
-                <TableCell className="px-5 py-4">{plateNumber}</TableCell>
-                <TableCell className="px-5 py-4">{type}</TableCell>
-                <TableCell className="px-5 py-4">{agencyName}</TableCell>
-                <TableCell className="px-8 py-4">
-                  <span
-                    className={`${
-                      statusStyles[status]
-                    } text-sm font-medium rounded-lg px-3 py-1`}
-                  >
-                    {status}
-                  </span>
-                </TableCell>
-                <TableCell className="px-5 py-4">{capacity}</TableCell>
-                <TableCell className="px-5 py-4">{busHistory}</TableCell>
-                <TableCell className="px-8 py-4 text-center">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost">
-                        <MoreVertical className="w-5 h-5" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuItem onClick={() => handleEdit(busId)}>
-                        <Edit className="w-4 h-4 mr-2" /> Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleDelete(busId)}
-                        className="text-red-500"
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" /> Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            )
-          )}
+          {paginatedData.map((vehicle) => (
+            <TableRow key={vehicle._id}>
+              <TableCell className="px-5 py-4">{vehicle.busId}</TableCell>
+              <TableCell className="px-5 py-4">{vehicle.plateNumber}</TableCell>
+              <TableCell className="px-5 py-4">{vehicle.type}</TableCell>
+              <TableCell className="px-5 py-4">{vehicle.agencyName}</TableCell>
+              <TableCell className="px-8 py-4">
+                <span
+                  className={`${
+                    statusStyles[vehicle.status as Status]
+                  } text-sm font-medium rounded-lg px-3 py-1`}
+                >
+                  {vehicle.status}
+                </span>
+              </TableCell>
+              <TableCell className="px-5 py-4">{vehicle.capacity}</TableCell>
+              <TableCell className="px-5 py-4">
+                {typeof vehicle.busHistory === "string"
+                  ? vehicle.busHistory
+                  : vehicle.busHistory.join(", ")}
+              </TableCell>
+              <TableCell className="px-8 py-4 text-center">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost">
+                      <MoreVertical className="w-5 h-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => handleEdit(vehicle._id)}>
+                      <Edit className="w-4 h-4 mr-2" /> Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleDelete(vehicle._id)}
+                      className="text-red-500"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" /> Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TableCell>
+            </TableRow>
+          ))}
         </TableBody>
       </Table>
+
+      <PaginationComponent
+        currentPage={currentPage}
+        totalItems={totalCount}
+        pageSize={pageSize}
+        onPageChange={handlePageChange}
+      />
     </div>
   );
 }

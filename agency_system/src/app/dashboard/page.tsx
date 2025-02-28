@@ -7,10 +7,11 @@ import { BellIcon, UserRound } from "lucide-react";
 import { useSelectedComponent } from "@/hooks/useSelectedComponent";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuthProtection } from "@/hooks/useAuthProtection";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch } from "@/redux/store";
 import { signOut } from "@/redux/slices/authSlice";
 import { toast } from "sonner";
+import { RootState } from "@/redux/store"; // Import the RootState type to access Redux state
 
 export default function DashboardPage() {
   const { selectedComponent, setSelectedComponent, ComponentToRender } =
@@ -18,6 +19,8 @@ export default function DashboardPage() {
   const { isLoading, isAuthenticated } = useAuthProtection("/auth/sign-in");
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
+
+  const user = useSelector((state: RootState) => state.auth.user); // Access the user data from Redux store
 
   const handleLogout = () => {
     dispatch(signOut());
@@ -41,11 +44,14 @@ export default function DashboardPage() {
   return (
     <SidebarProvider className="flex">
       <div className="flex h-screen">
-        <AppSidebar onSelect={setSelectedComponent} selected={selectedComponent} />
+        <AppSidebar
+          onSelect={setSelectedComponent}
+          selected={selectedComponent}
+        />
         <SidebarTrigger />
         <div className="flex-1 bg-gray-50">
           <div className="flex justify-end p-5 bg-white shadow-sm">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-6">
               <div className="relative">
                 <BellIcon className="cursor-pointer text-gray-600 hover:text-green-500 transition-colors" />
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
@@ -55,8 +61,9 @@ export default function DashboardPage() {
               <div className="flex items-center gap-2 cursor-pointer">
                 <UserRound className="text-gray-600" />
                 <div className="hidden md:block">
-                  <p className="text-sm font-medium">Admin User</p>
-                  <p className="text-xs text-gray-500">Admin</p>
+                  {/* Display the username and role dynamically */}
+                  <p className="text-sm font-medium">{user?.username}</p>
+                  <p className="text-xs text-gray-500">{user?.role}</p>
                 </div>
               </div>
             </div>

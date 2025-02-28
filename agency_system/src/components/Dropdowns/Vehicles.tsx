@@ -1,6 +1,9 @@
+// src/components/Dropdowns/Vehicles.tsx
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "@/redux/store";
 import {
   Select,
   SelectContent,
@@ -8,39 +11,79 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { setFilter } from "@/redux/slices/vehiclesSlice";
 
 export default function VehiclesDropdowns() {
-  const [status, setStatus] = useState("");
-  const [shift, setShift] = useState("");
+  const dispatch = useDispatch<AppDispatch>();
+  const { vehicles, filters } = useSelector(
+    (state: RootState) => state.vehicles
+  );
+
+  // Extract unique status values
+  const [statusOptions, setStatusOptions] = useState<string[]>([]);
+  // Extract unique capacity values
+  const [capacityOptions, setCapacityOptions] = useState<number[]>([]);
+
+  useEffect(() => {
+    // Get unique status values
+    const uniqueStatuses = Array.from(
+      new Set(vehicles.map((vehicle) => vehicle.status))
+    );
+    setStatusOptions(uniqueStatuses);
+
+    // Get unique capacity values
+    const uniqueCapacities = Array.from(
+      new Set(vehicles.map((vehicle) => vehicle.capacity))
+    );
+    setCapacityOptions(uniqueCapacities.sort((a, b) => a - b));
+  }, [vehicles]);
+
+  const handleStatusChange = (value: string | null) => {
+    dispatch(setFilter({ key: "status", value }));
+  };
+
+  const handleCapacityChange = (value: string | null) => {
+    dispatch(setFilter({ key: "capacity", value }));
+  };
 
   return (
     <div className="flex gap-6">
       {/* Status Dropdown */}
       <div className="w-40">
-        <Select onValueChange={(value) => setStatus(value)}>
+        <Select
+          value={filters.status || ""}
+          onValueChange={(value) => handleStatusChange(value || null)}
+        >
           <SelectTrigger className="flex items-center justify-between">
-            <span>Status</span>
+            <span>{filters.status || "Status"}</span>
           </SelectTrigger>
           <SelectContent>
-            {/* Placeholder - Replace with backend data */}
-            <SelectItem value="Assigned">Assigned</SelectItem>
-            <SelectItem value="Under Maintenance">Available</SelectItem>
-            <SelectItem value="Available">Under Maintenance</SelectItem>
+            <SelectItem value="">All Statuses</SelectItem>
+            {statusOptions.map((status) => (
+              <SelectItem key={status} value={status}>
+                {status}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
 
-      {/* Last Shift Dropdown */}
+      {/* Capacity Dropdown */}
       <div className="w-40">
-        <Select onValueChange={(value) => setShift(value)}>
+        <Select
+          value={filters.capacity || ""}
+          onValueChange={(value) => handleCapacityChange(value || null)}
+        >
           <SelectTrigger className="flex items-center justify-between">
-            <span>Capacity</span>
+            <span>{filters.capacity || "Capacity"}</span>
           </SelectTrigger>
           <SelectContent>
-            {/* Placeholder - Replace with backend data */}
-            <SelectItem value="morning">60</SelectItem>
-            <SelectItem value="afternoon">35</SelectItem>
-            <SelectItem value="night">40</SelectItem>
+            <SelectItem value="">All Capacities</SelectItem>
+            {capacityOptions.map((capacity) => (
+              <SelectItem key={capacity} value={capacity.toString()}>
+                {capacity}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>

@@ -1,5 +1,5 @@
 import express from 'express';
-import { protect } from '../middlewares/authMiddleware.js';
+import { protect, authorize } from '../middlewares/authMiddleware.js';
 import { 
   createDriver, 
   getDrivers, 
@@ -10,7 +10,7 @@ import {
 
 const router = express.Router();
 
-router.post('/', protect, createDriver); 
+router.post('/', protect, authorize('admin', 'manager'), createDriver);
 router.get('/', getDrivers);
 router.get('/:id', getDriverById);
 router.put('/:id', protect, updateDriver);

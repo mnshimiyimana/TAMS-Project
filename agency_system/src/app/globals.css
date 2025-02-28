@@ -95,6 +95,11 @@ html {
   scroll-behavior: smooth;
 }
 
+.table-wrapper {
+  max-height: 900px; /* Or any height that fits your design */
+  overflow-y: auto; /* Enables scrolling when content overflows */
+}
+
 
 
 

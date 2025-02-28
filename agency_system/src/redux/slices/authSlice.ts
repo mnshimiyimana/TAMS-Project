@@ -18,6 +18,7 @@ interface AuthState {
   resetToken: string | null;
 }
 
+
 interface SignUpData {
   agencyName: string;
   username: string;
@@ -147,6 +148,8 @@ const authSlice = createSlice({
       state.resetToken = null;
     }
   },
+
+  
   extraReducers: (builder) => {
     builder
       // Sign-up cases
@@ -167,9 +170,9 @@ const authSlice = createSlice({
         state.isLoading = true;
         state.error = null;
       })
-      .addCase(signIn.fulfilled, (state, action) => {
+      .addCase(signIn.fulfilled, (state, action: PayloadAction<{ user: UserData; token: string }>) => {
         state.isLoading = false;
-        state.user = action.payload;
+        state.user = action.payload.user;  // Store user data
         // Store user data in localStorage for persistence
         localStorage.setItem("token", action.payload.token);
         localStorage.setItem("user", JSON.stringify(action.payload.user));
@@ -220,6 +223,7 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload as string;
       });
+      
   },
 });
 

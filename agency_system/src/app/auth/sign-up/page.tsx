@@ -82,7 +82,6 @@ export default function SignUp() {
     }
   }, [dispatch, router]);
 
-  // Display error toast when error changes
   useEffect(() => {
     if (error) {
       toast.error(error);
@@ -106,7 +105,7 @@ export default function SignUp() {
     <div className="flex min-h-screen">
       <AuthBackground />
 
-      <div className="w-full lg:w-1/2 px-8 lg:px-16 py-10 overflow-y-auto">
+      <div className="w-full lg:w-1/2 px-8 lg:px-16 lg:py-40 overflow-y-auto">
         <div className="mb-6">
           <h1 className="text-2xl font-bold">Sign Up</h1>
           <p className="text-sm text-gray-700">
@@ -122,7 +121,7 @@ export default function SignUp() {
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="agencyName">Agency Name *</Label>
+              <Label htmlFor="agencyName">Agency Name</Label>
               <Input
                 id="agencyName"
                 {...register("agencyName")}
@@ -136,7 +135,7 @@ export default function SignUp() {
             </div>
 
             <div>
-              <Label htmlFor="username">Username *</Label>
+              <Label htmlFor="username">Username </Label>
               <Input
                 id="username"
                 {...register("username")}
@@ -152,7 +151,7 @@ export default function SignUp() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="email">Email *</Label>
+              <Label htmlFor="email">Email </Label>
               <Input
                 id="email"
                 type="email"
@@ -168,7 +167,7 @@ export default function SignUp() {
             </div>
 
             <div>
-              <Label htmlFor="phone">Phone Number *</Label>
+              <Label htmlFor="phone">Phone Number </Label>
               <Input
                 id="phone"
                 type="tel"
@@ -186,7 +185,7 @@ export default function SignUp() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="location">Location *</Label>
+              <Label htmlFor="location">Location </Label>
               <Input
                 id="location"
                 {...register("location")}
@@ -200,7 +199,7 @@ export default function SignUp() {
             </div>
 
             <div>
-              <Label htmlFor="role">Role *</Label>
+              <Label htmlFor="role">Role </Label>
               <Select
                 onValueChange={(value) =>
                   setValue("role", value as "admin" | "manager" | "fuel")
@@ -225,7 +224,7 @@ export default function SignUp() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="password">Password *</Label>
+              <Label htmlFor="password">Password </Label>
               <Input
                 id="password"
                 type="password"
@@ -241,7 +240,7 @@ export default function SignUp() {
             </div>
 
             <div>
-              <Label htmlFor="confirmPassword">Confirm Password *</Label>
+              <Label htmlFor="confirmPassword">Confirm Password </Label>
               <Input
                 id="confirmPassword"
                 type="password"

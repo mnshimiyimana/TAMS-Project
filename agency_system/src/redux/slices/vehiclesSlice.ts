@@ -162,7 +162,6 @@ const vehiclesSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-
       .addCase(fetchVehicles.pending, (state) => {
         state.status = "loading";
         state.isLoading = true;
@@ -229,7 +228,7 @@ function applyFiltersAndSearch(state: VehiclesState) {
   let filtered = [...state.vehicles];
 
   if (state.searchQuery) {
-    const query = state.searchQuery.toLowerCase();
+    const query = state.searchQuery.toLowerCase().trim();
     filtered = filtered.filter(
       (vehicle) =>
         vehicle.plateNumber.toLowerCase().includes(query) ||
@@ -244,7 +243,6 @@ function applyFiltersAndSearch(state: VehiclesState) {
       (vehicle) => vehicle.status === state.filters.status
     );
   }
-
 
   if (state.filters.capacity) {
     const capacity = parseInt(state.filters.capacity);

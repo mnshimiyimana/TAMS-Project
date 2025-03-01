@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
@@ -21,7 +21,7 @@ import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 import { Calendar } from "./ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
-import { createDriver } from "@/services/driverService";
+import { createDriver, updateDriver, Driver } from "@/services/driverService";
 
 const driverSchema = z.object({
   driverId: z.string().min(1, "Driver ID is required"),
@@ -39,18 +39,23 @@ interface AddDriverDialogProps {
   open: boolean;
   onClose: () => void;
   onDriverUpdated: () => void;
-  vehicle?: any;
+  agencyName: string;
+  driverToEdit?: Driver | null;
 }
 
 export default function AddDriverDialog({
   open,
   onClose,
   onDriverUpdated,
+  agencyName,
+  driverToEdit = null,
 }: AddDriverDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lastShiftDate, setLastShiftDate] = useState<Date | undefined>(
     new Date()
   );
+
+  const isEditing = !!driverToEdit;
 
   const {
     register,
@@ -69,6 +74,23 @@ export default function AddDriverDialog({
     },
   });
 
+  useEffect(() => {
+    if (driverToEdit) {
+      setValue("driverId", driverToEdit.driverId);
+      setValue("names", driverToEdit.names);
+      setValue("email", driverToEdit.email);
+      setValue("phoneNumber", driverToEdit.phoneNumber);
+      setValue(
+        "status",
+        driverToEdit.status as "On leave" | "On Shift" | "Off shift"
+      );
+
+      if (driverToEdit.lastShift) {
+        setLastShiftDate(new Date(driverToEdit.lastShift));
+      }
+    }
+  }, [driverToEdit, setValue]);
+
   const onSubmit = async (data: DriverFormData) => {
     try {
       setIsSubmitting(true);
@@ -78,18 +100,28 @@ export default function AddDriverDialog({
         lastShift: lastShiftDate
           ? lastShiftDate.toISOString()
           : new Date().toISOString(),
+        agencyName: agencyName,
       };
 
-      await createDriver(driverData);
+      if (isEditing && driverToEdit) {
+        await updateDriver(driverToEdit._id, driverData);
+        toast.success("Driver updated successfully!");
+      } else {
+        // Create new driver
+        await createDriver(driverData);
+        toast.success("Driver added successfully!");
+      }
 
-      toast.success("Driver added successfully!");
       reset();
       setLastShiftDate(new Date());
       onClose();
       onDriverUpdated();
     } catch (err: any) {
-      console.error("Error creating driver:", err);
-      toast.error(err?.response?.data?.message || "Failed to add driver");
+      console.error("Error with driver:", err);
+      toast.error(
+        err?.response?.data?.message ||
+          (isEditing ? "Failed to update driver" : "Failed to add driver")
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -106,7 +138,9 @@ export default function AddDriverDialog({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <h1 className="text-green-500 font-medium">Drivers</h1>
-          <DialogTitle>Add New Driver</DialogTitle>
+          <DialogTitle>
+            {isEditing ? "Edit Driver" : "Add New Driver"}
+          </DialogTitle>
           <p>Record Driver Details</p>
         </DialogHeader>
 
@@ -171,7 +205,7 @@ export default function AddDriverDialog({
                   value as "On leave" | "On Shift" | "Off shift"
                 )
               }
-              defaultValue="Off shift"
+              defaultValue={driverToEdit?.status || "Off shift"}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select status" />
@@ -226,7 +260,13 @@ export default function AddDriverDialog({
               type="submit"
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Adding..." : "Add Driver"}
+              {isSubmitting
+                ? isEditing
+                  ? "Updating..."
+                  : "Adding..."
+                : isEditing
+                ? "Update Driver"
+                : "Add Driver"}
             </Button>
           </div>
         </form>

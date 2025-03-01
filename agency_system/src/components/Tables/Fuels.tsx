@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "@/redux/store";
 import {
   Table,
   TableBody,
@@ -10,118 +12,293 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { MoreVertical, Edit, Trash2 } from "lucide-react";
+import {
+  MoreVertical,
+  Edit,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  AlertCircle,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  fetchFuelTransactions,
+  deleteFuelTransaction,
+  selectFuelTransaction,
+  setPage,
+  FuelTransaction,
+} from "@/redux/slices/fuelsSlice";
+import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const tableHeaders = [
   "Plate Number",
   "Driver Name",
   "Fuel Date",
-  "Liters",
-  "Price",
-  "Last Fill (Liters)",
-  "Last Fill Price",
+  "Amount (L)",
+  "Amount Price/L",
+  "Last Fill (L)",
+  "Last Fill Price/L",
   "Actions",
 ];
 
-interface Fuel {
-  plateNumber: string;
-  driverName: string;
-  fuelDate: string;
-  liters: number;
-  price: number;
-  lastFillLiters: number;
-  lastFillPrice: number;
+interface FuelsTableProps {
+  onEdit: (transaction: FuelTransaction) => void;
+  agencyName: string;
 }
 
-const initialFuels: Fuel[] = [
-  {
-    plateNumber: "RAB 123X",
-    driverName: "John Doe",
-    fuelDate: "2024-02-20T08:30:00",
-    liters: 50,
-    price: 50000,
-    lastFillLiters: 40,
-    lastFillPrice: 40000,
-  },
-  {
-    plateNumber: "RAC 456Y",
-    driverName: "Jane Smith",
-    fuelDate: "2024-02-21T12:15:00",
-    liters: 60,
-    price: 60000,
-    lastFillLiters: 55,
-    lastFillPrice: 55000,
-  },
-  {
-    plateNumber: "RAC 489 W",
-    driverName: "John Henry",
-    fuelDate: "2024-02-21T12:15:00",
-    liters: 70,
-    price: 70000,
-    lastFillLiters: 65,
-    lastFillPrice: 65000,
-  },
-];
+export default function FuelsTable({ onEdit, agencyName }: FuelsTableProps) {
+  const dispatch = useDispatch<AppDispatch>();
+  const { filteredTransactions, status, error, currentPage, totalCount } =
+    useSelector((state: RootState) => state.fuels);
 
-export default function FuelsTable() {
-  const [fuels, setFuels] = useState<Fuel[]>(initialFuels);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [transactionToDelete, setTransactionToDelete] = useState<string | null>(
+    null
+  );
 
-  const handleEdit = (plateNumber: string) => console.log("Edit Fuel Record:", plateNumber);
-  const handleDelete = (plateNumber: string) =>
-    setFuels((prev) => prev.filter((f) => f.plateNumber !== plateNumber));
+  const pageSize = 10;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+
+  useEffect(() => {
+    if (status === "idle") {
+      dispatch(fetchFuelTransactions());
+    }
+  }, [dispatch, status]);
+
+  const handleEdit = (transaction: FuelTransaction) => {
+    dispatch(selectFuelTransaction(transaction._id));
+    onEdit(transaction);
+  };
+
+  const handleDeleteClick = (id: string) => {
+    setTransactionToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!transactionToDelete) return;
+
+    try {
+      await dispatch(deleteFuelTransaction(transactionToDelete)).unwrap();
+      toast.success("Fuel transaction deleted successfully");
+    } catch (error) {
+      toast.error("Failed to delete fuel transaction");
+    } finally {
+      setDeleteDialogOpen(false);
+      setTransactionToDelete(null);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      dispatch(setPage(currentPage - 1));
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      dispatch(setPage(currentPage + 1));
+    }
+  };
+
+  const displayTransactions = filteredTransactions.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
+  const formatDate = (dateStr: string | Date) => {
+    try {
+      return new Date(dateStr).toLocaleString();
+    } catch (error) {
+      return "Invalid date";
+    }
+  };
+
+  if (status === "loading" && filteredTransactions.length === 0) {
+    return (
+      <div className="w-full py-6 bg-white rounded-lg overflow-x-auto">
+        <Table className="table-auto w-full">
+          <TableHeader>
+            <TableRow className="bg-gray-100">
+              {tableHeaders.map((header) => (
+                <TableHead key={header} className="px-5 py-3 text-left">
+                  {header}
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {Array.from({ length: 5 }).map((_, index) => (
+              <TableRow key={`skeleton-${index}`}>
+                {Array.from({ length: 6 }).map((_, cellIndex) => (
+                  <TableCell
+                    key={`cell-${index}-${cellIndex}`}
+                    className="px-5 py-4"
+                  >
+                    <Skeleton className="h-4 w-full" />
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    );
+  }
+
+  if (status === "failed") {
+    return (
+      <div className="w-full py-10 flex flex-col items-center justify-center text-center">
+        <AlertCircle className="h-10 w-10 text-red-500 mb-4" />
+        <h3 className="text-lg font-medium">Something went wrong</h3>
+        <p className="text-sm text-gray-500 mb-4">{error}</p>
+        <Button onClick={() => dispatch(fetchFuelTransactions())}>
+          Try Again
+        </Button>
+      </div>
+    );
+  }
 
   return (
-    <div className="w-full py-6 bg-white rounded-lg overflow-x-auto">
-      <Table className="table-auto w-full">
-        <TableHeader>
-          <TableRow className="bg-gray-100">
-            {tableHeaders.map((header) => (
-              <TableHead key={header} className="px-5 py-3 text-left">
-                {header}
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {fuels.map(({ plateNumber, driverName, fuelDate, liters, price, lastFillLiters, lastFillPrice }) => (
-            <TableRow key={plateNumber}>
-              <TableCell className="px-5 py-4">{plateNumber}</TableCell>
-              <TableCell className="px-5 py-4">{driverName}</TableCell>
-              <TableCell className="px-5 py-4">{new Date(fuelDate).toLocaleString()}</TableCell>
-              <TableCell className="px-5 py-4">{liters} L</TableCell>
-              <TableCell className="px-5 py-4">{price} RWF</TableCell>
-              <TableCell className="px-5 py-4">{lastFillLiters} L</TableCell>
-              <TableCell className="px-5 py-4">{lastFillPrice} RWF</TableCell>
-              <TableCell className="px-8 py-4 text-center">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost">
-                      <MoreVertical className="w-5 h-5" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => handleEdit(plateNumber)}>
-                      <Edit className="w-4 h-4 mr-2" /> Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => handleDelete(plateNumber)}
-                      className="text-red-500"
-                    >
-                      <Trash2 className="w-4 h-4 mr-2" /> Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
+    <>
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the
+              fuel transaction from our servers.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <div className="w-full py-6 bg-white rounded-lg overflow-x-auto">
+        <Table className="table-auto w-full">
+          <TableHeader>
+            <TableRow className="bg-gray-100">
+              {tableHeaders.map((header) => (
+                <TableHead key={header} className="px-5 py-3 text-left">
+                  {header}
+                </TableHead>
+              ))}
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+          </TableHeader>
+          <TableBody>
+            {filteredTransactions.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-10">
+                  No fuel transactions found.
+                </TableCell>
+              </TableRow>
+            ) : (
+              displayTransactions.map((transaction) => (
+                <TableRow key={transaction._id}>
+                  <TableCell className="px-5 py-4">
+                    {transaction.plateNumber}
+                  </TableCell>
+                  <TableCell className="px-5 py-4">
+                    {transaction.driverName}
+                  </TableCell>
+                  <TableCell className="px-5 py-4">
+                    {formatDate(transaction.fuelDate)}
+                  </TableCell>
+                  <TableCell className="px-5 py-4">
+                    {transaction.amount} L
+                  </TableCell>
+                  <TableCell className="px-5 py-4">
+                    {transaction.amountPrice}{" "}
+                  </TableCell>
+                  <TableCell className="px-5 py-4">
+                    {transaction.lastFill} L
+                  </TableCell>
+                  <TableCell className="px-5 py-4">
+                    {transaction.lastFillPrice}{" "}
+                  </TableCell>
+                  <TableCell className="px-8 py-4 text-center">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost">
+                          <MoreVertical className="w-5 h-5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem
+                          onClick={() => handleEdit(transaction)}
+                        >
+                          <Edit className="w-4 h-4 mr-2" /> Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleDeleteClick(transaction._id)}
+                          className="text-red-500"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" /> Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+
+        {filteredTransactions.length > 0 && (
+          <div className="flex items-center justify-between px-5 py-4 border-t">
+            <div className="text-sm text-gray-500">
+              Showing {Math.min(displayTransactions.length, pageSize)} of{" "}
+              {totalCount} fuel transactions
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePrevPage}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Previous
+              </Button>
+              <div className="text-sm">
+                Page {currentPage} of {totalPages}
+              </div>
+              <Button
+                variant="outline"
+                onClick={handleNextPage}
+                disabled={currentPage === totalPages}
+              >
+                Next
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
   );
 }

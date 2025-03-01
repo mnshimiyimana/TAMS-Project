@@ -1,4 +1,3 @@
-// src/redux/slices/fuelsSlice.ts
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import { fuelsAPI } from "@/services/api";
 
@@ -8,7 +7,10 @@ export interface FuelTransaction {
   driverName: string;
   fuelDate: string;
   amount: number;
+  amountPrice: number;
   lastFill: number;
+  lastFillPrice: number;
+  agencyName?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -18,6 +20,7 @@ interface FuelsState {
   filteredTransactions: FuelTransaction[];
   selectedTransaction: FuelTransaction | null;
   status: "idle" | "loading" | "succeeded" | "failed";
+  isLoading: boolean;
   error: string | null;
   totalCount: number;
   currentPage: number;
@@ -33,6 +36,7 @@ const initialState: FuelsState = {
   filteredTransactions: [],
   selectedTransaction: null,
   status: "idle",
+  isLoading: false,
   error: null,
   totalCount: 0,
   currentPage: 1,
@@ -116,7 +120,7 @@ const fuelsSlice = createSlice({
   reducers: {
     setSearchQuery: (state, action: PayloadAction<string>) => {
       state.searchQuery = action.payload;
-      state.currentPage = 1; // Reset to first page on search
+      state.currentPage = 1;
       applyFiltersAndSearch(state);
     },
     setFilter: (
@@ -127,8 +131,8 @@ const fuelsSlice = createSlice({
       }>
     ) => {
       const { key, value } = action.payload;
-      state.filters[key] = value;
-      state.currentPage = 1; // Reset to first page on filter change
+      state.filters[key] = value === "all" ? null : value;
+      state.currentPage = 1;
       applyFiltersAndSearch(state);
     },
     setPage: (state, action: PayloadAction<number>) => {
@@ -155,9 +159,11 @@ const fuelsSlice = createSlice({
       // Fetch fuel transactions cases
       .addCase(fetchFuelTransactions.pending, (state) => {
         state.status = "loading";
+        state.isLoading = true;
       })
       .addCase(fetchFuelTransactions.fulfilled, (state, action) => {
         state.status = "succeeded";
+        state.isLoading = false;
         state.fuelTransactions = action.payload;
         state.filteredTransactions = action.payload;
         state.totalCount = action.payload.length;
@@ -165,17 +171,28 @@ const fuelsSlice = createSlice({
       })
       .addCase(fetchFuelTransactions.rejected, (state, action) => {
         state.status = "failed";
+        state.isLoading = false;
         state.error = action.payload as string;
       })
 
       // Add fuel transaction cases
+      .addCase(addFuelTransaction.pending, (state) => {
+        state.isLoading = true;
+      })
       .addCase(addFuelTransaction.fulfilled, (state, action) => {
+        state.isLoading = false;
         state.fuelTransactions.push(action.payload);
         applyFiltersAndSearch(state);
       })
+      .addCase(addFuelTransaction.rejected, (state) => {
+        state.isLoading = false;
+      })
 
-      // Update fuel transaction cases
+      .addCase(updateFuelTransaction.pending, (state) => {
+        state.isLoading = true;
+      })
       .addCase(updateFuelTransaction.fulfilled, (state, action) => {
+        state.isLoading = false;
         const index = state.fuelTransactions.findIndex(
           (transaction) => transaction._id === action.payload._id
         );
@@ -187,8 +204,10 @@ const fuelsSlice = createSlice({
         }
         applyFiltersAndSearch(state);
       })
+      .addCase(updateFuelTransaction.rejected, (state) => {
+        state.isLoading = false;
+      })
 
-      // Delete fuel transaction cases
       .addCase(deleteFuelTransaction.fulfilled, (state, action) => {
         state.fuelTransactions = state.fuelTransactions.filter(
           (transaction) => transaction._id !== action.payload
@@ -201,11 +220,9 @@ const fuelsSlice = createSlice({
   },
 });
 
-// Helper function to apply filters and search
 function applyFiltersAndSearch(state: FuelsState) {
   let filtered = [...state.fuelTransactions];
 
-  // Apply search
   if (state.searchQuery) {
     const query = state.searchQuery.toLowerCase();
     filtered = filtered.filter(
@@ -215,21 +232,20 @@ function applyFiltersAndSearch(state: FuelsState) {
     );
   }
 
-  // Apply plate number filter
   if (state.filters.plateNumber) {
     filtered = filtered.filter(
       (transaction) => transaction.plateNumber === state.filters.plateNumber
     );
   }
 
-  // Apply date filter
   if (state.filters.date) {
-    // Assuming date is stored in ISO format
+    const filterDate = new Date(state.filters.date);
+    filterDate.setHours(0, 0, 0, 0);
+
     filtered = filtered.filter((transaction) => {
-      const transactionDate = new Date(transaction.fuelDate)
-        .toISOString()
-        .split("T")[0];
-      return transactionDate === state.filters.date;
+      const transactionDate = new Date(transaction.fuelDate);
+      transactionDate.setHours(0, 0, 0, 0);
+      return transactionDate.getTime() === filterDate.getTime();
     });
   }
 

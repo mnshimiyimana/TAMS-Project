@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "@/redux/store";
 import {
   Select,
   SelectContent,
@@ -8,39 +10,81 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { setFilter } from "@/redux/slices/fuelsSlice";
 
 export default function FuelsDropdowns() {
-  const [status, setStatus] = useState("");
-  const [shift, setShift] = useState("");
+  const dispatch = useDispatch<AppDispatch>();
+  const { fuelTransactions, filters } = useSelector(
+    (state: RootState) => state.fuels
+  );
+
+  const plateNumbers = useMemo(() => {
+    return Array.from(
+      new Set(fuelTransactions.map((transaction) => transaction.plateNumber))
+    ).sort();
+  }, [fuelTransactions]);
+
+  const dates = useMemo(() => {
+    return Array.from(
+      new Set(
+        fuelTransactions.map((transaction) => {
+          const date = new Date(transaction.fuelDate);
+          return date.toISOString().split("T")[0];
+        })
+      )
+    ).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+  }, [fuelTransactions]);
+
+  const handlePlateNumberChange = (value: string | null) => {
+    dispatch(
+      setFilter({ key: "plateNumber", value: value === "all" ? null : value })
+    );
+  };
+
+  const handleDateChange = (value: string | null) => {
+    dispatch(setFilter({ key: "date", value: value === "all" ? null : value }));
+  };
 
   return (
     <div className="flex gap-6">
-      {/* Status Dropdown */}
       <div className="w-40">
-        <Select onValueChange={(value) => setStatus(value)}>
+        <Select
+          value={filters.plateNumber || ""}
+          onValueChange={(value) => handlePlateNumberChange(value || null)}
+        >
           <SelectTrigger className="flex items-center justify-between">
-            <span>Plate Number</span>
+            <span>{filters.plateNumber || "Plate Number"}</span>
           </SelectTrigger>
           <SelectContent>
-            {/* Placeholder - Replace with backend data */}
-            <SelectItem value="active">RAD 234 Y</SelectItem>
-            <SelectItem value="inactive">RAF 678 T</SelectItem>
-            <SelectItem value="pending">RAH 098 H</SelectItem>
+            <SelectItem value="all">All Plates</SelectItem>
+            {plateNumbers.map((plateNumber) => (
+              <SelectItem key={plateNumber} value={plateNumber}>
+                {plateNumber}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
 
-      {/* Last Shift Dropdown */}
       <div className="w-40">
-        <Select onValueChange={(value) => setShift(value)}>
+        <Select
+          value={filters.date || ""}
+          onValueChange={(value) => handleDateChange(value || null)}
+        >
           <SelectTrigger className="flex items-center justify-between">
-            <span>Date</span>
+            <span>
+              {filters.date
+                ? new Date(filters.date).toLocaleDateString()
+                : "Date"}
+            </span>
           </SelectTrigger>
           <SelectContent>
-            {/* Placeholder - Replace with backend data */}
-            <SelectItem value="morning">13-04-2024</SelectItem>
-            <SelectItem value="afternoon">13-05-2024</SelectItem>
-            <SelectItem value="night">13-06-2024</SelectItem>
+            <SelectItem value="all">All Dates</SelectItem>
+            {dates.map((date) => (
+              <SelectItem key={date} value={date}>
+                {new Date(date).toLocaleDateString()}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>

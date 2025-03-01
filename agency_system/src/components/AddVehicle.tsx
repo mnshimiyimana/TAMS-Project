@@ -30,7 +30,6 @@ const vehicleSchema = z.object({
   busId: z.string().min(1, "Bus ID is required"),
   plateNumber: z.string().min(1, "Plate number is required"),
   type: z.string().min(1, "Vehicle type is required"),
-  agencyName: z.string().min(1, "Agency name is required"),
   status: z.enum(["Available", "Assigned", "Under Maintenance"], {
     errorMap: () => ({ message: "Status is required" }),
   }),
@@ -43,11 +42,13 @@ type VehicleFormData = z.infer<typeof vehicleSchema>;
 interface AddVehicleDialogProps {
   open: boolean;
   onClose: () => void;
+  agencyName: string;
 }
 
 export default function AddVehiclesDialog({
   open,
   onClose,
+  agencyName,
 }: AddVehicleDialogProps) {
   const dispatch = useDispatch<AppDispatch>();
   const { selectedVehicle, status } = useSelector(
@@ -67,7 +68,6 @@ export default function AddVehiclesDialog({
       busId: "",
       plateNumber: "",
       type: "",
-      agencyName: "",
       status: "Available",
       capacity: 0,
       busHistory: "",
@@ -79,7 +79,6 @@ export default function AddVehiclesDialog({
       setValue("busId", selectedVehicle.busId);
       setValue("plateNumber", selectedVehicle.plateNumber);
       setValue("type", selectedVehicle.type);
-      setValue("agencyName", selectedVehicle.agencyName);
       setValue(
         "status",
         selectedVehicle.status as "Available" | "Assigned" | "Under Maintenance"
@@ -102,16 +101,21 @@ export default function AddVehiclesDialog({
 
   const onSubmit = async (data: VehicleFormData) => {
     try {
+      const vehicleData = {
+        ...data,
+        agencyName: agencyName,
+      };
+
       if (isEditing && selectedVehicle) {
         await dispatch(
           updateVehicle({
             id: selectedVehicle._id,
-            vehicleData: data,
+            vehicleData: vehicleData,
           })
         ).unwrap();
         toast.success("Vehicle updated successfully!");
       } else {
-        await dispatch(addVehicle(data)).unwrap();
+        await dispatch(addVehicle(vehicleData)).unwrap();
         toast.success("Vehicle added successfully!");
       }
       handleClose();
@@ -174,14 +178,10 @@ export default function AddVehiclesDialog({
             <Label htmlFor="agency-name">Agency Name</Label>
             <Input
               id="agency-name"
-              {...register("agencyName")}
-              placeholder="Enter agency name"
+              value={agencyName}
+              disabled
+              className="bg-gray-100"
             />
-            {errors.agencyName && (
-              <p className="text-red-500 text-sm">
-                {errors.agencyName.message}
-              </p>
-            )}
           </div>
 
           <div>

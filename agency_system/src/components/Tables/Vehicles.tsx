@@ -12,7 +12,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { MoreVertical, Edit, Trash2 } from "lucide-react";
+import {
+  MoreVertical,
+  Edit,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  AlertCircle,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,7 +34,6 @@ import {
   Vehicle,
 } from "@/redux/slices/vehiclesSlice";
 import { toast } from "sonner";
-import PaginationComponent from "@/components/common/Pagination";
 import {
   Dialog,
   DialogContent,
@@ -35,7 +41,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-
+import { Skeleton } from "@/components/ui/skeleton";
 
 type Status = "Available" | "Assigned" | "Under Maintenance";
 
@@ -58,20 +64,25 @@ const statusStyles: Record<Status, string> = {
 
 interface VehiclesTableProps {
   onEdit: (id: string) => void;
+  agencyName: string;
 }
 
-export default function VehiclesTable({ onEdit }: VehiclesTableProps) {
+export default function VehiclesTable({
+  onEdit,
+  agencyName,
+}: VehiclesTableProps) {
   const dispatch = useDispatch<AppDispatch>();
-  const { filteredVehicles, status, error, currentPage, totalCount } =
-    useSelector((state: RootState) => state.vehicles);
+  const {
+    filteredVehicles,
+    status,
+    error,
+    currentPage,
+    totalCount,
+    searchQuery,
+  } = useSelector((state: RootState) => state.vehicles);
 
   const pageSize = 5;
-
-  useEffect(() => {
-    if (status === "idle") {
-      dispatch(fetchVehicles());
-    }
-  }, [dispatch, status]);
+  const totalPages = Math.ceil(totalCount / pageSize);
 
   const [deleteDialog, setDeleteDialog] = useState<{
     open: boolean;
@@ -80,6 +91,12 @@ export default function VehiclesTable({ onEdit }: VehiclesTableProps) {
     open: false,
     vehicleId: null,
   });
+
+  useEffect(() => {
+    if (status === "idle") {
+      dispatch(fetchVehicles());
+    }
+  }, [dispatch, status]);
 
   const confirmDelete = async () => {
     if (!deleteDialog.vehicleId) return;
@@ -101,37 +118,68 @@ export default function VehiclesTable({ onEdit }: VehiclesTableProps) {
     onEdit(id);
   };
 
-  const handlePageChange = (page: number) => {
-    dispatch(setPage(page));
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      dispatch(setPage(currentPage - 1));
+    }
   };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      dispatch(setPage(currentPage + 1));
+    }
+  };
+
+  const displayVehicles = filteredVehicles.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
 
   if (status === "loading" && filteredVehicles.length === 0) {
     return (
-      <div className="w-full py-6 bg-white rounded-lg text-center">
-        Loading vehicles...
+      <div className="w-full py-6 bg-white rounded-lg overflow-x-auto">
+        <Table className="table-auto w-full">
+          <TableHeader>
+            <TableRow className="bg-gray-100">
+              {tableHeaders.map((header) => (
+                <TableHead key={header} className="px-5 py-3 text-left">
+                  {header}
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {Array.from({ length: 5 }).map((_, index) => (
+              <TableRow key={`skeleton-${index}`}>
+                {Array.from({ length: 8 }).map((_, cellIndex) => (
+                  <TableCell
+                    key={`cell-${index}-${cellIndex}`}
+                    className="px-5 py-4"
+                  >
+                    <Skeleton className="h-4 w-full" />
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
     );
   }
 
   if (status === "failed") {
     return (
-      <div className="w-full py-6 bg-white rounded-lg text-center text-red-500">
-        Error: {error}
-      </div>
-    );
-  }
-
-  if (filteredVehicles.length === 0) {
-    return (
-      <div className="w-full py-6 bg-white rounded-lg text-center">
-        No vehicles found.
+      <div className="w-full py-10 flex flex-col items-center justify-center text-center">
+        <AlertCircle className="h-10 w-10 text-red-500 mb-4" />
+        <h3 className="text-lg font-medium">Something went wrong</h3>
+        <p className="text-sm text-gray-500 mb-4">{error}</p>
+        <Button onClick={() => dispatch(fetchVehicles())}>Try Again</Button>
       </div>
     );
   }
 
   return (
     <>
-      {/* Delete Confirmation Modal */}
       <Dialog
         open={deleteDialog.open}
         onOpenChange={() => setDeleteDialog({ open: false, vehicleId: null })}
@@ -158,7 +206,6 @@ export default function VehiclesTable({ onEdit }: VehiclesTableProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Vehicles Table */}
       <div className="w-full py-6 bg-white rounded-lg overflow-x-auto">
         <Table className="table-auto w-full">
           <TableHeader>
@@ -171,9 +218,15 @@ export default function VehiclesTable({ onEdit }: VehiclesTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredVehicles
-              .slice((currentPage - 1) * pageSize, currentPage * pageSize)
-              .map((vehicle) => (
+            {filteredVehicles.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center py-10">
+                  No vehicles found.
+                  {searchQuery ? " Try adjusting your search or filters." : ""}
+                </TableCell>
+              </TableRow>
+            ) : (
+              displayVehicles.map((vehicle) => (
                 <TableRow key={vehicle._id}>
                   <TableCell className="px-5 py-4">{vehicle.busId}</TableCell>
                   <TableCell className="px-5 py-4">
@@ -181,7 +234,7 @@ export default function VehiclesTable({ onEdit }: VehiclesTableProps) {
                   </TableCell>
                   <TableCell className="px-5 py-4">{vehicle.type}</TableCell>
                   <TableCell className="px-5 py-4">
-                    {vehicle.agencyName}
+                    {agencyName || vehicle.agencyName}
                   </TableCell>
                   <TableCell className="px-8 py-4">
                     <span
@@ -228,16 +281,42 @@ export default function VehiclesTable({ onEdit }: VehiclesTableProps) {
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))}
+              ))
+            )}
           </TableBody>
         </Table>
 
-        <PaginationComponent
-          currentPage={currentPage}
-          totalItems={totalCount}
-          pageSize={pageSize}
-          onPageChange={handlePageChange}
-        />
+        {filteredVehicles.length > 0 && (
+          <div className="flex items-center justify-between px-5 py-4 border-t">
+            <div className="text-sm text-gray-500">
+              Showing {Math.min(displayVehicles.length, pageSize)} of{" "}
+              {totalCount} vehicles
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePrevPage}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Previous
+              </Button>
+              <div className="text-sm">
+                Page {currentPage} of {totalPages || 1}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleNextPage}
+                disabled={currentPage === totalPages}
+              >
+                Next
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

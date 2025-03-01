@@ -28,6 +28,7 @@ export interface Driver {
   phoneNumber: string;
   status: "On leave" | "On Shift" | "Off shift";
   lastShift?: string;
+  agencyName?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -44,15 +45,21 @@ export interface DriverParams {
   limit?: number;
   search?: string;
   status?: string;
+  agencyName?: string;
 }
 
 export const getDrivers = async (
   params: DriverParams = {}
 ): Promise<DriverResponse> => {
   try {
-    const { page = 1, limit = 50, search = "", status = "" } = params;
+    const {
+      page = 1,
+      limit = 50,
+      search = "",
+      status = "",
+      agencyName = "",
+    } = params;
 
-    // Construct the query string
     const queryParams = new URLSearchParams();
     queryParams.append("page", page.toString());
     queryParams.append("limit", limit.toString());
@@ -63,6 +70,10 @@ export const getDrivers = async (
 
     if (status) {
       queryParams.append("status", status);
+    }
+
+    if (agencyName) {
+      queryParams.append("agencyName", agencyName);
     }
 
     const response = await driverAPI.get(`/drivers?${queryParams.toString()}`);
@@ -80,6 +91,7 @@ export interface CreateDriverData {
   phoneNumber: string;
   status: "On leave" | "On Shift" | "Off shift";
   lastShift?: string | Date;
+  agencyName?: string;
 }
 
 export const createDriver = async (driverData: CreateDriverData) => {

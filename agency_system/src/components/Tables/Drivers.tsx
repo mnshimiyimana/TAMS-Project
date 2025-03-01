@@ -39,6 +39,7 @@ import {
   getDrivers,
   deleteDriver,
   DriverParams,
+  getDriverById,
 } from "@/services/driverService";
 import {
   AlertDialog,
@@ -64,14 +65,12 @@ const tableHeaders = [
   "Actions",
 ];
 
-// Define status styles using a Record type for better TypeScript support
 const statusStyles: Record<Status, string> = {
   "On Shift": "bg-[#E9F6F2] text-[#3CD278]",
   "Off shift": "bg-[#FEF5D3] text-[#F7953B]",
   "On leave": "bg-[#DEEDFE] text-[#00A651]",
 };
 
-// Default style for statuses not in the record
 const defaultStatusStyle = "bg-gray-100 text-gray-600";
 
 interface DriversTableProps {
@@ -79,6 +78,8 @@ interface DriversTableProps {
   statusFilter: string;
   shiftFilter?: string;
   refreshTrigger: number;
+  agencyName: string;
+  onEdit?: (driver: Driver) => void;
 }
 
 export default function DriversTable({
@@ -86,6 +87,8 @@ export default function DriversTable({
   statusFilter,
   shiftFilter,
   refreshTrigger,
+  agencyName,
+  onEdit,
 }: DriversTableProps) {
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [filteredDrivers, setFilteredDrivers] = useState<Driver[]>([]);
@@ -113,6 +116,11 @@ export default function DriversTable({
 
       if (statusFilter) {
         params.status = statusFilter;
+      }
+
+      // Add agencyName as a parameter for filtering
+      if (agencyName) {
+        params.agencyName = agencyName;
       }
 
       const response = await getDrivers(params);
@@ -192,7 +200,7 @@ export default function DriversTable({
 
   useEffect(() => {
     fetchDrivers();
-  }, [currentPage, searchQuery, statusFilter, refreshTrigger]);
+  }, [currentPage, searchQuery, statusFilter, refreshTrigger, agencyName]);
 
   useEffect(() => {
     if (drivers.length > 0) {
@@ -205,8 +213,18 @@ export default function DriversTable({
     }
   }, [shiftFilter, drivers]);
 
-  const handleEdit = (id: string) => {
-    toast.info(`Edit driver functionality coming soon for ID: ${id}`);
+  const handleEdit = async (id: string) => {
+    try {
+      const driver = await getDriverById(id);
+      if (onEdit && driver) {
+        onEdit(driver);
+      } else {
+        toast.info(`Edit driver functionality for ID: ${id}`);
+      }
+    } catch (error) {
+      console.error("Error fetching driver details:", error);
+      toast.error("Failed to fetch driver details for editing");
+    }
   };
 
   const handleDeleteClick = (id: string) => {

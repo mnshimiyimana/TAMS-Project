@@ -1,20 +1,17 @@
-// src/services/api.ts
-import axios from 'axios';
+import axios from "axios";
 
 const API_URL = "http://localhost:5000/api";
 
-// Create an axios instance with default config
 const apiClient = axios.create({
   baseURL: API_URL,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
-// Request interceptor for adding auth token
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -25,29 +22,26 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Response interceptor for handling errors
 apiClient.interceptors.response.use(
   (response) => {
     return response;
   },
   (error) => {
-    // Handle session expiration
     if (error.response && error.response.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      // Redirect to login page if appropriate
-      if (window.location.pathname !== '/auth/sign-in') {
-        window.location.href = '/auth/sign-in';
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+
+      if (window.location.pathname !== "/auth/sign-in") {
+        window.location.href = "/auth/sign-in";
       }
     }
     return Promise.reject(error);
   }
 );
 
-// Vehicles API
 export const vehiclesAPI = {
   getAllVehicles: async (params = {}) => {
-    const response = await apiClient.get('/buses', { params });
+    const response = await apiClient.get("/buses", { params });
     return response.data;
   },
   getVehicleById: async (id: string) => {
@@ -55,7 +49,7 @@ export const vehiclesAPI = {
     return response.data;
   },
   createVehicle: async (vehicleData: any) => {
-    const response = await apiClient.post('/buses', vehicleData);
+    const response = await apiClient.post("/buses", vehicleData);
     return response.data;
   },
   updateVehicle: async (id: string, vehicleData: any) => {
@@ -65,13 +59,12 @@ export const vehiclesAPI = {
   deleteVehicle: async (id: string) => {
     const response = await apiClient.delete(`/buses/${id}`);
     return response.data;
-  }
+  },
 };
 
-// Shifts API
 export const shiftsAPI = {
   getAllShifts: async (params = {}) => {
-    const response = await apiClient.get('/shifts', { params });
+    const response = await apiClient.get("/shifts", { params });
     return response.data;
   },
   getShiftById: async (id: string) => {
@@ -79,7 +72,7 @@ export const shiftsAPI = {
     return response.data;
   },
   createShift: async (shiftData: any) => {
-    const response = await apiClient.post('/shifts', shiftData);
+    const response = await apiClient.post("/shifts", shiftData);
     return response.data;
   },
   updateShift: async (id: string, shiftData: any) => {
@@ -89,13 +82,12 @@ export const shiftsAPI = {
   deleteShift: async (id: string) => {
     const response = await apiClient.delete(`/shifts/${id}`);
     return response.data;
-  }
+  },
 };
 
-// Fuels API
 export const fuelsAPI = {
   getAllFuels: async (params = {}) => {
-    const response = await apiClient.get('/fuel-management', { params });
+    const response = await apiClient.get("/fuel-management", { params });
     return response.data;
   },
   getFuelById: async (id: string) => {
@@ -103,7 +95,7 @@ export const fuelsAPI = {
     return response.data;
   },
   createFuel: async (fuelData: any) => {
-    const response = await apiClient.post('/fuel-management', fuelData);
+    const response = await apiClient.post("/fuel-management", fuelData);
     return response.data;
   },
   updateFuel: async (id: string, fuelData: any) => {
@@ -113,7 +105,7 @@ export const fuelsAPI = {
   deleteFuel: async (id: string) => {
     const response = await apiClient.delete(`/fuel-management/${id}`);
     return response.data;
-  }
+  },
 };
 
 export default apiClient;

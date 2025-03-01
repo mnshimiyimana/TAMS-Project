@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "../ui/button";
 import { FileDown, Search } from "lucide-react";
 import { Input } from "../ui/input";
@@ -8,34 +8,58 @@ import DriversDropdowns from "../Dropdowns/Drivers";
 import DriversTable from "../Tables/Drivers";
 import AddDriverDialog from "../AddDriver";
 import { exportToExcel } from "@/utils/excelExport";
-import { getDrivers } from "@/services/driverService";
+import { getDrivers, Driver } from "@/services/driverService";
 import { toast } from "sonner";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
 
 export default function Drivers() {
   const [activeTab, setActiveTab] = useState("enrolled");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [shiftFilter, setShiftFilter] = useState(""); // Add state for shift filter
+  const [shiftFilter, setShiftFilter] = useState("");
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isExporting, setIsExporting] = useState(false);
+  const [driverToEdit, setDriverToEdit] = useState<Driver | null>(null);
+
+  const user = useSelector((state: RootState) => state.auth.user);
+  const agencyName = user?.agencyName || "";
+
+  useEffect(() => {
+    if (activeTab === "scheduled") {
+      setStatusFilter("On Shift");
+    } else {
+      setStatusFilter("");
+    }
+  }, [activeTab]);
 
   const handleDriverUpdated = () => {
-    // Trigger a refresh of the drivers list
     setRefreshTrigger((prev) => prev + 1);
   };
 
   const handleStatusFilterChange = (status: string) => {
-    setStatusFilter(status);
+    if (activeTab === "enrolled") {
+      setStatusFilter(status);
+    }
   };
 
-  // Add handler for shift filter
   const handleShiftFilterChange = (shift: string) => {
     setShiftFilter(shift);
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
+  };
+
+  const handleEdit = (driver: Driver) => {
+    setDriverToEdit(driver);
+    setIsDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+    setDriverToEdit(null);
   };
 
   const handleExportToExcel = async () => {
@@ -46,7 +70,6 @@ export default function Drivers() {
         limit: 1000,
         search: searchQuery,
         status: statusFilter,
-
         ...(shiftFilter && { shift: shiftFilter }),
       });
 
@@ -157,10 +180,12 @@ export default function Drivers() {
             onChange={handleSearchChange}
           />
         </div>
-        <DriversDropdowns
-          onStatusChange={handleStatusFilterChange}
-          onShiftChange={handleShiftFilterChange} // Pass the new handler
-        />
+        {activeTab === "enrolled" && (
+          <DriversDropdowns
+            onStatusChange={handleStatusFilterChange}
+            onShiftChange={handleShiftFilterChange}
+          />
+        )}
       </div>
 
       <div>
@@ -169,13 +194,17 @@ export default function Drivers() {
           statusFilter={statusFilter}
           shiftFilter={shiftFilter}
           refreshTrigger={refreshTrigger}
+          agencyName={agencyName}
+          onEdit={handleEdit}
         />
       </div>
 
       <AddDriverDialog
         open={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
+        onClose={handleCloseDialog}
         onDriverUpdated={handleDriverUpdated}
+        agencyName={agencyName}
+        driverToEdit={driverToEdit}
       />
     </div>
   );

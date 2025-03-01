@@ -1,4 +1,3 @@
-// src/components/dashboard/Vehicles.tsx
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/redux/store";
@@ -9,16 +8,29 @@ import {
   fetchVehicles,
   setSearchQuery,
   clearFilters,
+  Vehicle,
 } from "@/redux/slices/vehiclesSlice";
+import { vehiclesAPI } from "@/services/api";
 import { Button } from "../ui/button";
-import { ArrowDownToLine, Search, X } from "lucide-react";
+import { FileDown, Search, X } from "lucide-react";
 import { Input } from "../ui/input";
+import { toast } from "sonner";
+import { exportToExcel } from "@/utils/excelExport";
 
 export default function Vehicles() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
-  const { searchQuery, status } = useSelector(
+  const { searchQuery, status, filteredVehicles, filters } = useSelector(
     (state: RootState) => state.vehicles
+  );
+
+  const user = useSelector((state: RootState) => state.auth.user);
+  const agencyName = user?.agencyName || "";
+
+  const filtersActive = useSelector(
+    (state: RootState) =>
+      !!state.vehicles.filters.status || !!state.vehicles.filters.capacity
   );
 
   useEffect(() => {
@@ -41,8 +53,78 @@ export default function Vehicles() {
     setIsDialogOpen(true);
   };
 
-  const handleExport = () => {
-    alert("Export functionality to be implemented");
+  const handleExport = async () => {
+    try {
+      setIsExporting(true);
+
+      let vehiclesToExport: Vehicle[] = [];
+
+      if (searchQuery || filters.status || filters.capacity) {
+        vehiclesToExport = [...filteredVehicles];
+      } else {
+        try {
+          const params: any = {};
+          if (agencyName) {
+            params.agencyName = agencyName;
+          }
+
+          const response = await vehiclesAPI.getAllVehicles(params);
+          vehiclesToExport = response;
+        } catch (error) {
+          console.error("Error fetching all vehicles for export:", error);
+
+          vehiclesToExport = [...filteredVehicles];
+        }
+      }
+
+      if (vehiclesToExport.length === 0) {
+        toast.warning("No data to export");
+        return;
+      }
+
+      const columns = [
+        { header: "Bus ID", key: "busId", width: 15 },
+        { header: "Plate Number", key: "plateNumber", width: 20 },
+        { header: "Type", key: "type", width: 15 },
+        { header: "Agency Name", key: "agencyName", width: 25 },
+        { header: "Status", key: "status", width: 20 },
+        { header: "Capacity", key: "capacity", width: 10 },
+        { header: "Bus History", key: "busHistory", width: 40 },
+      ];
+
+      const processedData = vehiclesToExport.map((vehicle) => ({
+        ...vehicle,
+        busHistory:
+          typeof vehicle.busHistory === "string"
+            ? vehicle.busHistory
+            : vehicle.busHistory.join(", "),
+      }));
+
+      let filename = `Vehicles_Export_${
+        new Date().toISOString().split("T")[0]
+      }`;
+
+      if (filters.status) {
+        filename += `_Status-${filters.status}`;
+      }
+
+      if (filters.capacity) {
+        filename += `_Capacity-${filters.capacity}`;
+      }
+
+      if (searchQuery) {
+        filename += `_Search-Results`;
+      }
+
+      exportToExcel(processedData, columns, filename);
+
+      toast.success(`${processedData.length} vehicles exported successfully`);
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error("Failed to export vehicles");
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -68,9 +150,16 @@ export default function Vehicles() {
           <Button
             className="bg-[#005F15] hover:bg-[#004A12] text-white"
             onClick={handleExport}
+            disabled={isExporting}
           >
-            <ArrowDownToLine />
-            Export File
+            {isExporting ? (
+              "Exporting..."
+            ) : (
+              <>
+                <FileDown className="w-5 h-5 mr-2" />
+                Export File
+              </>
+            )}
           </Button>
         </div>
       </div>
@@ -97,11 +186,7 @@ export default function Vehicles() {
 
         <div className="flex items-center gap-4">
           <VehiclesDropdowns />
-          {(searchQuery ||
-            useSelector(
-              (state: RootState) =>
-                state.vehicles.filters.status || state.vehicles.filters.capacity
-            )) && (
+          {(searchQuery || filtersActive) && (
             <Button
               variant="outline"
               size="sm"
@@ -115,12 +200,13 @@ export default function Vehicles() {
       </div>
 
       <div>
-        <VehiclesTable onEdit={handleEdit} />
+        <VehiclesTable onEdit={handleEdit} agencyName={agencyName} />
       </div>
 
       <AddVehiclesDialog
         open={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
+        agencyName={agencyName}
       />
     </div>
   );

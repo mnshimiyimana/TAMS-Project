@@ -17,7 +17,7 @@ const UserSchema = new mongoose.Schema(
         return this.role !== "superadmin";
       },
     },
-    password: { type: String, required: true },
+    password: { type: String, required: false }, // Changed to not required
     role: {
       type: String,
       enum: ["superadmin", "admin", "manager", "fuel"],
@@ -32,6 +32,10 @@ const UserSchema = new mongoose.Schema(
         return this.role !== "superadmin";
       }, 
     },
+    // Adding fields for password setup
+    passwordResetToken: { type: String },
+    passwordResetExpires: { type: Date },
+    passwordSet: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

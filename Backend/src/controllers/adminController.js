@@ -1,6 +1,8 @@
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { User } from "../models/userModel.js";
 import Agency from "../models/agencyModel.js";
+import sendEmail from "../config/nodemailer.js";
 
 // For super admin to create admin users
 export const createAdmin = async (req, res) => {
@@ -16,17 +18,10 @@ export const createAdmin = async (req, res) => {
         .json({ message: "Only super admins can create admin accounts" });
     }
 
-    const { agencyName, username, email, phone, location, password } = req.body;
+    const { agencyName, username, email, phone, location } = req.body;
 
     // Validate input
-    if (
-      !agencyName ||
-      !username ||
-      !email ||
-      !phone ||
-      !location ||
-      !password
-    ) {
+    if (!agencyName || !username || !email || !phone || !location) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
@@ -65,8 +60,12 @@ export const createAdmin = async (req, res) => {
       });
     }
 
-    // Hash the password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Generate a password reset token
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const passwordResetToken = crypto
+      .createHash("sha256")
+      .update(resetToken)
+      .digest("hex");
 
     // Create new admin user
     const newAdmin = new User({
@@ -75,18 +74,53 @@ export const createAdmin = async (req, res) => {
       email,
       phone,
       location,
-      password: hashedPassword,
       role: "admin",
       createdBy: superAdminId,
+      passwordResetToken,
+      passwordResetExpires: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+      passwordSet: false,
     });
 
     await newAdmin.save();
 
-    res.status(201).json({
-      message: "Admin created successfully",
-      adminId: newAdmin._id,
-      agencyName: newAdmin.agencyName,
-    });
+    // Send email with password setup link
+    const resetURL = `${req.protocol}://${req.get(
+      "host"
+    )}/auth/setup-password/${resetToken}`;
+    const message = `
+      Hello ${username},
+      
+      Your admin account has been created for the Transport Agency Management System.
+      
+      Please use the following link to set up your password: ${resetURL}
+      
+      This link will expire in 24 hours.
+      
+      If you did not request this account, please ignore this email.
+      
+      Regards,
+      Transport Agency Management Team
+    `;
+
+    try {
+      await sendEmail(email, "Welcome to TAMS - Set Up Your Password", message);
+
+      res.status(201).json({
+        message: "Admin created successfully. Password setup email sent.",
+        adminId: newAdmin._id,
+        agencyName: newAdmin.agencyName,
+      });
+    } catch (err) {
+      // If email fails, still create the user but let admin know email failed
+      console.error("Error sending email:", err);
+
+      res.status(201).json({
+        message:
+          "Admin created successfully but email delivery failed. Please inform the user manually.",
+        adminId: newAdmin._id,
+        agencyName: newAdmin.agencyName,
+      });
+    }
   } catch (error) {
     console.error("Error creating admin:", error);
     res.status(500).json({ message: "Internal server error" });
@@ -105,10 +139,10 @@ export const createUser = async (req, res) => {
       return res.status(403).json({ message: "Only admins can create users" });
     }
 
-    const { username, email, phone, role, password } = req.body;
+    const { username, email, phone, role } = req.body;
 
     // Validate input
-    if (!username || !email || !phone || !password) {
+    if (!username || !email || !phone) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
@@ -130,8 +164,12 @@ export const createUser = async (req, res) => {
       });
     }
 
-    // Hash the password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Generate a password reset token
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const passwordResetToken = crypto
+      .createHash("sha256")
+      .update(resetToken)
+      .digest("hex");
 
     // Create new user with the same agency as the admin
     const newUser = new User({
@@ -140,18 +178,53 @@ export const createUser = async (req, res) => {
       email,
       phone,
       location: admin.location, // Use admin's location by default
-      password: hashedPassword,
       role, // manager or fuel
       createdBy: adminId,
+      passwordResetToken,
+      passwordResetExpires: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+      passwordSet: false,
     });
 
     await newUser.save();
 
-    res.status(201).json({
-      message: "User created successfully",
-      userId: newUser._id,
-      role: newUser.role,
-    });
+    // Send email with password setup link
+    const resetURL = `${req.protocol}://${req.get(
+      "host"
+    )}/auth/setup-password/${resetToken}`;
+    const message = `
+      Hello ${username},
+      
+      Your account has been created for the Transport Agency Management System.
+      
+      Please use the following link to set up your password: ${resetURL}
+      
+      This link will expire in 24 hours.
+      
+      If you did not request this account, please ignore this email.
+      
+      Regards,
+      Transport Agency Management Team
+    `;
+
+    try {
+      await sendEmail(email, "Welcome to TAMS - Set Up Your Password", message);
+
+      res.status(201).json({
+        message: "User created successfully. Password setup email sent.",
+        userId: newUser._id,
+        role: newUser.role,
+      });
+    } catch (err) {
+      // If email fails, still create the user but let admin know email failed
+      console.error("Error sending email:", err);
+
+      res.status(201).json({
+        message:
+          "User created successfully but email delivery failed. Please inform the user manually.",
+        userId: newUser._id,
+        role: newUser.role,
+      });
+    }
   } catch (error) {
     console.error("Error creating user:", error);
     res.status(500).json({ message: "Internal server error" });
@@ -216,7 +289,7 @@ export const getAgencyUsers = async (req, res) => {
       const users = await User.find({
         agencyName,
         role: { $nin: ["superadmin"] }, // Exclude superadmins
-      }).select("-password");
+      }).select("-password -passwordResetToken -passwordResetExpires");
 
       return res.status(200).json(users);
     } else {

@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import { User } from "../models/userModel.js";
+import { hasPermission } from "../config/permissionsConfig.js";
 
 // Authenticate user and set userId in request
 export const protect = async (req, res, next) => {
@@ -26,11 +27,11 @@ export const protect = async (req, res, next) => {
     // Check if id exists directly or as userId
     const userId = decoded.id || decoded.userId;
     console.log("Using userId:", userId);
-    
+
     if (!userId) {
-      return res.status(401).json({ 
-        message: "Invalid token format", 
-        details: "Token payload does not contain user identifier" 
+      return res.status(401).json({
+        message: "Invalid token format",
+        details: "Token payload does not contain user identifier",
       });
     }
 
@@ -44,10 +45,7 @@ export const protect = async (req, res, next) => {
 
       // Try alternative ID field names that might be in the token
       const alternativeUser = await User.findOne({
-        $or: [
-          { _id: userId },
-          { userId: userId },
-        ],
+        $or: [{ _id: userId }, { userId: userId }],
       });
 
       console.log("Alternative user found:", alternativeUser ? "Yes" : "No");
@@ -82,10 +80,6 @@ export const protect = async (req, res, next) => {
       agency: user.agencyName,
     });
 
-    // Update last login time
-    user.lastLogin = new Date();
-    await user.save();
-
     next();
   } catch (error) {
     console.error("Authentication error:", error);
@@ -102,8 +96,43 @@ export const protect = async (req, res, next) => {
   }
 };
 
-// Check user role permissions (no changes)
-export const authorize = (...roles) => {
+
+export const authorize = (requiredPermission) => {
+  return async (req, res, next) => {
+    try {
+      // If no permission specified, just check if user is authenticated
+      if (!requiredPermission) {
+        return next();
+      }
+
+      const user = await User.findById(req.userId);
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      console.log(
+        `Permission check: User role is ${user.role}, required permission is ${requiredPermission}`
+      );
+
+      // Check if user has the required permission
+      if (!hasPermission(user.role, requiredPermission)) {
+        return res.status(403).json({
+          message: `Access denied: ${user.role} role cannot access this resource`,
+        });
+      }
+
+      console.log("Authorization successful for user:", user._id);
+      next();
+    } catch (error) {
+      console.error("Authorization error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  };
+};
+
+// Legacy role-based authorization
+export const authorizeRoles = (...roles) => {
   return async (req, res, next) => {
     try {
       const user = await User.findById(req.userId);
@@ -125,7 +154,7 @@ export const authorize = (...roles) => {
         });
       }
 
-      console.log("Authorization successful for user:", user._id);
+      console.log("Role authorization successful for user:", user._id);
       next();
     } catch (error) {
       console.error("Authorization error:", error);

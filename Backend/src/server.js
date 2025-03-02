@@ -3,7 +3,6 @@ import dotenv from "dotenv";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
-import mongoose from "mongoose";
 import connectDB from "./config/db.js";
 import agencyRoutes from "./routes/agencyRoutes.js";
 import driverRoutes from "./routes/driverRoutes.js";
@@ -13,35 +12,34 @@ import notificationRoutes from "./routes/notificationRoutes.js";
 import shiftRoutes from "./routes/shiftRoutes.js";
 import insightRoutes from "./routes/insightRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
-// import dashboardRoutes from './routes/dashboardRoutes.js';
+import dashboardRoutes from "./routes/dashboardRoutes.js";
 import superadminRoutes from "./routes/superAdminRoutes.js";
 
-// Load environment variables
+// environment variables
 dotenv.config();
 
-// Connect to MongoDB
+// MongoDB
 connectDB();
 
 const app = express();
 
 // Middleware
-app.use(express.json()); // JSON parsing
-app.use(cors()); // Enable CORS
-app.use(helmet()); // Security headers
-app.use(morgan("dev")); // Logging
+app.use(express.json());
+app.use(cors());
+app.use(helmet());
+app.use(morgan("dev"));
 
-// Register routes
+// routes
 app.use("/api/auth", authRoutes);
-app.use("/api/agencies", agencyRoutes); // Make sure this is registered only once
+app.use("/api/agencies", agencyRoutes);
 app.use("/api/drivers", driverRoutes);
 app.use("/api/buses", busRoutes);
 app.use("/api/fuel-management", fuelManagementRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/shifts", shiftRoutes);
 app.use("/api/insights", insightRoutes);
-// app.use('/api/dashboard', dashboardRoutes);
 app.use("/api/superadmin", superadminRoutes);
-// REMOVE THIS DUPLICATE: app.use("/api/agencies", agencyRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 // Test route
 app.get("/", (req, res) => {
@@ -57,7 +55,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start server
+// server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

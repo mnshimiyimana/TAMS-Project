@@ -4,7 +4,6 @@ import Driver from "../models/driverModel.js";
 import Shift from "../models/shiftModel.js";
 import FuelManagement from "../models/fuelManagementModel.js";
 
-
 // Get dashboard data based on user role
 export const getDashboardData = async (req, res) => {
   try {

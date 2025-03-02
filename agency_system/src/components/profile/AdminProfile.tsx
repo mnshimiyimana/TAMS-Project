@@ -328,7 +328,7 @@ export default function AdminProfile() {
                   <h3 className="text-lg font-semibold mb-4">
                     Agency Statistics
                   </h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-10">
                     <Card className="bg-blue-50">
                       <CardContent className="p-4 text-center">
                         <Users className="h-8 w-8 mx-auto text-blue-500 mb-2" />

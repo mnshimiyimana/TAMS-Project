@@ -105,7 +105,7 @@ export default function SignUp() {
     <div className="flex min-h-screen">
       <AuthBackground />
 
-      <div className="w-full lg:w-1/2 px-8 lg:px-16 lg:py-40 overflow-y-auto">
+      <div className="w-full lg:w-1/2 px-8 lg:px-16 lg:py-40 py-20 overflow-y-auto">
         <div className="mb-6">
           <h1 className="text-2xl font-bold">Sign Up</h1>
           <p className="text-sm text-gray-700">

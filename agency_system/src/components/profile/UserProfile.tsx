@@ -138,7 +138,7 @@ export default function UserProfile() {
             <CardDescription className="capitalize">{user?.role}</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-4 text-justify pl-4 pt-4">
               <div className="flex items-center gap-3 text-gray-600">
                 <Mail className="h-5 w-5" />
                 <span>{user?.email}</span>

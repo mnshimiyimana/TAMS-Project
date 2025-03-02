@@ -14,14 +14,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +27,7 @@ import {
   MapPin, 
   RefreshCw 
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface ActivitySummary {
   totalShifts: number;
@@ -55,6 +48,7 @@ interface RecentShift {
 }
 
 export default function ManagerProfile() {
+  const router = useRouter();
   const [activitySummary, setActivitySummary] = useState<ActivitySummary>({
     totalShifts: 0,
     upcomingShifts: 0,
@@ -76,7 +70,6 @@ export default function ManagerProfile() {
     try {
       setIsLoading(true);
       
-      // Get shifts data
       const shiftsResponse = await axios.get("http://localhost:5000/api/shifts", {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -146,6 +139,10 @@ export default function ManagerProfile() {
     return new Date(dateString).toLocaleDateString();
   };
 
+  const navigateToDashboard = () => {
+    router.push("/dashboard?feature=shifts");
+  };
+
   const formatTime = (dateString: string) => {
     if (!dateString) return "N/A";
     return new Date(dateString).toLocaleTimeString();
@@ -190,7 +187,7 @@ export default function ManagerProfile() {
           ) : (
             <div className="space-y-8">
               {/* Activity summary cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
                 <Card className="bg-blue-50">
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start">
@@ -343,7 +340,7 @@ export default function ManagerProfile() {
 
               <div className="flex justify-center">
                 <Button 
-                  onClick={() => window.location.href = '/dashboard'} 
+                  onClick={navigateToDashboard}  
                   className="bg-green-600 hover:bg-green-700"
                 >
                   Go to Dashboard

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AppSidebar } from "@/components/dashboard/Sidebar";
 import { BellIcon, UserRound } from "lucide-react";
 import { useSelectedComponent } from "@/hooks/useSelectedComponent";
@@ -19,17 +19,41 @@ export default function DashboardPage() {
     useSelectedComponent();
   const { isLoading, isAuthenticated } = useAuthProtection("/auth/sign-in");
   const router = useRouter();
+  const searchParams = useSearchParams();
   const dispatch = useDispatch<AppDispatch>();
   const user = useSelector((state: RootState) => state.auth.user);
 
-  // Ensure selected component is permitted for the current user
+  useEffect(() => {
+    const featureParam = searchParams.get("feature");
+
+    if (featureParam && user?.role) {
+      const validFeatures = [
+        "drivers",
+        "vehicles",
+        "shifts",
+        "fuels",
+        "profile",
+      ];
+
+      if (
+        validFeatures.includes(featureParam) &&
+        hasPermission(user.role as any, featureParam)
+      ) {
+        setSelectedComponent(featureParam);
+      }
+    }
+  }, [searchParams, user, setSelectedComponent]);
+
   useEffect(() => {
     if (user?.role && !hasPermission(user.role as any, selectedComponent)) {
-      // If current component is not permitted, select the first permitted one
-      const firstPermitted = ['drivers', 'vehicles', 'shifts', 'fuels', 'profile'].find(
-        feature => hasPermission(user.role as any, feature)
-      );
-      
+      const firstPermitted = [
+        "drivers",
+        "vehicles",
+        "shifts",
+        "fuels",
+        "profile",
+      ].find((feature) => hasPermission(user.role as any, feature));
+
       if (firstPermitted) {
         setSelectedComponent(firstPermitted);
       }
@@ -63,7 +87,9 @@ export default function DashboardPage() {
         />
         <SidebarTrigger />
         <div className="flex-1 bg-gray-50">
-          <div className="flex justify-end items-end p-5 bg-white shadow-sm">
+          <div className="w-full flex justify-between items-center p-5 bg-white shadow-sm">
+            <div></div>
+
             <div className="flex items-center gap-6">
               <div className="relative">
                 <BellIcon className="cursor-pointer text-gray-600 hover:text-green-500 transition-colors" />

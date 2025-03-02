@@ -24,7 +24,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   AreaChart,
   BarChart3,
@@ -37,7 +36,6 @@ import {
   DollarSign,
 } from "lucide-react";
 
-// Import Recharts components
 import {
   AreaChart as RechartsAreaChart,
   Area,
@@ -50,6 +48,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
+import { useRouter } from "next/navigation";
 
 interface FuelTransaction {
   _id: string;
@@ -83,6 +82,9 @@ interface ChartData {
 }
 
 export default function FuelProfile() {
+
+  const router = useRouter();
+  
   const [transactions, setTransactions] = useState<FuelTransaction[]>([]);
   const [vehicleSummaries, setVehicleSummaries] = useState<
     VehicleFuelSummary[]
@@ -107,7 +109,6 @@ export default function FuelProfile() {
     try {
       setIsLoading(true);
 
-      // Get fuel transactions
       const response = await axios.get(
         "http://localhost:5000/api/fuel-management",
         {
@@ -120,7 +121,6 @@ export default function FuelProfile() {
       const fuelData = Array.isArray(response.data) ? response.data : [];
       setTransactions(fuelData);
 
-      // Calculate statistics
       if (fuelData.length > 0) {
         // Overall stats
         const totalVolume = fuelData.reduce((sum, t) => sum + t.amount, 0);
@@ -136,7 +136,6 @@ export default function FuelProfile() {
           transactionsCount: fuelData.length,
         });
 
-        // Per vehicle summaries
         const vehicleMap = new Map<string, VehicleFuelSummary>();
 
         fuelData.forEach((tx) => {
@@ -167,7 +166,6 @@ export default function FuelProfile() {
 
         setVehicleSummaries(Array.from(vehicleMap.values()));
 
-        // Prepare chart data (by month)
         const monthlyData = new Map<string, { volume: number; cost: number }>();
 
         fuelData.forEach((tx) => {
@@ -193,7 +191,6 @@ export default function FuelProfile() {
           });
         });
 
-        // Sort by date
         chartDataArray.sort((a, b) => {
           const [monthA, yearA] = a.name.split("/");
           const [monthB, yearB] = b.name.split("/");
@@ -218,6 +215,10 @@ export default function FuelProfile() {
       currency: "USD",
       minimumFractionDigits: 2,
     }).format(amount);
+  };
+
+  const navigateToDashboard = () => {
+    router.push("/dashboard?feature=fuels");
   };
 
   const formatDate = (dateString: string) => {
@@ -245,7 +246,7 @@ export default function FuelProfile() {
           ) : (
             <div className="space-y-8">
               {/* Fuel stats cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
                 <Card className="bg-blue-50">
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start">
@@ -443,7 +444,7 @@ export default function FuelProfile() {
                 </CardContent>
                 <CardFooter className="flex justify-center">
                   <Button
-                    onClick={() => (window.location.href = "/dashboard")}
+                    onClick={navigateToDashboard} 
                     className="bg-green-600 hover:bg-green-700"
                   >
                     <Fuel className="h-4 w-4 mr-2" />

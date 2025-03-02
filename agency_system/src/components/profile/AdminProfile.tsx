@@ -99,7 +99,7 @@ export default function AdminProfile() {
     userId: "",
     action: () => {},
   });
-  
+
   const user = useSelector((state: RootState) => state.auth.user);
   const token = localStorage.getItem("token");
 
@@ -121,11 +121,14 @@ export default function AdminProfile() {
   const fetchUsers = async () => {
     try {
       setIsLoading(true);
-      const response = await axios.get("http://localhost:5000/api/auth/agency-users", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await axios.get(
+        "http://localhost:5000/api/auth/agency-users",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
       setUsers(response.data);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -142,7 +145,7 @@ export default function AdminProfile() {
           Authorization: `Bearer ${token}`,
         },
       });
-      
+
       if (response.data && response.data.length > 0) {
         setAgencyInfo(response.data[0]);
       }
@@ -171,9 +174,7 @@ export default function AdminProfile() {
       fetchUsers(); // Refresh the user list
     } catch (error: any) {
       console.error("Error creating user:", error);
-      toast.error(
-        error.response?.data?.message || "Failed to create user"
-      );
+      toast.error(error.response?.data?.message || "Failed to create user");
     } finally {
       setIsAddingUser(false);
     }
@@ -192,7 +193,9 @@ export default function AdminProfile() {
         }
       );
 
-      toast.success(`User ${isActive ? "activated" : "deactivated"} successfully`);
+      toast.success(
+        `User ${isActive ? "activated" : "deactivated"} successfully`
+      );
       fetchUsers(); // Refresh user list
     } catch (error: any) {
       console.error("Error updating user status:", error);
@@ -228,7 +231,8 @@ export default function AdminProfile() {
     setAlertDialog({
       open: true,
       title: "Resend Setup Email",
-      description: "Are you sure you want to resend the password setup email to this user?",
+      description:
+        "Are you sure you want to resend the password setup email to this user?",
       userId,
       action: () => resendSetupEmail(userId),
     });
@@ -236,19 +240,21 @@ export default function AdminProfile() {
 
   const handleToggleStatus = (userId: string, currentStatus: boolean) => {
     const newStatus = !currentStatus;
-    
+
     setAlertDialog({
       open: true,
       title: newStatus ? "Activate User" : "Deactivate User",
-      description: `Are you sure you want to ${newStatus ? "activate" : "deactivate"} this user?`,
+      description: `Are you sure you want to ${
+        newStatus ? "activate" : "deactivate"
+      } this user?`,
       userId,
       action: () => toggleUserStatus(userId, newStatus),
     });
   };
 
-  const filteredUsers = users.filter(user => {
+  const filteredUsers = users.filter((user) => {
     if (!searchQuery) return true;
-    
+
     const query = searchQuery.toLowerCase();
     return (
       user.username?.toLowerCase().includes(query) ||
@@ -291,23 +297,25 @@ export default function AdminProfile() {
             <CardContent>
               <div className="grid md:grid-cols-2 gap-40 pt-10">
                 <div>
-                  <h3 className="text-lg font-semibold mb-4">Basic Information</h3>
+                  <h3 className="text-lg font-semibold mb-4">
+                    Basic Information
+                  </h3>
                   <div className="space-y-4">
                     <div>
                       <Label className="text-gray-600">Agency Name</Label>
-                      <div className="text-lg font-semibold">
+                      <div className=" font-medium">
                         {agencyInfo?.agencyName || user?.agencyName}
                       </div>
                     </div>
                     <div>
                       <Label className="text-gray-600">Location</Label>
-                      <div className="text-lg font-medium">
+                      <div className=" font-medium">
                         {agencyInfo?.location || "Not specified"}
                       </div>
                     </div>
                     <div>
                       <Label className="text-gray-600">Created At</Label>
-                      <div className="text-lg font-medium">
+                      <div className="font-medium">
                         {agencyInfo?.createdAt
                           ? new Date(agencyInfo.createdAt).toLocaleDateString()
                           : "Not available"}
@@ -317,7 +325,9 @@ export default function AdminProfile() {
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold mb-4">Agency Statistics</h3>
+                  <h3 className="text-lg font-semibold mb-4">
+                    Agency Statistics
+                  </h3>
                   <div className="grid grid-cols-2 gap-4">
                     <Card className="bg-blue-50">
                       <CardContent className="p-4 text-center">
@@ -333,7 +343,7 @@ export default function AdminProfile() {
                         <Mail className="h-8 w-8 mx-auto text-green-600 mb-2" />
                         <p className="text-sm text-gray-600">Active Users</p>
                         <p className="text-2xl font-bold text-green-700">
-                          {users.filter(u => u.isActive).length}
+                          {users.filter((u) => u.isActive).length}
                         </p>
                       </CardContent>
                     </Card>
@@ -347,14 +357,14 @@ export default function AdminProfile() {
         <TabsContent value="users">
           <Card>
             <CardHeader>
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div>
+              <div className="flex flex-col justify-between gap-4">
+                <div className="py-4">
                   <CardTitle className="text-xl">User Management</CardTitle>
                   <CardDescription>
                     Manage users within your agency
                   </CardDescription>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-10 py-4">
                   <div className="relative">
                     <Search className="h-4 w-4 absolute left-3 top-3 text-gray-500" />
                     <Input
@@ -364,8 +374,8 @@ export default function AdminProfile() {
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
                   </div>
-                  <Button 
-                    onClick={() => setIsAddUserDialogOpen(true)} 
+                  <Button
+                    onClick={() => setIsAddUserDialogOpen(true)}
                     className="bg-green-600 hover:bg-green-700"
                   >
                     <UserPlus className="h-4 w-4 mr-2" />
@@ -379,12 +389,16 @@ export default function AdminProfile() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Username</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Last Login</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead className="w-1/6 min-w-40 px-4">Username</TableHead>
+                      <TableHead className="w-1/2 min-w-60 px-4">Email</TableHead>
+                      <TableHead className="w-1/6 min-w-36 px-4">Role</TableHead>
+                      <TableHead className="w-1/6 min-w-36 px-4">Status</TableHead>
+                      <TableHead className="w-1/3 min-w-48">
+                        Last Login
+                      </TableHead>
+                      <TableHead className="w-1/12 min-w-24 text-center">
+                        Actions
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -396,14 +410,19 @@ export default function AdminProfile() {
                       </TableRow>
                     ) : filteredUsers.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-10 text-gray-500">
+                        <TableCell
+                          colSpan={6}
+                          className="text-center py-10 text-gray-500"
+                        >
                           No users found
                         </TableCell>
                       </TableRow>
                     ) : (
                       filteredUsers.map((u) => (
                         <TableRow key={u._id}>
-                          <TableCell className="font-medium">{u.username}</TableCell>
+                          <TableCell className="font-medium">
+                            {u.username}
+                          </TableCell>
                           <TableCell>{u.email}</TableCell>
                           <TableCell>
                             <Badge
@@ -432,7 +451,7 @@ export default function AdminProfile() {
                             </Badge>
                           </TableCell>
                           <TableCell>{formatDate(u.lastLogin)}</TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-center">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" className="h-8 w-8 p-0">
@@ -440,11 +459,17 @@ export default function AdminProfile() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleResendSetupEmail(u._id)}>
+                                <DropdownMenuItem
+                                  onClick={() => handleResendSetupEmail(u._id)}
+                                >
                                   <RefreshCw className="h-4 w-4 mr-2" />
                                   Resend Setup Email
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleToggleStatus(u._id, u.isActive)}>
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    handleToggleStatus(u._id, u.isActive)
+                                  }
+                                >
                                   {u.isActive ? (
                                     <>
                                       <Ban className="h-4 w-4 mr-2" />
@@ -477,7 +502,8 @@ export default function AdminProfile() {
           <DialogHeader>
             <DialogTitle>Add New User</DialogTitle>
             <DialogDescription>
-              Create a new user account. An email will be sent to the user to set their password.
+              Create a new user account. An email will be sent to the user to
+              set their password.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit(onAddUser)}>
@@ -490,7 +516,9 @@ export default function AdminProfile() {
                   placeholder="Enter username"
                 />
                 {errors.username && (
-                  <p className="text-red-500 text-sm">{errors.username.message}</p>
+                  <p className="text-red-500 text-sm">
+                    {errors.username.message}
+                  </p>
                 )}
               </div>
               <div className="space-y-2">
@@ -518,7 +546,11 @@ export default function AdminProfile() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="role">Role</Label>
-                <Select onValueChange={(value) => setValue("role", value as "manager" | "fuel")}>
+                <Select
+                  onValueChange={(value) =>
+                    setValue("role", value as "manager" | "fuel")
+                  }
+                >
                   <SelectTrigger id="role">
                     <SelectValue placeholder="Select a role" />
                   </SelectTrigger>
@@ -533,11 +565,15 @@ export default function AdminProfile() {
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsAddUserDialogOpen(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsAddUserDialogOpen(false)}
+              >
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="bg-green-600 hover:bg-green-700"
                 disabled={isAddingUser}
               >

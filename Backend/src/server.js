@@ -3,6 +3,8 @@ import dotenv from "dotenv";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
+import swaggerUi from "swagger-ui-express";
+import swaggerSpec from "./config/swagger.js";
 import connectDB from "./config/db.js";
 import agencyRoutes from "./routes/agencyRoutes.js";
 import driverRoutes from "./routes/driverRoutes.js";
@@ -14,6 +16,9 @@ import insightRoutes from "./routes/insightRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 import superadminRoutes from "./routes/superAdminRoutes.js";
+import feedbackRoutes from "./routes/feedbackRoutes.js";
+import { auditLogin } from "./middlewares/auditLogger.js";
+// import auditLogRoutes from "./routes/auditLogRoutes.js";
 
 // environment variables
 dotenv.config();
@@ -22,6 +27,7 @@ dotenv.config();
 connectDB();
 
 const app = express();
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Middleware
 app.use(express.json());
@@ -40,6 +46,8 @@ app.use("/api/shifts", shiftRoutes);
 app.use("/api/insights", insightRoutes);
 app.use("/api/superadmin", superadminRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/feedback", feedbackRoutes);
+// app.use("/api/audit-logs", auditLogRoutes);
 
 // Test route
 app.get("/", (req, res) => {

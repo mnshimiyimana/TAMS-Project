@@ -3,6 +3,7 @@ import authReducer from "./slices/authSlice";
 import vehiclesReducer from "./slices/vehiclesSlice";
 import shiftsReducer from "./slices/shiftsSlice";
 import fuelsReducer from "./slices/fuelsSlice";
+import feedbackReducer from './slices/feedbackSlice';
 
 const store = configureStore({
   reducer: {
@@ -10,6 +11,7 @@ const store = configureStore({
     vehicles: vehiclesReducer,
     shifts: shiftsReducer,
     fuels: fuelsReducer,
+    feedback: feedbackReducer,
   },
 });
 

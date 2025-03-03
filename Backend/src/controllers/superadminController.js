@@ -4,11 +4,10 @@ import Bus from "../models/busModel.js";
 import Driver from "../models/driverModel.js";
 import Shift from "../models/shiftModel.js";
 import FuelManagement from "../models/fuelManagementModel.js";
+import Feedback from "../models/feedbackModel.js";
 
-// Get a list of all agencies with basic stats (no sensitive data)
 export const getAgenciesOverview = async (req, res) => {
   try {
-    // Verify requester is superadmin
     const user = await User.findById(req.userId);
     if (!user || user.role !== "superadmin") {
       return res
@@ -16,12 +15,10 @@ export const getAgenciesOverview = async (req, res) => {
         .json({ message: "Only superadmin can access this endpoint" });
     }
 
-    // Get all agencies
     const agencies = await Agency.find().select(
       "agencyName location createdAt"
     );
 
-    // Get user counts by agency and role (metadata only, no user details)
     const agencyStats = await User.aggregate([
       {
         $group: {
@@ -54,7 +51,6 @@ export const getAgenciesOverview = async (req, res) => {
       },
     ]);
 
-    // Combine agency details with stats
     const agenciesWithStats = agencies.map((agency) => {
       const stats = agencyStats.find(
         (stat) => stat.agencyName === agency.agencyName
@@ -81,12 +77,10 @@ export const getAgenciesOverview = async (req, res) => {
   }
 };
 
-// Add/update agency status (activate/deactivate) without accessing user data
 export const updateAgencyStatus = async (req, res) => {
   try {
     const { agencyName, isActive } = req.body;
 
-    // Verify requester is superadmin
     const user = await User.findById(req.userId);
     if (!user || user.role !== "superadmin") {
       return res
@@ -94,17 +88,14 @@ export const updateAgencyStatus = async (req, res) => {
         .json({ message: "Only superadmin can modify agency status" });
     }
 
-    // Find agency
     const agency = await Agency.findOne({ agencyName });
     if (!agency) {
       return res.status(404).json({ message: "Agency not found" });
     }
 
-    // Update status field (add it to schema if needed)
     agency.isActive = isActive;
     await agency.save();
 
-    // Also update the agency admin's active status
     await User.updateOne({ agencyName, role: "admin" }, { isActive: isActive });
 
     res.status(200).json({
@@ -117,10 +108,8 @@ export const updateAgencyStatus = async (req, res) => {
   }
 };
 
-// Get system-wide summary (metadata only, no sensitive data)
 export const getSystemSummary = async (req, res) => {
   try {
-    // Verify requester is superadmin
     const user = await User.findById(req.userId);
     if (!user || user.role !== "superadmin") {
       return res
@@ -128,10 +117,8 @@ export const getSystemSummary = async (req, res) => {
         .json({ message: "Only superadmin can access system summary" });
     }
 
-    // Count agencies
     const totalAgencies = await Agency.countDocuments();
 
-    // User distribution by role (system-wide)
     const userDistribution = await User.aggregate([
       {
         $group: {
@@ -148,13 +135,11 @@ export const getSystemSummary = async (req, res) => {
       },
     ]);
 
-    // Most recently created agencies
     const recentAgencies = await Agency.find()
       .sort({ createdAt: -1 })
       .limit(5)
       .select("agencyName location createdAt");
 
-    // Date ranges
     const oldestAgency = await Agency.findOne()
       .sort({ createdAt: 1 })
       .select("createdAt");
@@ -178,12 +163,10 @@ export const getSystemSummary = async (req, res) => {
   }
 };
 
-// Get high-level agency stats without accessing PII or sensitive operational data
 export const getAgencyHighLevelStats = async (req, res) => {
   try {
     const { agencyName } = req.params;
 
-    // Verify requester is superadmin
     const user = await User.findById(req.userId);
     if (!user || user.role !== "superadmin") {
       return res
@@ -191,13 +174,11 @@ export const getAgencyHighLevelStats = async (req, res) => {
         .json({ message: "Only superadmin can access this endpoint" });
     }
 
-    // Check if agency exists
     const agency = await Agency.findOne({ agencyName });
     if (!agency) {
       return res.status(404).json({ message: "Agency not found" });
     }
 
-    // Get user counts by role
     const userStats = await User.aggregate([
       {
         $match: { agencyName },
@@ -217,7 +198,6 @@ export const getAgencyHighLevelStats = async (req, res) => {
       },
     ]);
 
-    // High-level resource counts (without details)
     const resourceCounts = {
       buses: await Bus.countDocuments({ agencyName }),
       drivers: await Driver.countDocuments({ agencyName }),
@@ -225,7 +205,6 @@ export const getAgencyHighLevelStats = async (req, res) => {
       fuelTransactions: await FuelManagement.countDocuments({ agencyName }),
     };
 
-    // Activity metrics (dates only, not specific data)
     const activityMetrics = {
       lastUserCreated: await User.findOne({ agencyName })
         .sort({ createdAt: -1 })
@@ -251,12 +230,10 @@ export const getAgencyHighLevelStats = async (req, res) => {
   }
 };
 
-// Add ability to delete agency (with safety checks)
 export const deleteAgency = async (req, res) => {
   try {
     const { agencyName } = req.body;
 
-    // Verify requester is superadmin
     const user = await User.findById(req.userId);
     if (!user || user.role !== "superadmin") {
       return res
@@ -264,13 +241,11 @@ export const deleteAgency = async (req, res) => {
         .json({ message: "Only superadmin can delete agencies" });
     }
 
-    // Find agency
     const agency = await Agency.findOne({ agencyName });
     if (!agency) {
       return res.status(404).json({ message: "Agency not found" });
     }
 
-    // Check if agency has any resources that would be orphaned
     const resourceCounts = {
       users: await User.countDocuments({ agencyName }),
       buses: await Bus.countDocuments({ agencyName }),
@@ -291,7 +266,6 @@ export const deleteAgency = async (req, res) => {
       });
     }
 
-    // Delete the agency
     await Agency.deleteOne({ agencyName });
 
     res.status(200).json({
@@ -300,6 +274,349 @@ export const deleteAgency = async (req, res) => {
     });
   } catch (error) {
     console.error("Error deleting agency:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getAgenciesDashboard = async (req, res) => {
+  try {
+    const user = await User.findById(req.userId);
+    if (!user || user.role !== "superadmin") {
+      return res
+        .status(403)
+        .json({ message: "Only superadmin can access this endpoint" });
+    }
+
+    const agencies = await Agency.find().select(
+      "agencyName location createdAt isActive"
+    );
+
+    const agencyStats = await User.aggregate([
+      {
+        $group: {
+          _id: {
+            agencyName: "$agencyName",
+            role: "$role",
+          },
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $group: {
+          _id: "$_id.agencyName",
+          roles: {
+            $push: {
+              role: "$_id.role",
+              count: "$count",
+            },
+          },
+          totalUsers: { $sum: "$count" },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          agencyName: "$_id",
+          roles: 1,
+          totalUsers: 1,
+        },
+      },
+    ]);
+
+    const resourceCounts = await Promise.all(
+      agencies.map(async (agency) => {
+        const buses = await Bus.countDocuments({
+          agencyName: agency.agencyName,
+        });
+        const drivers = await Driver.countDocuments({
+          agencyName: agency.agencyName,
+        });
+        const shifts = await Shift.countDocuments({
+          agencyName: agency.agencyName,
+        });
+        const feedback = await Feedback.countDocuments({
+          agencyName: agency.agencyName,
+        });
+
+        return {
+          agencyName: agency.agencyName,
+          resourceCounts: { buses, drivers, shifts, feedback },
+        };
+      })
+    );
+
+    const agenciesWithStats = agencies.map((agency) => {
+      const stats = agencyStats.find(
+        (stat) => stat.agencyName === agency.agencyName
+      ) || {
+        totalUsers: 0,
+        roles: [],
+      };
+
+      const resources = resourceCounts.find(
+        (resource) => resource.agencyName === agency.agencyName
+      )?.resourceCounts || {
+        buses: 0,
+        drivers: 0,
+        shifts: 0,
+        feedback: 0,
+      };
+
+      return {
+        _id: agency._id,
+        agencyName: agency.agencyName,
+        location: agency.location,
+        createdAt: agency.createdAt,
+        isActive: agency.isActive !== false,
+        userStats: {
+          total: stats.totalUsers,
+          roleDistribution: stats.roles,
+        },
+        resources,
+      };
+    });
+
+    res.status(200).json(agenciesWithStats);
+  } catch (error) {
+    console.error("Error getting agencies dashboard:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getEnhancedSystemSummary = async (req, res) => {
+  try {
+    const user = await User.findById(req.userId);
+    if (!user || user.role !== "superadmin") {
+      return res
+        .status(403)
+        .json({ message: "Only superadmin can access system summary" });
+    }
+
+    const totalAgencies = await Agency.countDocuments();
+    const activeAgencies = await Agency.countDocuments({
+      isActive: { $ne: false },
+    });
+
+    const userDistribution = await User.aggregate([
+      {
+        $group: {
+          _id: "$role",
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          role: "$_id",
+          count: 1,
+        },
+      },
+    ]);
+
+    const recentAgencies = await Agency.find()
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .select("agencyName location createdAt");
+
+    const recentActivity = await User.find()
+      .sort({ lastLogin: -1 })
+      .limit(5)
+      .select("username role agencyName lastLogin");
+
+    const oldestAgency = await Agency.findOne()
+      .sort({ createdAt: 1 })
+      .select("createdAt");
+
+    const newestAgency = await Agency.findOne()
+      .sort({ createdAt: -1 })
+      .select("createdAt");
+
+    const totalBuses = await Bus.countDocuments();
+    const totalDrivers = await Driver.countDocuments();
+    const totalShifts = await Shift.countDocuments();
+    const totalFeedback = await Feedback.countDocuments();
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const newUsersLast30Days = await User.countDocuments({
+      createdAt: { $gte: thirtyDaysAgo },
+    });
+
+    const newFeedbackLast30Days = await Feedback.countDocuments({
+      createdAt: { $gte: thirtyDaysAgo },
+    });
+
+    const recentFeedbackByType = await Feedback.aggregate([
+      {
+        $match: { createdAt: { $gte: thirtyDaysAgo } },
+      },
+      {
+        $group: {
+          _id: "$type",
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          type: "$_id",
+          count: 1,
+        },
+      },
+    ]);
+
+    res.status(200).json({
+      agencyStats: {
+        totalAgencies,
+        activeAgencies,
+        inactiveAgencies: totalAgencies - activeAgencies,
+      },
+      userStats: {
+        totalUsers: userDistribution.reduce((sum, role) => sum + role.count, 0),
+        userDistribution,
+      },
+      resourceStats: {
+        totalBuses,
+        totalDrivers,
+        totalShifts,
+        totalFeedback,
+      },
+      recentActivity: {
+        newUsersLast30Days,
+        newFeedbackLast30Days,
+        feedbackByType: recentFeedbackByType,
+      },
+      recentAgencies,
+      recentLogins: recentActivity,
+      timespan: {
+        firstAgencyCreated: oldestAgency?.createdAt,
+        lastAgencyCreated: newestAgency?.createdAt,
+      },
+    });
+  } catch (error) {
+    console.error("Error getting enhanced system summary:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const updateAgencyUsers = async (req, res) => {
+  try {
+    const { agencyName, isActive } = req.body;
+
+    const user = await User.findById(req.userId);
+    if (!user || user.role !== "superadmin") {
+      return res
+        .status(403)
+        .json({ message: "Only superadmin can perform this action" });
+    }
+
+    const agency = await Agency.findOne({ agencyName });
+    if (!agency) {
+      return res.status(404).json({ message: "Agency not found" });
+    }
+
+    const result = await User.updateMany({ agencyName }, { isActive });
+
+    agency.isActive = isActive;
+    await agency.save();
+
+    res.status(200).json({
+      message: `${result.modifiedCount} users in agency ${agencyName} ${
+        isActive ? "activated" : "deactivated"
+      } successfully`,
+      agencyName,
+      affectedUsers: result.modifiedCount,
+    });
+  } catch (error) {
+    console.error("Error updating agency users:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const resetAgencyPasswords = async (req, res) => {
+  try {
+    const { agencyName } = req.body;
+
+    const user = await User.findById(req.userId);
+    if (!user || user.role !== "superadmin") {
+      return res
+        .status(403)
+        .json({ message: "Only superadmin can perform this action" });
+    }
+
+    const agency = await Agency.findOne({ agencyName });
+    if (!agency) {
+      return res.status(404).json({ message: "Agency not found" });
+    }
+
+    const users = await User.find({
+      agencyName,
+      role: { $ne: "superadmin" },
+    });
+
+    if (users.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "No users found for this agency" });
+    }
+
+    let processedCount = 0;
+
+    for (const user of users) {
+      user.passwordSet = false;
+      await user.save();
+      processedCount++;
+    }
+
+    res.status(200).json({
+      message: `Password reset initialized for ${processedCount} users in agency ${agencyName}`,
+      agencyName,
+      affectedUsers: processedCount,
+    });
+  } catch (error) {
+    console.error("Error resetting agency passwords:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getAuditLogs = async (req, res) => {
+  try {
+    const user = await User.findById(req.userId);
+    if (!user || user.role !== "superadmin") {
+      return res
+        .status(403)
+        .json({ message: "Only superadmin can access audit logs" });
+    }
+
+    const { limit = 50, page = 1, agencyName } = req.query;
+
+    const skip = (page - 1) * limit;
+
+    const query = {};
+    if (agencyName) {
+      query.agencyName = agencyName;
+    }
+
+    const users = await User.find(query)
+      .select("username role agencyName lastLogin createdAt")
+      .sort({ lastLogin: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await User.countDocuments(query);
+
+    res.status(200).json({
+      users,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    console.error("Error getting audit logs:", error);
     res.status(500).json({ error: error.message });
   }
 };

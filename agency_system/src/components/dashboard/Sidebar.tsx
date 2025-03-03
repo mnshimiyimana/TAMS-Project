@@ -1,5 +1,3 @@
-"use client";
-
 import {
   LogOut,
   UserPen,
@@ -8,8 +6,10 @@ import {
   BusFront,
   ChartColumnIncreasing,
   Blinds,
+  Shield,
 } from "lucide-react";
 import {
+  Separator,
   Sidebar,
   SidebarContent,
   SidebarGroup,
@@ -22,6 +22,7 @@ import {
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import { hasPermission } from "@/utils/permissions";
+import Link from "next/link";
 
 const ALL_ITEMS = [
   { title: "Drivers", key: "drivers", icon: UsersRound },
@@ -47,7 +48,6 @@ export function AppSidebar({
     | "fuel"
     | undefined;
 
-  // Filter items based on user permissions
   const permittedItems = ALL_ITEMS.filter((item) =>
     hasPermission(userRole, item.key)
   );
@@ -87,6 +87,24 @@ export function AppSidebar({
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+
+              {/* SuperAdmin Portal Link - only visible to superadmins */}
+              {userRole === "superadmin" && (
+                <>
+                  <Separator className="my-2" />
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link
+                        href="/superadmin"
+                        className="flex items-center gap-3 w-full text-left px-4 py-2 rounded-lg transition hover:bg-green-50 text-green-600 font-semibold"
+                      >
+                        <Shield className="h-5 w-5" />
+                        <span>SuperAdmin Portal</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

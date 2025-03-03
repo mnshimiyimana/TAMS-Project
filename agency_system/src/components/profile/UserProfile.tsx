@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSelector } from "react-redux";
-import { RootState } from "@/redux/store";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "@/redux/store";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -19,9 +19,38 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BadgeCheck, Mail, Phone, MapPin, UserRound, CalendarClock } from "lucide-react";
+import { 
+  BadgeCheck, 
+  Mail, 
+  Phone, 
+  MapPin, 
+  UserRound, 
+  CalendarClock, 
+  MessageSquare, 
+  AlertCircle, 
+  HelpCircle, 
+  ThumbsUp,
+  Clock,
+  CheckCircle2
+} from "lucide-react";
+import { 
+  submitFeedback, 
+  FeedbackType, 
+  fetchUserFeedback,
+  resetSubmissionStatus,
+  FeedbackItem 
+} from "@/redux/slices/feedbackSlice";
 
 const profileSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
@@ -32,10 +61,23 @@ const profileSchema = z.object({
 type ProfileFormData = z.infer<typeof profileSchema>;
 
 export default function UserProfile() {
+  const dispatch = useDispatch<AppDispatch>();
   const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [feedbackType, setFeedbackType] = useState<FeedbackType>("feedback");
+  const [feedbackText, setFeedbackText] = useState("");
+  
+  // Get user and auth state from Redux
   const user = useSelector((state: RootState) => state.auth.user);
   const token = localStorage.getItem("token");
+
+  // Get feedback state from Redux
+  const { 
+    submissionStatus, 
+    submissionError, 
+    userFeedback,
+    status: feedbackStatus
+  } = useSelector((state: RootState) => state.feedback);
 
   const {
     register,
@@ -52,6 +94,7 @@ export default function UserProfile() {
     },
   });
 
+  // Fetch user profile
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -72,6 +115,26 @@ export default function UserProfile() {
 
     fetchProfile();
   }, [setValue, token]);
+
+  // Fetch user's feedback history
+  useEffect(() => {
+    dispatch(fetchUserFeedback());
+  }, [dispatch]);
+
+  // Watch for feedback submission status changes
+  useEffect(() => {
+    if (submissionStatus === 'succeeded') {
+      toast.success("Your submission has been received. Thank you for your feedback!");
+      setFeedbackText("");
+      dispatch(resetSubmissionStatus());
+      
+      // Refresh feedback history after successful submission
+      dispatch(fetchUserFeedback());
+    } else if (submissionStatus === 'failed' && submissionError) {
+      toast.error(submissionError);
+      dispatch(resetSubmissionStatus());
+    }
+  }, [submissionStatus, submissionError, dispatch]);
 
   const onSubmit = async (data: ProfileFormData) => {
     try {
@@ -102,6 +165,21 @@ export default function UserProfile() {
     }
   };
 
+  const handleSubmitFeedback = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!feedbackText.trim()) {
+      toast.error("Please enter your feedback or issue details");
+      return;
+    }
+    
+    // Dispatch the action to submit feedback using the Redux slice
+    dispatch(submitFeedback({
+      type: feedbackType,
+      message: feedbackText
+    }));
+  };
+
   const cancelEdit = () => {
     reset();
     setIsEditing(false);
@@ -115,9 +193,81 @@ export default function UserProfile() {
       .toUpperCase();
   };
 
+  const getFeedbackTypeIcon = () => {
+    switch (feedbackType) {
+      case "feedback":
+        return <ThumbsUp className="h-5 w-5 text-[#006380]" />;
+      case "issue":
+        return <AlertCircle className="h-5 w-5 text-amber-500" />;
+      case "suggestion":
+        return <HelpCircle className="h-5 w-5 text-green-500" />;
+      default:
+        return <MessageSquare className="h-5 w-5 text-gray-500" />;
+    }
+  };
+
+  const getFeedbackStatusIcon = (status: string = 'pending') => {
+    switch (status) {
+      case 'resolved':
+        return <CheckCircle2 className="h-4 w-4 text-green-500" />;
+      case 'in-progress':
+        return <Clock className="h-4 w-4 text-amber-500" />;
+      case 'closed':
+        return <CheckCircle2 className="h-4 w-4 text-blue-500" />;
+      default:
+        return <Clock className="h-4 w-4 text-gray-500" />;
+    }
+  };
+
+  const getFeedbackTypeIconByType = (type: FeedbackType) => {
+    switch (type) {
+      case "feedback":
+        return <ThumbsUp className="h-4 w-4 text-[#006380]" />;
+      case "issue":
+        return <AlertCircle className="h-4 w-4 text-amber-500" />;
+      case "suggestion":
+        return <HelpCircle className="h-4 w-4 text-green-500" />;
+      default:
+        return <MessageSquare className="h-4 w-4 text-gray-500" />;
+    }
+  };
+
+  const getFeedbackStatusColor = (status: string = 'pending') => {
+    switch (status) {
+      case 'resolved':
+        return 'bg-green-100 text-green-800';
+      case 'in-progress':
+        return 'bg-amber-100 text-amber-800';
+      case 'closed':
+        return 'bg-blue-100 text-blue-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getPlaceholderText = () => {
+    switch (feedbackType) {
+      case "feedback":
+        return "Share your thoughts on your experience with the system...";
+      case "issue":
+        return "Please describe the issue you encountered in detail, including any error messages...";
+      case "suggestion":
+        return "We'd love to hear your ideas for improving the system...";
+      default:
+        return "Enter your message here...";
+    }
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'N/A';
+    
+    const date = new Date(dateString);
+    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
   return (
     <div className="space-y-8 w-full">
-      <div className="grid md:grid-cols-2 grid-cols-1 gap-20 w-full">
+      <div className="grid md:grid-cols-3 grid-cols-1 gap-12 w-full">
         {/* Profile Card */}
         <Card className="w-full">
           <CardHeader className="text-center">
@@ -160,7 +310,7 @@ export default function UserProfile() {
         </Card>
 
         {/* Edit Profile Form */}
-        <Card className="flex-1 min-w-full">
+        <Card className="w-full">
           <CardHeader>
             <CardTitle>Profile Information</CardTitle>
             <CardDescription>
@@ -257,6 +407,141 @@ export default function UserProfile() {
             )}
           </CardFooter>
         </Card>
+
+        {/* Feedback & Support Card */}
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {getFeedbackTypeIcon()}
+              Feedback & Support
+            </CardTitle>
+            <CardDescription>
+              Share your thoughts or report an issue
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form id="feedback-form" onSubmit={handleSubmitFeedback}>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="feedback-type">What would you like to share?</Label>
+                  <Select
+                    value={feedbackType}
+                    onValueChange={(value) => setFeedbackType(value as FeedbackType)}
+                  >
+                    <SelectTrigger id="feedback-type">
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="feedback">General Feedback</SelectItem>
+                      <SelectItem value="issue">Report an Issue</SelectItem>
+                      <SelectItem value="suggestion">Suggestion</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="feedback-content">Your Message</Label>
+                  <Textarea
+                    id="feedback-content"
+                    placeholder={getPlaceholderText()}
+                    value={feedbackText}
+                    onChange={(e) => setFeedbackText(e.target.value)}
+                    className="min-h-32 resize-none"
+                  />
+                </div>
+              </div>
+            </form>
+          </CardContent>
+          <CardFooter className="flex justify-end">
+            <Button
+              form="feedback-form"
+              type="submit"
+              className="bg-green-600 hover:bg-green-700"
+              disabled={submissionStatus === 'loading' || !feedbackText.trim()}
+            >
+              {submissionStatus === 'loading' ? "Submitting..." : "Submit"}
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+
+      {/* Feedback History Tracking Section */}
+      <div className="w-full">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">My Feedback History</h2>
+          <Button 
+            variant="outline"
+            size="sm"
+            onClick={() => dispatch(fetchUserFeedback())}
+            disabled={feedbackStatus === 'loading'}
+          >
+            {feedbackStatus === 'loading' ? "Refreshing..." : "Refresh"}
+          </Button>
+        </div>
+
+        {feedbackStatus === 'loading' ? (
+          <div className="flex justify-center items-center h-40">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500"></div>
+          </div>
+        ) : userFeedback.length === 0 ? (
+          <Card className="w-full">
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <MessageSquare className="h-12 w-12 text-gray-300 mb-4" />
+              <p className="text-gray-500">You haven't submitted any feedback yet.</p>
+              <p className="text-gray-400 text-sm mt-2">When you submit feedback, it will appear here.</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {userFeedback.map((feedback) => (
+              <Card key={feedback._id} className="w-full hover:shadow-md transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      {getFeedbackTypeIconByType(feedback.type as FeedbackType)}
+                      <CardTitle className="text-sm font-medium capitalize">
+                        {feedback.type}
+                      </CardTitle>
+                    </div>
+                    <Badge 
+                      variant="outline"
+                      className={getFeedbackStatusColor(feedback.status)}
+                    >
+                      <div className="flex items-center gap-1">
+                        {getFeedbackStatusIcon(feedback.status)}
+                        <span className="capitalize">{feedback.status || 'pending'}</span>
+                      </div>
+                    </Badge>
+                  </div>
+                  <CardDescription className="text-xs">
+                    Submitted: {formatDate(feedback.createdAt)}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pb-4">
+                  <div className="max-h-24 overflow-y-auto">
+                    <p className="text-sm">{feedback.message}</p>
+                  </div>
+                  
+                  {feedback.response && (
+                    <div className="mt-3 pt-3 border-t border-gray-100">
+                      <p className="text-xs text-gray-500 mb-1">Response:</p>
+                      <p className="text-sm text-gray-700">{feedback.response}</p>
+                    </div>
+                  )}
+                </CardContent>
+                {feedback.resolvedAt && (
+                  <CardFooter className="pt-0 pb-3">
+                    <p className="text-xs text-gray-500">
+                      {feedback.status === 'resolved' || feedback.status === 'closed' 
+                        ? `${feedback.status.charAt(0).toUpperCase() + feedback.status.slice(1)} on ${formatDate(feedback.resolvedAt)}` 
+                        : ''}
+                    </p>
+                  </CardFooter>
+                )}
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

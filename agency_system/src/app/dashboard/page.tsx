@@ -23,6 +23,14 @@ export default function DashboardPage() {
   const dispatch = useDispatch<AppDispatch>();
   const user = useSelector((state: RootState) => state.auth.user);
 
+  // Redirect superadmin to superadmin portal
+  useEffect(() => {
+    if (user?.role === "superadmin") {
+      router.push("/superadmin");
+      return;
+    }
+  }, [user, router]);
+
   useEffect(() => {
     const featureParam = searchParams.get("feature");
 
@@ -75,6 +83,11 @@ export default function DashboardPage() {
   }
 
   if (!isAuthenticated) {
+    return null;
+  }
+
+  // If superadmin, don't render the dashboard
+  if (user?.role === "superadmin") {
     return null;
   }
 

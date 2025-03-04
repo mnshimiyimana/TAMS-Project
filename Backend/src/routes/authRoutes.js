@@ -1,3 +1,4 @@
+// Update your routes to include the agency isolation middleware
 import express from "express";
 import { signup } from "../controllers/auth/signup.js";
 import {
@@ -15,6 +16,7 @@ import {
   verifySetupToken,
   completePasswordSetup,
   resendSetupEmail,
+  updateUserDetailsWithPassword,
 } from "../controllers/auth/passwordSetup.js";
 import {
   createAdmin,
@@ -23,17 +25,26 @@ import {
   updateUserStatus,
 } from "../controllers/adminController.js";
 import { protect, authorizeRoles } from "../middlewares/authMiddleware.js";
+import { enforceAgencyIsolation } from "../middlewares/agencyIsolationMiddleware.js";
 
 const router = express.Router();
 
+// Public routes
 router.post("/signup", signup);
 router.post("/login", login);
 router.get("/check-admin", checkAdmin);
 router.get("/check-superadmin", checkSuperAdmin);
-
 router.post("/create-superadmin", createSuperAdmin);
 
-// User management
+// Password reset/setup public endpoints
+router.post("/send-reset-code", sendResetCode);
+router.post("/verify-reset-code", verifyResetCode);
+router.post("/reset-password", resetPassword);
+router.get("/verify-setup-token/:token", verifySetupToken);
+router.post("/complete-setup/:token", completePasswordSetup);
+router.post("/update-user-with-password/:token", updateUserDetailsWithPassword);
+
+// Protected admin routes with agency isolation
 router.post(
   "/create-admin",
   protect,
@@ -41,12 +52,20 @@ router.post(
   createAdmin
 );
 
-router.post("/create-user", protect, authorizeRoles("admin"), createUser);
+router.post(
+  "/create-user",
+  protect,
+  authorizeRoles("admin"),
+  enforceAgencyIsolation,
+  createUser
+);
 
+// Apply agency isolation to user data access
 router.get(
   "/agency-users",
   protect,
   authorizeRoles("admin", "superadmin"),
+  enforceAgencyIsolation, 
   getAgencyUsers
 );
 
@@ -54,21 +73,15 @@ router.patch(
   "/user-status",
   protect,
   authorizeRoles("admin", "superadmin"),
+  enforceAgencyIsolation,
   updateUserStatus
 );
 
-// Password reset
-router.post("/send-reset-code", sendResetCode);
-router.post("/verify-reset-code", verifyResetCode);
-router.post("/reset-password", resetPassword);
-
-// Password setup
-router.get("/verify-setup-token/:token", verifySetupToken);
-router.post("/complete-setup/:token", completePasswordSetup);
 router.post(
   "/resend-setup-email",
   protect,
   authorizeRoles("admin", "superadmin"),
+  enforceAgencyIsolation,
   resendSetupEmail
 );
 

@@ -556,7 +556,7 @@ export default function Insights() {
                     dataKey="cost"
                     stroke="#82ca9d"
                     fill="#82ca9d"
-                    name="Cost ($)"
+                    name="Cost (RWF)"
                   />
                 </AreaChart>
               </ResponsiveContainer>

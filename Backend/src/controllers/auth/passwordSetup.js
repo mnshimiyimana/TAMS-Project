@@ -1,7 +1,10 @@
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { User } from "../../models/userModel.js";
-import sendEmail from "../../config/nodemailer.js";
+import sendEmail from "../../config/emailService.js";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 // Verify a password setup token and show user information
 export const verifySetupToken = async (req, res) => {
@@ -23,13 +26,15 @@ export const verifySetupToken = async (req, res) => {
       });
     }
 
-    // Return user info (excluding sensitive data)
+    // Return more user info (excluding sensitive data)
     res.status(200).json({
       message: "Token is valid",
       user: {
         id: user._id,
         username: user.username,
         email: user.email,
+        phone: user.phone,
+        location: user.location,
         role: user.role,
         agencyName: user.agencyName,
       },
@@ -97,6 +102,108 @@ export const completePasswordSetup = async (req, res) => {
     });
   } catch (error) {
     console.error("Error completing password setup:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// Update user details during password setup
+export const updateUserDetailsWithPassword = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { password, username, email, phone, location } = req.body;
+
+    // Validate password
+    if (!password || password.length < 8) {
+      return res.status(400).json({
+        message: "Password must be at least 8 characters long",
+      });
+    }
+
+    // Hash the provided token to match it with what's stored in the database
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+    // Find user with matching token that hasn't expired
+    const user = await User.findOne({
+      passwordResetToken: hashedToken,
+      passwordResetExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        message: "Token is invalid or has expired",
+      });
+    }
+
+    // Check for email uniqueness if changed
+    if (email && email !== user.email) {
+      const existingUser = await User.findOne({
+        email,
+        _id: { $ne: user._id },
+      });
+      if (existingUser) {
+        return res.status(400).json({ message: "Email is already in use" });
+      }
+    }
+
+    // Check for username uniqueness if changed
+    if (username && username !== user.username) {
+      const existingUser = await User.findOne({
+        username,
+        _id: { $ne: user._id },
+      });
+      if (existingUser) {
+        return res.status(400).json({ message: "Username is already in use" });
+      }
+    }
+
+    // Check for phone uniqueness if changed
+    if (phone && phone !== user.phone) {
+      const existingUser = await User.findOne({
+        phone,
+        _id: { $ne: user._id },
+      });
+      if (existingUser) {
+        return res
+          .status(400)
+          .json({ message: "Phone number is already in use" });
+      }
+    }
+
+    // Update user details
+    if (username) user.username = username;
+    if (email) user.email = email;
+    if (phone) user.phone = phone;
+    if (location) user.location = location;
+
+    // Update password and clear reset token
+    user.password = await bcrypt.hash(password, 10);
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    user.passwordSet = true;
+
+    await user.save();
+
+    // Send confirmation email
+    const message = `
+      Hello ${user.username},
+      
+      Your account has been successfully set up for the Transport Agency Management System.
+      
+      You can now log in using your email and new password.
+      
+      If you did not set up this account, please contact your administrator immediately.
+      
+      Regards,
+      Transport Agency Management Team
+    `;
+
+    await sendEmail(user.email, "Account Setup Complete", message);
+
+    res.status(200).json({
+      message: "Account has been set up successfully. You can now log in.",
+    });
+  } catch (error) {
+    console.error("Error completing account setup:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };

@@ -1,0 +1,20 @@
+[2025-03-04T19:10:49.078Z] ERROR: Missing RESEND_API_KEY in environment variables
+[2025-03-04T19:11:36.978Z] ERROR: Missing RESEND_API_KEY in environment variables
+[2025-03-04T19:13:37.347Z] ERROR: Missing RESEND_API_KEY in environment variables
+[2025-03-04T19:15:16.811Z] ERROR: Missing RESEND_API_KEY in environment variables
+[2025-03-04T19:17:05.688Z] ERROR: Missing RESEND_API_KEY in environment variables
+[2025-03-04T19:17:29.345Z] ERROR: Missing RESEND_API_KEY in environment variables
+[2025-03-04T19:17:41.239Z] ERROR: Missing RESEND_API_KEY in environment variables
+[2025-03-04T19:17:43.774Z] ERROR: Missing RESEND_API_KEY in environment variables
+[2025-03-04T19:20:14.879Z] Attempting to send email to: nshimiyemaureen@gmail.com
+[2025-03-04T19:20:14.891Z] Subject: Welcome to TAMS - Set Up Your Password
+[2025-03-04T19:20:14.894Z] Email configuration: {"from":"TAMS <onboarding@resend.dev>","to":"nshimiyemaureen@gmail.com","subject":"Welcome to TAMS - Set Up Your Password"}
+[2025-03-04T19:20:21.021Z] Email API error: {"statusCode":403,"message":"You can only send testing emails to your own email address (m.nshimiyim@alustudent.com). To send emails to other recipients, please verify a domain at resend.com/domains, and change the `from` address to an email using this domain.","name":"validation_error"}
+[2025-03-04T19:24:20.617Z] Attempting to send email to: m.nshimiyim@alustudent.com
+[2025-03-04T19:24:20.619Z] Subject: Welcome to TAMS - Set Up Your Password
+[2025-03-04T19:24:20.620Z] Email configuration: {"from":"TAMS <onboarding@resend.dev>","to":"m.nshimiyim@alustudent.com","subject":"Welcome to TAMS - Set Up Your Password"}
+[2025-03-04T19:24:22.110Z] Email sent successfully to m.nshimiyim@alustudent.com. ID: 57308e72-04bb-4f8d-9342-6d4769c697d4
+[2025-03-04T19:38:17.279Z] Attempting to send email to: m.nshimiyim@alustudent.com
+[2025-03-04T19:38:17.288Z] Subject: Account Setup Complete
+[2025-03-04T19:38:17.311Z] Email configuration: {"from":"TAMS <onboarding@resend.dev>","to":"m.nshimiyim@alustudent.com","subject":"Account Setup Complete"}
+[2025-03-04T19:38:19.050Z] Email sent successfully to m.nshimiyim@alustudent.com. ID: 5dcd9810-f552-4a9b-ad61-732011817288

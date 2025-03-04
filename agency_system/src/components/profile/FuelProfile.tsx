@@ -210,9 +210,9 @@ export default function FuelProfile() {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("en-RW", {
       style: "currency",
-      currency: "USD",
+      currency: "RWF",
       minimumFractionDigits: 2,
     }).format(amount);
   };
@@ -373,7 +373,7 @@ export default function FuelProfile() {
                           <Tooltip />
                           <Bar
                             dataKey="cost"
-                            name="Cost ($)"
+                            name="Cost (RWF)"
                             fill="#3b82f6"
                             radius={[4, 4, 0, 0]}
                           />

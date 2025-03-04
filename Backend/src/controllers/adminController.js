@@ -2,9 +2,11 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { User } from "../models/userModel.js";
 import Agency from "../models/agencyModel.js";
-import sendEmail from "../config/nodemailer.js";
+import sendEmail from "../config/emailService.js";
 
-// For super admin to create admin users
+// Create a new admin (by superadmin)
+// Update the createAdmin function in your adminController.js file
+
 export const createAdmin = async (req, res) => {
   try {
     // Get the super admin's ID from the request
@@ -60,6 +62,8 @@ export const createAdmin = async (req, res) => {
       });
     }
 
+    console.log("Creating admin account for:", username, email);
+
     // Generate a password reset token
     const resetToken = crypto.randomBytes(32).toString("hex");
     const passwordResetToken = crypto
@@ -82,11 +86,15 @@ export const createAdmin = async (req, res) => {
     });
 
     await newAdmin.save();
+    console.log("Admin created with ID:", newAdmin._id);
 
-    // Send email with password setup link
-    const resetURL = `${req.protocol}://${req.get(
-      "host"
-    )}/auth/setup-password/${resetToken}`;
+
+    const frontendBaseUrl =
+      process.env.FRONTEND_URL || `${req.protocol}://${req.get("host")}`;
+    const resetURL = `${frontendBaseUrl}/setup-password/${resetToken}`;
+
+    console.log("Password setup URL:", resetURL);
+
     const message = `
       Hello ${username},
       
@@ -102,32 +110,48 @@ export const createAdmin = async (req, res) => {
       Transport Agency Management Team
     `;
 
-    try {
-      await sendEmail(email, "Welcome to TAMS - Set Up Your Password", message);
+    // Send email with enhanced error handling
+    console.log("Attempting to send email to:", email);
+    const emailResult = await sendEmail(
+      email,
+      "Welcome to TAMS - Set Up Your Password",
+      message
+    );
+    console.log("Email result:", emailResult);
 
-      res.status(201).json({
-        message: "Admin created successfully. Password setup email sent.",
-        adminId: newAdmin._id,
-        agencyName: newAdmin.agencyName,
-      });
-    } catch (err) {
-      // If email fails, still create the user but let admin know email failed
-      console.error("Error sending email:", err);
+    if (!emailResult.success) {
+      console.error("Email sending failed:", emailResult.error);
 
-      res.status(201).json({
+      // For development, make the setup link available in the console
+      console.log("====================================================");
+      console.log("🔗 DEVELOPMENT - SETUP LINK:");
+      console.log(resetURL);
+      console.log("====================================================");
+
+      return res.status(201).json({
         message:
-          "Admin created successfully but email delivery failed. Please inform the user manually.",
+          "Admin created successfully but email delivery failed. Please note the setup URL for manual sharing.",
         adminId: newAdmin._id,
         agencyName: newAdmin.agencyName,
+        setupUrl: process.env.NODE_ENV === "development" ? resetURL : undefined,
+        emailError: emailResult.error,
       });
     }
+
+    res.status(201).json({
+      message: "Admin created successfully. Password setup email sent.",
+      adminId: newAdmin._id,
+      agencyName: newAdmin.agencyName,
+    });
   } catch (error) {
     console.error("Error creating admin:", error);
-    res.status(500).json({ message: "Internal server error" });
+    res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
   }
 };
 
-// For admin to create other users (manager, fuel)
+// Create a new user (by admin)
 export const createUser = async (req, res) => {
   try {
     // Get the admin's ID from the request
@@ -136,21 +160,17 @@ export const createUser = async (req, res) => {
     // Verify the creator is an admin
     const admin = await User.findById(adminId);
     if (!admin || admin.role !== "admin") {
-      return res.status(403).json({ message: "Only admins can create users" });
+      return res
+        .status(403)
+        .json({ message: "Only admins can create user accounts" });
     }
 
-    const { username, email, phone, role } = req.body;
+    const adminAgency = admin.agencyName;
+    const { username, email, phone, location } = req.body;
 
     // Validate input
-    if (!username || !email || !phone) {
+    if (!username || !email || !phone || !location) {
       return res.status(400).json({ message: "All fields are required" });
-    }
-
-    // Ensure role is valid and not superadmin or admin
-    if (!role || role === "superadmin" || role === "admin") {
-      return res.status(400).json({
-        message: "Invalid role. Admin can only create manager or fuel users",
-      });
     }
 
     // Check if email or phone already exists
@@ -171,14 +191,14 @@ export const createUser = async (req, res) => {
       .update(resetToken)
       .digest("hex");
 
-    // Create new user with the same agency as the admin
+    // Create new user
     const newUser = new User({
-      agencyName: admin.agencyName,
       username,
       email,
       phone,
-      location: admin.location, // Use admin's location by default
-      role, // manager or fuel
+      location,
+      role: "user",
+      agencyName: adminAgency,
       createdBy: adminId,
       passwordResetToken,
       passwordResetExpires: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
@@ -207,22 +227,28 @@ export const createUser = async (req, res) => {
     `;
 
     try {
-      await sendEmail(email, "Welcome to TAMS - Set Up Your Password", message);
+      const emailResult = await sendEmail(
+        email,
+        "Welcome to TAMS - Set Up Your Password",
+        message
+      );
+      console.log(
+        `Email sent to ${email} with message ID: ${emailResult.messageId}`
+      );
 
       res.status(201).json({
         message: "User created successfully. Password setup email sent.",
         userId: newUser._id,
-        role: newUser.role,
+        agencyName: newUser.agencyName,
       });
     } catch (err) {
-      // If email fails, still create the user but let admin know email failed
       console.error("Error sending email:", err);
 
       res.status(201).json({
         message:
           "User created successfully but email delivery failed. Please inform the user manually.",
         userId: newUser._id,
-        role: newUser.role,
+        agencyName: newUser.agencyName,
       });
     }
   } catch (error) {
@@ -231,124 +257,99 @@ export const createUser = async (req, res) => {
   }
 };
 
-// Get users for an agency (admin access only for full details)
+// Get all users for an agency
 export const getAgencyUsers = async (req, res) => {
   try {
-    const userId = req.userId;
+    const adminId = req.userId;
+    const { agencyName } = req.query;
 
-    // Find the requesting user
+    // Verify requester is admin or superadmin
+    const requester = await User.findById(adminId);
+    if (
+      !requester ||
+      (requester.role !== "admin" && requester.role !== "superadmin")
+    ) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    // For admins, restrict to their own agency
+    if (requester.role === "admin") {
+      if (agencyName && agencyName !== requester.agencyName) {
+        return res
+          .status(403)
+          .json({ message: "Not authorized to access other agencies" });
+      }
+    }
+
+    // Set the agency to query based on role and provided query param
+    const queryAgencyName =
+      requester.role === "admin" ? requester.agencyName : agencyName || null;
+
+    let query = {};
+    if (queryAgencyName) {
+      query.agencyName = queryAgencyName;
+    }
+
+    const users = await User.find(query).select(
+      "-password -passwordResetToken -passwordResetExpires"
+    );
+
+    res.status(200).json({
+      message: "Users retrieved successfully",
+      users,
+    });
+  } catch (error) {
+    console.error("Error getting agency users:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// Update user status (active/inactive)
+export const updateUserStatus = async (req, res) => {
+  try {
+    const adminId = req.userId;
+    const { userId, isActive } = req.body;
+
+    if (!userId || isActive === undefined) {
+      return res
+        .status(400)
+        .json({ message: "User ID and status are required" });
+    }
+
+    // Verify requester is admin or superadmin
+    const admin = await User.findById(adminId);
+    if (!admin || (admin.role !== "admin" && admin.role !== "superadmin")) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    // Find the user to update
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Determine which agency to view
-    let agencyName;
-
-    if (user.role === "superadmin") {
-      // Superadmin can request to see limited user info for any agency
-      agencyName = req.query.agencyName;
-      if (!agencyName) {
-        return res.status(400).json({ message: "Agency name is required" });
-      }
-
-      // For superadmin, only return summary counts of users by role
-      const userSummary = await User.aggregate([
-        { $match: { agencyName } },
-        {
-          $group: {
-            _id: "$role",
-            count: { $sum: 1 },
-          },
-        },
-        {
-          $project: {
-            _id: 0,
-            role: "$_id",
-            count: 1,
-          },
-        },
-      ]);
-
-      // Get only admin users with limited fields
-      const adminUsers = await User.find({
-        agencyName,
-        role: "admin",
-      }).select("username email createdAt lastLogin");
-
-      return res.status(200).json({
-        agencyName,
-        userSummary,
-        adminUsers,
-      });
-    } else if (user.role === "admin") {
-      // Admin can only view their own agency's users
-      agencyName = user.agencyName;
-
-      // Admins can see detailed user information for their agency
-      const users = await User.find({
-        agencyName,
-        role: { $nin: ["superadmin"] }, // Exclude superadmins
-      }).select("-password -passwordResetToken -passwordResetExpires");
-
-      return res.status(200).json(users);
-    } else {
-      return res.status(403).json({ message: "Not authorized to view users" });
-    }
-  } catch (error) {
-    console.error("Error fetching users:", error);
-    res.status(500).json({ message: "Internal server error" });
-  }
-};
-
-// Update user status (activate/deactivate)
-export const updateUserStatus = async (req, res) => {
-  try {
-    const { userId, isActive } = req.body;
-    const adminId = req.userId;
-
-    // Verify the requester is an admin or superadmin
-    const admin = await User.findById(adminId);
-    if (!admin || (admin.role !== "admin" && admin.role !== "superadmin")) {
-      return res
-        .status(403)
-        .json({ message: "Not authorized to update user status" });
-    }
-
-    // Find the user to update
-    const userToUpdate = await User.findById(userId);
-    if (!userToUpdate) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    // Admin can only update users in their agency and not other admins
-    if (
-      admin.role === "admin" &&
-      (userToUpdate.agencyName !== admin.agencyName ||
-        userToUpdate.role === "admin")
-    ) {
+    // For admins, restrict to their own agency
+    if (admin.role === "admin" && user.agencyName !== admin.agencyName) {
       return res
         .status(403)
         .json({ message: "Not authorized to update this user" });
     }
 
-    // Superadmin can update any user except other superadmins
-    if (
-      admin.role === "superadmin" &&
-      userToUpdate.role === "superadmin" &&
-      userToUpdate._id.toString() !== adminId
-    ) {
+    // Prevent admins from deactivating superadmins
+    if (admin.role === "admin" && user.role === "superadmin") {
       return res
         .status(403)
-        .json({ message: "Not authorized to update other superadmins" });
+        .json({ message: "Not authorized to update superadmin accounts" });
     }
 
-    // Update user status
-    userToUpdate.isActive = isActive;
-    await userToUpdate.save();
+    // Update the user status
+    user.isActive = isActive;
+    await user.save();
 
     res.status(200).json({
-      message: `User ${isActive ? "activated" : "deactivated"} successfully`,
+      message: "User status updated successfully",
+      userId: user._id,
+      isActive: user.isActive,
     });
   } catch (error) {
     console.error("Error updating user status:", error);

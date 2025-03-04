@@ -23,6 +23,9 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import { hasPermission } from "@/utils/permissions";
 import Link from "next/link";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 const ALL_ITEMS = [
   { title: "Drivers", key: "drivers", icon: UsersRound },
@@ -41,12 +44,26 @@ export function AppSidebar({
   selected: string;
 }) {
   const { user } = useSelector((state: RootState) => state.auth);
+  const router = useRouter();
   const userRole = user?.role as
     | "superadmin"
     | "admin"
     | "manager"
     | "fuel"
     | undefined;
+
+  // Redirect superadmin to superadmin portal
+  useEffect(() => {
+    if (userRole === "superadmin") {
+      toast.info("Redirecting to SuperAdmin Portal...");
+      router.push("/superadmin");
+    }
+  }, [userRole, router]);
+
+  // If superadmin, don't render any items
+  if (userRole === "superadmin") {
+    return null;
+  }
 
   const permittedItems = ALL_ITEMS.filter((item) =>
     hasPermission(userRole, item.key)
@@ -87,24 +104,6 @@ export function AppSidebar({
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
-
-              {/* SuperAdmin Portal Link - only visible to superadmins */}
-              {userRole === "superadmin" && (
-                <>
-                  <Separator className="my-2" />
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link
-                        href="/superadmin"
-                        className="flex items-center gap-3 w-full text-left px-4 py-2 rounded-lg transition hover:bg-green-50 text-green-600 font-semibold"
-                      >
-                        <Shield className="h-5 w-5" />
-                        <span>SuperAdmin Portal</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </>
-              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

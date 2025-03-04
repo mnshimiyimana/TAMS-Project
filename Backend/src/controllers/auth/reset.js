@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { User } from "../../models/userModel.js";
-import sendEmail from "../../config/nodemailer.js";
+import sendEmail from "../../config/emailService.js";
 
 // Store reset tokens with expiry times
 const resetTokens = new Map();
@@ -19,27 +19,28 @@ export const sendResetCode = async (req, res) => {
 
     if (!user) {
       // Don't reveal if user exists or not for security
-      return res.status(200).json({ 
-        message: "If a user with this email exists, a reset code has been sent"
+      return res.status(200).json({
+        message: "If a user with this email exists, a reset code has been sent",
       });
     }
 
     // Check if user is active
     if (!user.isActive) {
-      return res.status(403).json({ 
-        error: "This account is deactivated. Please contact your administrator."
+      return res.status(403).json({
+        error:
+          "This account is deactivated. Please contact your administrator.",
       });
     }
 
     // Generate a secure random token
-    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetToken = crypto.randomBytes(32).toString("hex");
     const resetCode = crypto.randomInt(100000, 999999).toString();
-    
+
     // Store token with expiry (30 minutes)
     resetTokens.set(resetToken, {
       email: user.email,
       code: resetCode,
-      expiresAt: Date.now() + 30 * 60 * 1000 // 30 minutes
+      expiresAt: Date.now() + 30 * 60 * 1000, // 30 minutes
     });
 
     // Prepare email
@@ -62,9 +63,9 @@ export const sendResetCode = async (req, res) => {
     await sendEmail(user.email, "Password Reset Code", emailText);
 
     // Return the reset token to the client (will be needed for verification)
-    res.status(200).json({ 
+    res.status(200).json({
       message: "Reset code sent to email",
-      resetToken
+      resetToken,
     });
   } catch (error) {
     console.error("Error sending reset code:", error);
@@ -78,7 +79,9 @@ export const verifyResetCode = (req, res) => {
     const { resetToken, code } = req.body;
 
     if (!resetToken || !code) {
-      return res.status(400).json({ error: "Reset token and code are required" });
+      return res
+        .status(400)
+        .json({ error: "Reset token and code are required" });
     }
 
     // Get stored reset data
@@ -104,9 +107,9 @@ export const verifyResetCode = (req, res) => {
     resetData.verified = true;
     resetTokens.set(resetToken, resetData);
 
-    res.status(200).json({ 
+    res.status(200).json({
       message: "Code verified. Proceed to reset password",
-      resetToken
+      resetToken,
     });
   } catch (error) {
     console.error("Error verifying reset code:", error);
@@ -120,12 +123,16 @@ export const resetPassword = async (req, res) => {
     const { resetToken, newPassword } = req.body;
 
     if (!resetToken || !newPassword) {
-      return res.status(400).json({ error: "Reset token and new password are required" });
+      return res
+        .status(400)
+        .json({ error: "Reset token and new password are required" });
     }
 
     // Validate password strength
     if (newPassword.length < 8) {
-      return res.status(400).json({ error: "Password must be at least 8 characters long" });
+      return res
+        .status(400)
+        .json({ error: "Password must be at least 8 characters long" });
     }
 
     // Get stored reset data
@@ -133,7 +140,9 @@ export const resetPassword = async (req, res) => {
 
     // Check if token exists, is verified, and is not expired
     if (!resetData || !resetData.verified) {
-      return res.status(400).json({ error: "Invalid reset token or code not verified" });
+      return res
+        .status(400)
+        .json({ error: "Invalid reset token or code not verified" });
     }
 
     if (Date.now() > resetData.expiresAt) {
@@ -151,7 +160,7 @@ export const resetPassword = async (req, res) => {
 
     // Hash new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    
+
     // Update user's password
     user.password = hashedPassword;
     await user.save();
@@ -159,7 +168,7 @@ export const resetPassword = async (req, res) => {
     // Remove used reset token
     resetTokens.delete(resetToken);
 
-    // Send confirmation email
+    // Send confirmation email using the new email service
     const emailText = `
       Hello ${user.username},
       
@@ -183,7 +192,7 @@ export const resetPassword = async (req, res) => {
 // Scheduled cleanup of expired tokens (can be called via a cron job)
 export const cleanupExpiredTokens = () => {
   const now = Date.now();
-  
+
   for (const [token, data] of resetTokens.entries()) {
     if (now > data.expiresAt) {
       resetTokens.delete(token);

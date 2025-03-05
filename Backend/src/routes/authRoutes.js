@@ -25,7 +25,6 @@ import {
   updateUserStatus,
 } from "../controllers/adminController.js";
 import { protect, authorizeRoles } from "../middlewares/authMiddleware.js";
-import { enforceAgencyIsolation } from "../middlewares/agencyIsolationMiddleware.js";
 
 const router = express.Router();
 
@@ -52,20 +51,14 @@ router.post(
   createAdmin
 );
 
-router.post(
-  "/create-user",
-  protect,
-  authorizeRoles("admin"),
-  enforceAgencyIsolation,
-  createUser
-);
+router.post("/create-user", protect, authorizeRoles("admin"), createUser);
 
 // Apply agency isolation to user data access
 router.get(
   "/agency-users",
   protect,
   authorizeRoles("admin", "superadmin"),
-  enforceAgencyIsolation, 
+
   getAgencyUsers
 );
 
@@ -73,7 +66,7 @@ router.patch(
   "/user-status",
   protect,
   authorizeRoles("admin", "superadmin"),
-  enforceAgencyIsolation,
+
   updateUserStatus
 );
 
@@ -81,7 +74,7 @@ router.post(
   "/resend-setup-email",
   protect,
   authorizeRoles("admin", "superadmin"),
-  enforceAgencyIsolation,
+
   resendSetupEmail
 );
 

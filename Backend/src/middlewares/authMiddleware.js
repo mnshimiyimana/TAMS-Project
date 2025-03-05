@@ -2,7 +2,6 @@ import jwt from "jsonwebtoken";
 import { User } from "../models/userModel.js";
 import { hasPermission } from "../config/permissionsConfig.js";
 
-// Authenticate user and set userId in request
 export const protect = async (req, res, next) => {
   try {
     let token;
@@ -20,11 +19,9 @@ export const protect = async (req, res, next) => {
       return res.status(401).json({ message: "Not authorized, no token" });
     }
 
-    // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     console.log("Decoded token:", decoded);
 
-    // Check if id exists directly or as userId
     const userId = decoded.id || decoded.userId;
     console.log("Using userId:", userId);
 
@@ -35,15 +32,12 @@ export const protect = async (req, res, next) => {
       });
     }
 
-    // Find user by id
     const user = await User.findById(userId);
     console.log("User found:", user ? "Yes" : "No");
 
     if (!user) {
-      // Try with alternative IDs only if needed
       console.log("Checking for user with ID:", userId);
 
-      // Try alternative ID field names that might be in the token
       const alternativeUser = await User.findOne({
         $or: [{ _id: userId }, { userId: userId }],
       });
@@ -64,12 +58,10 @@ export const protect = async (req, res, next) => {
       });
     }
 
-    // Check if user is active
     if (!user.isActive) {
       return res.status(401).json({ message: "User account is deactivated" });
     }
 
-    // Set user id and role in request
     req.userId = user._id;
     req.userRole = user.role;
     req.agencyName = user.agencyName;
@@ -96,11 +88,9 @@ export const protect = async (req, res, next) => {
   }
 };
 
-
 export const authorize = (requiredPermission) => {
   return async (req, res, next) => {
     try {
-      // If no permission specified, just check if user is authenticated
       if (!requiredPermission) {
         return next();
       }
@@ -115,7 +105,6 @@ export const authorize = (requiredPermission) => {
         `Permission check: User role is ${user.role}, required permission is ${requiredPermission}`
       );
 
-      // Check if user has the required permission
       if (!hasPermission(user.role, requiredPermission)) {
         return res.status(403).json({
           message: `Access denied: ${user.role} role cannot access this resource`,
@@ -131,7 +120,6 @@ export const authorize = (requiredPermission) => {
   };
 };
 
-// Legacy role-based authorization
 export const authorizeRoles = (...roles) => {
   return async (req, res, next) => {
     try {
@@ -147,7 +135,6 @@ export const authorizeRoles = (...roles) => {
         )}`
       );
 
-      // Check if user role is in the allowed roles
       if (!roles.includes(user.role)) {
         return res.status(403).json({
           message: `Access denied: ${user.role} role cannot access this resource`,

@@ -6,12 +6,10 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-// Get current file directory for log file path
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const logFile = path.join(__dirname, "../../email-logs.txt");
 
-// Log email activity to file for debugging
 const appendToLog = (message) => {
   const timestamp = new Date().toISOString();
   const logMessage = `[${timestamp}] ${message}\n`;
@@ -23,15 +21,13 @@ const appendToLog = (message) => {
   }
 };
 
-// Validate API key
 const apiKey = process.env.RESEND_API_KEY;
 if (!apiKey) {
   console.error("⚠️ ERROR: Missing RESEND_API_KEY in environment variables");
-  // Log to file for persistence
+
   appendToLog("ERROR: Missing RESEND_API_KEY in environment variables");
 }
 
-// Initialize Resend with a fallback for development
 const resend = apiKey
   ? new Resend(apiKey)
   : {
@@ -46,19 +42,14 @@ const resend = apiKey
       },
     };
 
-/**
- * Send an email using the Resend service with enhanced error handling and logging
- */
 const sendEmail = async (to, subject, text) => {
   try {
     appendToLog(`Attempting to send email to: ${to}`);
     appendToLog(`Subject: ${subject}`);
     console.log(`📧 Sending email to: ${to}`);
 
-    // Convert plain text to HTML for better formatting
     const html = text.replace(/\n/g, "<br>");
 
-    // Prepare email data
     const emailData = {
       from: process.env.EMAIL_FROM || "TAMS <onboarding@resend.dev>",
       to,
@@ -67,7 +58,6 @@ const sendEmail = async (to, subject, text) => {
       html,
     };
 
-    // Log attempt
     appendToLog(
       `Email configuration: ${JSON.stringify({
         from: emailData.from,
@@ -76,7 +66,6 @@ const sendEmail = async (to, subject, text) => {
       })}`
     );
 
-    // Send the email via Resend API
     const { data, error } = await resend.emails.send(emailData);
 
     if (error) {
@@ -111,3 +100,42 @@ const sendEmail = async (to, subject, text) => {
 };
 
 export default sendEmail;
+
+const sendShiftNotification = async (driver, shift) => {
+  try {
+    const to = driver.email;
+    const subject = "New Shift Assignment";
+
+    const startTime = new Date(shift.startTime).toLocaleString();
+    const endTime = shift.endTime
+      ? new Date(shift.endTime).toLocaleString()
+      : "To be determined";
+
+    const text = `
+      Hello ${driver.names},
+      
+      You have been assigned to a new shift with the following details:
+      
+      Date: ${shift.Date}
+      From: ${shift.origin}
+      To: ${shift.destination}
+      Start Time: ${startTime}
+      Expected End Time: ${endTime}
+      Vehicle: ${shift.plateNumber}
+      
+      Please ensure you are prepared and on time for this assignment.
+      
+      Regards,
+      Transport Agency Management Team
+    `;
+    return await sendEmail(to, subject, text);
+  } catch (error) {
+    console.error("Error sending shift notification:", error);
+    return {
+      success: false,
+      error: error.message || "Unknown error",
+    };
+  }
+};
+
+export { sendEmail, sendShiftNotification };

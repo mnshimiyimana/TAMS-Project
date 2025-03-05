@@ -118,7 +118,6 @@ export default function DriversTable({
         params.status = statusFilter;
       }
 
-      // Add agencyName as a parameter for filtering
       if (agencyName) {
         params.agencyName = agencyName;
       }
@@ -328,14 +327,14 @@ export default function DriversTable({
                 return (
                   <TableRow key={_id}>
                     <TableCell className="px-6 py-4">{driverId}</TableCell>
-                    <TableCell className="px-8 py-4">{names}</TableCell>
+                    <TableCell className="px-6 py-4">{names}</TableCell>
                     <TableCell className="px-6 py-4">{email}</TableCell>
                     <TableCell className="px-6 py-4">{phoneNumber}</TableCell>
-                    <TableCell className="px-8 py-4">
+                    <TableCell className="px-6 py-4">
                       <span
                         className={`${getStatusStyle(
                           status
-                        )} text-sm font-medium rounded-lg px-3 py-1`}
+                        )} text-sm font-medium rounded-lg px-6 py-1`}
                       >
                         {status}
                       </span>

@@ -34,8 +34,8 @@ import {
   TrendingUp,
   Car,
   DollarSign,
+  X,
 } from "lucide-react";
-
 import {
   AreaChart as RechartsAreaChart,
   Area,
@@ -49,6 +49,15 @@ import {
   Legend,
 } from "recharts";
 import { useRouter } from "next/navigation";
+
+// **shadcn/ui** Select
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 
 interface FuelTransaction {
   _id: string;
@@ -82,9 +91,10 @@ interface ChartData {
 }
 
 export default function FuelProfile() {
-
   const router = useRouter();
-  
+
+  const [allTransactions, setAllTransactions] = useState<FuelTransaction[]>([]);
+
   const [transactions, setTransactions] = useState<FuelTransaction[]>([]);
   const [vehicleSummaries, setVehicleSummaries] = useState<
     VehicleFuelSummary[]
@@ -98,17 +108,24 @@ export default function FuelProfile() {
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const [selectedDriver, setSelectedDriver] = useState<string>("");
+  const [selectedBus, setSelectedBus] = useState<string>("");
+
   const user = useSelector((state: RootState) => state.auth.user);
-  const token = localStorage.getItem("token");
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("token") : "";
 
   useEffect(() => {
     fetchFuelData();
   }, []);
 
+  useEffect(() => {
+    applyFilters();
+  }, [selectedDriver, selectedBus, allTransactions]);
+
   const fetchFuelData = async () => {
     try {
       setIsLoading(true);
-
       const response = await axios.get(
         "http://localhost:5000/api/fuel-management",
         {
@@ -119,94 +136,114 @@ export default function FuelProfile() {
       );
 
       const fuelData = Array.isArray(response.data) ? response.data : [];
-      setTransactions(fuelData);
-
-      if (fuelData.length > 0) {
-        // Overall stats
-        const totalVolume = fuelData.reduce((sum, t) => sum + t.amount, 0);
-        const totalSpent = fuelData.reduce(
-          (sum, t) => sum + t.amount * t.amountPrice,
-          0
-        );
-
-        setFuelStats({
-          totalSpent,
-          totalVolume,
-          averagePrice: totalSpent / totalVolume,
-          transactionsCount: fuelData.length,
-        });
-
-        const vehicleMap = new Map<string, VehicleFuelSummary>();
-
-        fuelData.forEach((tx) => {
-          if (!vehicleMap.has(tx.plateNumber)) {
-            vehicleMap.set(tx.plateNumber, {
-              plateNumber: tx.plateNumber,
-              totalFuel: 0,
-              averageCost: 0,
-              transactions: 0,
-            });
-          }
-
-          const summary = vehicleMap.get(tx.plateNumber)!;
-          summary.totalFuel += tx.amount;
-          summary.transactions += 1;
-        });
-
-        vehicleMap.forEach((summary) => {
-          const vehicleTxs = fuelData.filter(
-            (tx) => tx.plateNumber === summary.plateNumber
-          );
-          const totalCost = vehicleTxs.reduce(
-            (sum, tx) => sum + tx.amount * tx.amountPrice,
-            0
-          );
-          summary.averageCost = totalCost / summary.totalFuel;
-        });
-
-        setVehicleSummaries(Array.from(vehicleMap.values()));
-
-        const monthlyData = new Map<string, { volume: number; cost: number }>();
-
-        fuelData.forEach((tx) => {
-          const date = new Date(tx.fuelDate);
-          const monthYear = `${date.getMonth() + 1}/${date.getFullYear()}`;
-
-          if (!monthlyData.has(monthYear)) {
-            monthlyData.set(monthYear, { volume: 0, cost: 0 });
-          }
-
-          const monthData = monthlyData.get(monthYear)!;
-          monthData.volume += tx.amount;
-          monthData.cost += tx.amount * tx.amountPrice;
-        });
-
-        const chartDataArray: ChartData[] = [];
-
-        monthlyData.forEach((data, month) => {
-          chartDataArray.push({
-            name: month,
-            volume: parseFloat(data.volume.toFixed(2)),
-            cost: parseFloat(data.cost.toFixed(2)),
-          });
-        });
-
-        chartDataArray.sort((a, b) => {
-          const [monthA, yearA] = a.name.split("/");
-          const [monthB, yearB] = b.name.split("/");
-
-          if (yearA !== yearB) return parseInt(yearA) - parseInt(yearB);
-          return parseInt(monthA) - parseInt(monthB);
-        });
-
-        setChartData(chartDataArray);
-      }
+      setAllTransactions(fuelData);
     } catch (error) {
       console.error("Error fetching fuel data:", error);
       toast.error("Failed to load fuel management data");
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const applyFilters = () => {
+    let filtered = [...allTransactions];
+
+    if (selectedDriver) {
+      filtered = filtered.filter((tx) => tx.driverName === selectedDriver);
+    }
+    if (selectedBus) {
+      filtered = filtered.filter((tx) => tx.plateNumber === selectedBus);
+    }
+
+    setTransactions(filtered);
+    recalcStats(filtered);
+  };
+
+  const recalcStats = (fuelData: FuelTransaction[]) => {
+    if (fuelData.length === 0) {
+      setFuelStats({
+        totalSpent: 0,
+        totalVolume: 0,
+        averagePrice: 0,
+        transactionsCount: 0,
+      });
+      setVehicleSummaries([]);
+      setChartData([]);
+      return;
+    }
+
+    const totalVolume = fuelData.reduce((sum, t) => sum + t.amount, 0);
+    const totalSpent = fuelData.reduce(
+      (sum, t) => sum + t.amount * t.amountPrice,
+      0
+    );
+
+    setFuelStats({
+      totalSpent,
+      totalVolume,
+      averagePrice: totalSpent / totalVolume,
+      transactionsCount: fuelData.length,
+    });
+
+    const vehicleMap = new Map<string, VehicleFuelSummary>();
+
+    fuelData.forEach((tx) => {
+      if (!vehicleMap.has(tx.plateNumber)) {
+        vehicleMap.set(tx.plateNumber, {
+          plateNumber: tx.plateNumber,
+          totalFuel: 0,
+          averageCost: 0,
+          transactions: 0,
+        });
+      }
+      const summary = vehicleMap.get(tx.plateNumber)!;
+      summary.totalFuel += tx.amount;
+      summary.transactions += 1;
+    });
+
+    vehicleMap.forEach((summary) => {
+      const vehicleTxs = fuelData.filter(
+        (tx) => tx.plateNumber === summary.plateNumber
+      );
+      const totalCost = vehicleTxs.reduce(
+        (sum, tx) => sum + tx.amount * tx.amountPrice,
+        0
+      );
+      summary.averageCost = totalCost / summary.totalFuel;
+    });
+
+    setVehicleSummaries(Array.from(vehicleMap.values()));
+
+    const monthlyData = new Map<string, { volume: number; cost: number }>();
+
+    fuelData.forEach((tx) => {
+      const date = new Date(tx.fuelDate);
+      const monthYear = `${date.getMonth() + 1}/${date.getFullYear()}`;
+      if (!monthlyData.has(monthYear)) {
+        monthlyData.set(monthYear, { volume: 0, cost: 0 });
+      }
+      const monthData = monthlyData.get(monthYear)!;
+      monthData.volume += tx.amount;
+      monthData.cost += tx.amount * tx.amountPrice;
+    });
+
+    const chartDataArray: ChartData[] = [];
+    monthlyData.forEach((data, month) => {
+      chartDataArray.push({
+        name: month,
+        volume: parseFloat(data.volume.toFixed(2)),
+        cost: parseFloat(data.cost.toFixed(2)),
+      });
+    });
+
+    chartDataArray.sort((a, b) => {
+      const [monthA, yearA] = a.name.split("/");
+      const [monthB, yearB] = b.name.split("/");
+      if (yearA !== yearB) return parseInt(yearA) - parseInt(yearB);
+      return parseInt(monthA) - parseInt(monthB);
+    });
+
+    setChartData(chartDataArray);
   };
 
   const formatCurrency = (amount: number) => {
@@ -224,6 +261,20 @@ export default function FuelProfile() {
   const formatDate = (dateString: string) => {
     if (!dateString) return "N/A";
     return new Date(dateString).toLocaleDateString();
+  };
+
+  const uniqueDrivers = Array.from(
+    new Set(allTransactions.map((t) => t.driverName))
+  ).filter(Boolean);
+  const uniqueBuses = Array.from(
+    new Set(allTransactions.map((t) => t.plateNumber))
+  ).filter(Boolean);
+
+  const isFiltering = selectedDriver !== "" || selectedBus !== "";
+
+  const handleClearFilters = () => {
+    setSelectedDriver("");
+    setSelectedBus("");
   };
 
   return (
@@ -245,6 +296,73 @@ export default function FuelProfile() {
             </div>
           ) : (
             <div className="space-y-8">
+              {/* Filter section using shadcn/ui Select */}
+              <div className="bg-white p-4 rounded-md shadow mb-4 flex flex-col md:flex-row gap-4 items-center justify-between">
+                <div className="flex flex-col md:flex-row gap-4 items-center">
+                  <div className="flex flex-col">
+                    <label className="font-medium text-sm mb-1">
+                      Filter by Driver
+                    </label>
+                    <Select
+                      value={selectedDriver || "all"}
+                      onValueChange={(val) =>
+                        setSelectedDriver(val === "all" ? "" : val)
+                      }
+                    >
+                      <SelectTrigger className="w-[200px] border-gray-300 focus:ring-green-500">
+                        <SelectValue placeholder="All Drivers" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {/* Notice 'all' instead of '' */}
+                        <SelectItem value="all">All Drivers</SelectItem>
+                        {uniqueDrivers.map((driver) => (
+                          <SelectItem key={driver} value={driver}>
+                            {driver}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex flex-col">
+                    <label className="font-medium text-sm mb-1">
+                      Filter by Bus
+                    </label>
+                    <Select
+                      value={selectedBus || "all"}
+                      onValueChange={(val) =>
+                        setSelectedBus(val === "all" ? "" : val)
+                      }
+                    >
+                      <SelectTrigger className="w-[200px] border-gray-300 focus:ring-green-500">
+                        <SelectValue placeholder="All Buses" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Buses</SelectItem>
+                        {uniqueBuses.map((bus) => (
+                          <SelectItem key={bus} value={bus}>
+                            {bus}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {isFiltering && (
+                  <div>
+                    <Button
+                      variant="outline"
+                      className="flex items-center gap-2 text-gray-800 border-gray-200 hover:text-black"
+                      onClick={handleClearFilters}
+                    >
+                      <X className="h-4 w-4" />
+                      Clear Filters
+                    </Button>
+                  </div>
+                )}
+              </div>
+
               {/* Fuel stats cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
                 <Card className="bg-blue-50">
@@ -336,6 +454,7 @@ export default function FuelProfile() {
                           <XAxis dataKey="name" />
                           <YAxis />
                           <Tooltip />
+                          <Legend />
                           <Area
                             type="monotone"
                             dataKey="volume"
@@ -371,6 +490,7 @@ export default function FuelProfile() {
                           <XAxis dataKey="name" />
                           <YAxis />
                           <Tooltip />
+                          <Legend />
                           <Bar
                             dataKey="cost"
                             name="Cost (RWF)"
@@ -444,7 +564,7 @@ export default function FuelProfile() {
                 </CardContent>
                 <CardFooter className="flex justify-center">
                   <Button
-                    onClick={navigateToDashboard} 
+                    onClick={navigateToDashboard}
                     className="bg-green-600 hover:bg-green-700"
                   >
                     <Fuel className="h-4 w-4 mr-2" />

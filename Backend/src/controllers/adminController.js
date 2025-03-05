@@ -9,10 +9,8 @@ import sendEmail from "../config/emailService.js";
 
 export const createAdmin = async (req, res) => {
   try {
-    // Get the super admin's ID from the request
     const superAdminId = req.userId;
 
-    // Verify the creator is a super admin
     const superAdmin = await User.findById(superAdminId);
     if (!superAdmin || superAdmin.role !== "superadmin") {
       return res
@@ -22,12 +20,10 @@ export const createAdmin = async (req, res) => {
 
     const { agencyName, username, email, phone, location } = req.body;
 
-    // Validate input
     if (!agencyName || !username || !email || !phone || !location) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    // Check if agency exists; if not, create it
     let agency = await Agency.findOne({ agencyName });
 
     if (!agency) {
@@ -39,7 +35,6 @@ export const createAdmin = async (req, res) => {
       await agency.save();
     }
 
-    // Check if email or phone already exists
     const existingUser = await User.findOne({
       $or: [{ email }, { phone }, { username }],
     });
@@ -50,7 +45,6 @@ export const createAdmin = async (req, res) => {
       });
     }
 
-    // Check if an admin already exists for this agency
     const existingAdmin = await User.findOne({
       agencyName,
       role: "admin",
@@ -64,14 +58,12 @@ export const createAdmin = async (req, res) => {
 
     console.log("Creating admin account for:", username, email);
 
-    // Generate a password reset token
     const resetToken = crypto.randomBytes(32).toString("hex");
     const passwordResetToken = crypto
       .createHash("sha256")
       .update(resetToken)
       .digest("hex");
 
-    // Create new admin user
     const newAdmin = new User({
       agencyName,
       username,
@@ -81,13 +73,12 @@ export const createAdmin = async (req, res) => {
       role: "admin",
       createdBy: superAdminId,
       passwordResetToken,
-      passwordResetExpires: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+      passwordResetExpires: Date.now() + 24 * 60 * 60 * 1000,
       passwordSet: false,
     });
 
     await newAdmin.save();
     console.log("Admin created with ID:", newAdmin._id);
-
 
     const frontendBaseUrl =
       process.env.FRONTEND_URL || `${req.protocol}://${req.get("host")}`;
@@ -110,7 +101,6 @@ export const createAdmin = async (req, res) => {
       Transport Agency Management Team
     `;
 
-    // Send email with enhanced error handling
     console.log("Attempting to send email to:", email);
     const emailResult = await sendEmail(
       email,
@@ -122,7 +112,6 @@ export const createAdmin = async (req, res) => {
     if (!emailResult.success) {
       console.error("Email sending failed:", emailResult.error);
 
-      // For development, make the setup link available in the console
       console.log("====================================================");
       console.log("🔗 DEVELOPMENT - SETUP LINK:");
       console.log(resetURL);
@@ -151,13 +140,10 @@ export const createAdmin = async (req, res) => {
   }
 };
 
-// Create a new user (by admin)
 export const createUser = async (req, res) => {
   try {
-    // Get the admin's ID from the request
     const adminId = req.userId;
 
-    // Verify the creator is an admin
     const admin = await User.findById(adminId);
     if (!admin || admin.role !== "admin") {
       return res
@@ -168,12 +154,10 @@ export const createUser = async (req, res) => {
     const adminAgency = admin.agencyName;
     const { username, email, phone, location } = req.body;
 
-    // Validate input
     if (!username || !email || !phone || !location) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    // Check if email or phone already exists
     const existingUser = await User.findOne({
       $or: [{ email }, { phone }, { username }],
     });
@@ -184,14 +168,12 @@ export const createUser = async (req, res) => {
       });
     }
 
-    // Generate a password reset token
     const resetToken = crypto.randomBytes(32).toString("hex");
     const passwordResetToken = crypto
       .createHash("sha256")
       .update(resetToken)
       .digest("hex");
 
-    // Create new user
     const newUser = new User({
       username,
       email,
@@ -201,13 +183,12 @@ export const createUser = async (req, res) => {
       agencyName: adminAgency,
       createdBy: adminId,
       passwordResetToken,
-      passwordResetExpires: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+      passwordResetExpires: Date.now() + 24 * 60 * 60 * 1000,
       passwordSet: false,
     });
 
     await newUser.save();
 
-    // Send email with password setup link
     const resetURL = `${req.protocol}://${req.get(
       "host"
     )}/auth/setup-password/${resetToken}`;
@@ -257,13 +238,11 @@ export const createUser = async (req, res) => {
   }
 };
 
-// Get all users for an agency
 export const getAgencyUsers = async (req, res) => {
   try {
     const adminId = req.userId;
     const { agencyName } = req.query;
 
-    // Verify requester is admin or superadmin
     const requester = await User.findById(adminId);
     if (
       !requester ||
@@ -272,7 +251,6 @@ export const getAgencyUsers = async (req, res) => {
       return res.status(403).json({ message: "Not authorized" });
     }
 
-    // For admins, restrict to their own agency
     if (requester.role === "admin") {
       if (agencyName && agencyName !== requester.agencyName) {
         return res
@@ -281,7 +259,6 @@ export const getAgencyUsers = async (req, res) => {
       }
     }
 
-    // Set the agency to query based on role and provided query param
     const queryAgencyName =
       requester.role === "admin" ? requester.agencyName : agencyName || null;
 
@@ -304,7 +281,6 @@ export const getAgencyUsers = async (req, res) => {
   }
 };
 
-// Update user status (active/inactive)
 export const updateUserStatus = async (req, res) => {
   try {
     const adminId = req.userId;
@@ -316,33 +292,28 @@ export const updateUserStatus = async (req, res) => {
         .json({ message: "User ID and status are required" });
     }
 
-    // Verify requester is admin or superadmin
     const admin = await User.findById(adminId);
     if (!admin || (admin.role !== "admin" && admin.role !== "superadmin")) {
       return res.status(403).json({ message: "Not authorized" });
     }
 
-    // Find the user to update
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // For admins, restrict to their own agency
     if (admin.role === "admin" && user.agencyName !== admin.agencyName) {
       return res
         .status(403)
         .json({ message: "Not authorized to update this user" });
     }
 
-    // Prevent admins from deactivating superadmins
     if (admin.role === "admin" && user.role === "superadmin") {
       return res
         .status(403)
         .json({ message: "Not authorized to update superadmin accounts" });
     }
 
-    // Update the user status
     user.isActive = isActive;
     await user.save();
 

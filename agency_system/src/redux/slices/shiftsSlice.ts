@@ -7,6 +7,7 @@ export interface Shift {
   driverName: string;
   startTime: string;
   endTime?: string;
+  actualEndTime?: string;
   destination: string;
   origin: string;
   Date: string;

@@ -38,7 +38,6 @@ const initialState: FeedbackState = {
   submissionError: null,
 };
 
-// Async thunk to submit feedback
 export const submitFeedback = createAsyncThunk(
   "feedback/submit",
   async (
@@ -72,7 +71,6 @@ export const submitFeedback = createAsyncThunk(
   }
 );
 
-// Async thunk to fetch user's feedback history
 export const fetchUserFeedback = createAsyncThunk(
   "feedback/fetchUserFeedback",
   async (_, { rejectWithValue }) => {
@@ -229,7 +227,6 @@ const feedbackSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // Update feedback status
       .addCase(updateFeedbackStatus.fulfilled, (state, action) => {
         const updatedFeedback = action.payload.feedback;
 

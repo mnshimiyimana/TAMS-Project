@@ -621,4 +621,258 @@ export const getAuditLogs = async (req, res) => {
   }
 };
 
+export const getUserDetails = async (req, res) => {
+  try {
+    const { userId } = req.params;
 
+    const superAdmin = await User.findById(req.userId);
+    if (!superAdmin || superAdmin.role !== "superadmin") {
+      return res
+        .status(403)
+        .json({ message: "Only superadmin can access user details" });
+    }
+
+    const user = await User.findById(userId).select("-password");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json(user);
+  } catch (error) {
+    console.error("Error fetching user details:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const updateUserRole = async (req, res) => {
+  try {
+    const { userId, newRole } = req.body;
+
+    if (!["admin", "manager", "operator"].includes(newRole)) {
+      return res.status(400).json({ message: "Invalid role specified" });
+    }
+
+    const superAdmin = await User.findById(req.userId);
+    if (!superAdmin || superAdmin.role !== "superadmin") {
+      return res
+        .status(403)
+        .json({ message: "Only superadmin can update user roles" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (user.role === "superadmin") {
+      return res
+        .status(403)
+        .json({ message: "Cannot modify superadmin accounts" });
+    }
+
+    const oldRole = user.role;
+    user.role = newRole;
+    await user.save();
+
+    await createAuditLog({
+      userId: req.userId,
+      action: "update_role",
+      resourceType: "user",
+      resourceId: userId,
+      description: `Changed user ${user.username} role from ${oldRole} to ${newRole}`,
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+      metadata: { oldRole, newRole },
+    });
+
+    res.status(200).json({
+      message: "User role updated successfully",
+      user: {
+        id: user._id,
+        username: user.username,
+        role: user.role,
+        agencyName: user.agencyName,
+      },
+    });
+  } catch (error) {
+    console.error("Error updating user role:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const deleteUser = async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    const superAdmin = await User.findById(req.userId);
+    if (!superAdmin || superAdmin.role !== "superadmin") {
+      return res
+        .status(403)
+        .json({ message: "Only superadmin can delete users" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (user.role === "superadmin") {
+      return res
+        .status(403)
+        .json({ message: "Cannot delete superadmin accounts" });
+    }
+
+    const userInfo = {
+      username: user.username,
+      role: user.role,
+      agencyName: user.agencyName,
+    };
+
+    await User.findByIdAndDelete(userId);
+
+    await createAuditLog({
+      userId: req.userId,
+      action: "delete",
+      resourceType: "user",
+      resourceId: userId,
+      description: `Deleted user ${userInfo.username} (${userInfo.role}) from agency ${userInfo.agencyName}`,
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+      metadata: { deletedUser: userInfo },
+    });
+
+    res.status(200).json({
+      message: "User deleted successfully",
+      deletedUser: userInfo,
+    });
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const resetUserPassword = async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    const superAdmin = await User.findById(req.userId);
+    if (!superAdmin || superAdmin.role !== "superadmin") {
+      return res
+        .status(403)
+        .json({ message: "Only superadmin can reset passwords" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    user.passwordSet = false;
+    await user.save();
+
+    await createAuditLog({
+      userId: req.userId,
+      action: "reset_password",
+      resourceType: "user",
+      resourceId: userId,
+      description: `Reset password for user ${user.username}`,
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+    });
+
+    res.status(200).json({
+      message: "User password reset successfully",
+      user: {
+        id: user._id,
+        username: user.username,
+      },
+    });
+  } catch (error) {
+    console.error("Error resetting user password:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getUsersByAgency = async (req, res) => {
+  try {
+    const { agencyName } = req.params;
+    const { page = 1, limit = 20 } = req.query;
+
+    const superAdmin = await User.findById(req.userId);
+    if (!superAdmin || superAdmin.role !== "superadmin") {
+      return res
+        .status(403)
+        .json({ message: "Only superadmin can access this endpoint" });
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const query = { agencyName };
+
+    const users = await User.find(query)
+      .select("-password")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await User.countDocuments(query);
+
+    res.status(200).json({
+      users,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / parseInt(limit)),
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching users by agency:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const searchUsers = async (req, res) => {
+  try {
+    const { query, page = 1, limit = 20 } = req.query;
+
+    const superAdmin = await User.findById(req.userId);
+    if (!superAdmin || superAdmin.role !== "superadmin") {
+      return res
+        .status(403)
+        .json({ message: "Only superadmin can access this endpoint" });
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const searchQuery = {
+      $or: [
+        { username: { $regex: query, $options: "i" } },
+        { email: { $regex: query, $options: "i" } },
+        { agencyName: { $regex: query, $options: "i" } },
+      ],
+    };
+
+    const users = await User.find(searchQuery)
+      .select("-password")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await User.countDocuments(searchQuery);
+
+    res.status(200).json({
+      users,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / parseInt(limit)),
+      },
+    });
+  } catch (error) {
+    console.error("Error searching users:", error);
+    res.status(500).json({ error: error.message });
+  }
+};

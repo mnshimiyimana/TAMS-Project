@@ -129,7 +129,16 @@ export default function AdminProfile() {
           },
         }
       );
-      setUsers(response.data);
+
+      if (Array.isArray(response.data)) {
+        setUsers(response.data);
+      } else if (response.data && Array.isArray(response.data.users)) {
+        setUsers(response.data.users);
+      } else {
+        console.error("API did not return an array:", response.data);
+        setUsers([]);
+        toast.error("Failed to load users: Unexpected data format");
+      }
     } catch (error) {
       console.error("Error fetching users:", error);
       toast.error("Failed to load users");
@@ -171,7 +180,7 @@ export default function AdminProfile() {
       toast.success(response.data.message || "User created successfully");
       setIsAddUserDialogOpen(false);
       reset();
-      fetchUsers(); // Refresh the user list
+      fetchUsers(); 
     } catch (error: any) {
       console.error("Error creating user:", error);
       toast.error(error.response?.data?.message || "Failed to create user");
@@ -196,7 +205,7 @@ export default function AdminProfile() {
       toast.success(
         `User ${isActive ? "activated" : "deactivated"} successfully`
       );
-      fetchUsers(); // Refresh user list
+      fetchUsers();
     } catch (error: any) {
       console.error("Error updating user status:", error);
       toast.error(
@@ -389,10 +398,18 @@ export default function AdminProfile() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-1/6 min-w-40 px-4">Username</TableHead>
-                      <TableHead className="w-1/2 min-w-60 px-4">Email</TableHead>
-                      <TableHead className="w-1/6 min-w-36 px-4">Role</TableHead>
-                      <TableHead className="w-1/6 min-w-36 px-4">Status</TableHead>
+                      <TableHead className="w-1/6 min-w-40 px-4">
+                        Username
+                      </TableHead>
+                      <TableHead className="w-1/2 min-w-60 px-4">
+                        Email
+                      </TableHead>
+                      <TableHead className="w-1/6 min-w-36 px-4">
+                        Role
+                      </TableHead>
+                      <TableHead className="w-1/6 min-w-36 px-4">
+                        Status
+                      </TableHead>
                       <TableHead className="w-1/3 min-w-48">
                         Last Login
                       </TableHead>
@@ -584,7 +601,7 @@ export default function AdminProfile() {
         </DialogContent>
       </Dialog>
 
-      {/* Alert Dialog for Confirmations */}
+
       <AlertDialog
         open={alertDialog.open}
         onOpenChange={(open) => setAlertDialog({ ...alertDialog, open })}

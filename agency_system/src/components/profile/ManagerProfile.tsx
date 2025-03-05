@@ -18,14 +18,27 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { 
-  Calendar, 
-  Clock, 
-  Users, 
-  Car, 
-  TrendingUp, 
-  MapPin, 
-  RefreshCw 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Calendar,
+  Clock,
+  Users,
+  Car,
+  TrendingUp,
+  MapPin,
+  RefreshCw,
+  CheckCircle,
+  X,
+  ClipboardCheck,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -42,6 +55,7 @@ interface RecentShift {
   driverName: string;
   startTime: string;
   endTime?: string;
+  actualEndTime?: string;
   destination: string;
   origin: string;
   Date: string;
@@ -58,9 +72,16 @@ export default function ManagerProfile() {
   const [recentShifts, setRecentShifts] = useState<RecentShift[]>([]);
   const [topDrivers, setTopDrivers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+  const [isCompletingShift, setIsCompletingShift] = useState<string | null>(
+    null
+  );
+  const [editingShift, setEditingShift] = useState<RecentShift | null>(null);
+  const [actualEndTime, setActualEndTime] = useState<string>("");
+  const [isUpdatingEndTime, setIsUpdatingEndTime] = useState(false);
+
   const user = useSelector((state: RootState) => state.auth.user);
-  const token = localStorage.getItem("token");
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
   useEffect(() => {
     fetchManagerData();
@@ -69,63 +90,71 @@ export default function ManagerProfile() {
   const fetchManagerData = async () => {
     try {
       setIsLoading(true);
-      
-      const shiftsResponse = await axios.get("http://localhost:5000/api/shifts", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      
+
+      const shiftsResponse = await axios.get(
+        "http://localhost:5000/api/shifts",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
       if (Array.isArray(shiftsResponse.data)) {
         setRecentShifts(shiftsResponse.data.slice(0, 5));
       }
-      
-      // Get drivers data
-      const driversResponse = await axios.get("http://localhost:5000/api/drivers", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      
+
+      const driversResponse = await axios.get(
+        "http://localhost:5000/api/drivers",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
       const drivers = driversResponse.data.drivers || [];
-      
-      // Get vehicles data
-      const vehiclesResponse = await axios.get("http://localhost:5000/api/buses", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      
-      const vehicles = Array.isArray(vehiclesResponse.data) 
-        ? vehiclesResponse.data 
+
+      const vehiclesResponse = await axios.get(
+        "http://localhost:5000/api/buses",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      const vehicles = Array.isArray(vehiclesResponse.data)
+        ? vehiclesResponse.data
         : [];
-      
-      // Calculate summary
+
       const today = new Date();
-      const shifts = Array.isArray(shiftsResponse.data) ? shiftsResponse.data : [];
-      
+      const shifts = Array.isArray(shiftsResponse.data)
+        ? shiftsResponse.data
+        : [];
+
       const summary = {
         totalShifts: shifts.length,
-        upcomingShifts: shifts.filter(s => new Date(s.startTime) > today).length,
-        activeDrivers: drivers.filter((d: { status: string; }) => d.status === "On Shift").length,
-        availableVehicles: vehicles.filter(v => v.status === "Available").length,
+        upcomingShifts: shifts.filter((s) => new Date(s.startTime) > today)
+          .length,
+        activeDrivers: drivers.filter(
+          (d: { status: string }) => d.status === "On Shift"
+        ).length,
+        availableVehicles: vehicles.filter((v) => v.status === "Available")
+          .length,
       };
-      
+
       setActivitySummary(summary);
-      
-      // Calculate top drivers (by number of shifts)
+
       const driverShiftCount = shifts.reduce((acc: any, shift: any) => {
         acc[shift.driverName] = (acc[shift.driverName] || 0) + 1;
         return acc;
       }, {});
-      
+
       const topDriversList = Object.entries(driverShiftCount)
         .map(([name, count]) => ({ name, count }))
         .sort((a: any, b: any) => b.count - a.count)
         .slice(0, 5);
-        
+
       setTopDrivers(topDriversList);
-      
     } catch (error) {
       console.error("Error fetching manager data:", error);
       toast.error("Failed to load manager dashboard data");
@@ -134,13 +163,128 @@ export default function ManagerProfile() {
     }
   };
 
+  function getShiftStatus(shift: RecentShift) {
+    const now = new Date();
+    const start = new Date(shift.startTime);
+
+    if (start > now) {
+      return "Scheduled";
+    }
+
+    if (shift.endTime && !isNaN(new Date(shift.endTime).getTime())) {
+      const end = new Date(shift.endTime);
+
+      if (end <= now) {
+        return "Completed";
+      }
+    }
+
+    return "In Progress";
+  }
+
+  function getBadgeClasses(status: string) {
+    switch (status) {
+      case "Completed":
+        return "bg-green-100 text-green-800";
+      case "Scheduled":
+        return "bg-blue-100 text-blue-800";
+      default:
+        return "bg-yellow-100 text-yellow-800";
+    }
+  }
+
+  const completeShift = async (shiftId: string) => {
+    try {
+      setIsCompletingShift(shiftId);
+
+      const endTime = new Date().toISOString();
+
+      await axios.patch(
+        `http://localhost:5000/api/shifts/${shiftId}`,
+        { endTime },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      toast.success("Shift completed successfully");
+
+      setRecentShifts((prevShifts) =>
+        prevShifts.map((shift) =>
+          shift._id === shiftId ? { ...shift, endTime } : shift
+        )
+      );
+
+      fetchManagerData();
+    } catch (error) {
+      console.error("Error completing shift:", error);
+      toast.error("Failed to complete shift. Please try again.");
+    } finally {
+      setIsCompletingShift(null);
+    }
+  };
+
+  const updateActualEndTime = async () => {
+    if (!editingShift) return;
+    try {
+      setIsUpdatingEndTime(true);
+
+      const actualEndTimeValue = new Date(actualEndTime).toISOString();
+
+      await axios.patch(
+        `http://localhost:5000/api/shifts/${editingShift._id}`,
+        { actualEndTime: actualEndTimeValue },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      toast.success("Actual end time recorded successfully");
+
+      setRecentShifts((prevShifts) =>
+        prevShifts.map((shift) =>
+          shift._id === editingShift._id
+            ? { ...shift, actualEndTime: actualEndTimeValue }
+            : shift
+        )
+      );
+
+      setEditingShift(null);
+      setActualEndTime("");
+
+      fetchManagerData();
+    } catch (error) {
+      console.error("Error recording actual end time:", error);
+      toast.error("Failed to record actual end time. Please try again.");
+    } finally {
+      setIsUpdatingEndTime(false);
+    }
+  };
+
+  useEffect(() => {
+    if (editingShift) {
+      let timeToUse = editingShift.actualEndTime || editingShift.endTime;
+      if (timeToUse) {
+        const endDate = new Date(timeToUse);
+        const formattedDate = endDate.toISOString().slice(0, 16);
+        setActualEndTime(formattedDate);
+      } else {
+        const now = new Date();
+        const formattedNow = now.toISOString().slice(0, 16);
+        setActualEndTime(formattedNow);
+      }
+    }
+  }, [editingShift]);
+
   const formatDate = (dateString: string) => {
     if (!dateString) return "N/A";
     return new Date(dateString).toLocaleDateString();
-  };
-
-  const navigateToDashboard = () => {
-    router.push("/dashboard?feature=shifts");
   };
 
   const formatTime = (dateString: string) => {
@@ -148,13 +292,12 @@ export default function ManagerProfile() {
     return new Date(dateString).toLocaleTimeString();
   };
 
-  const getInitials = (name: string) => {
-    return name
+  const getInitials = (name: string) =>
+    name
       .split(" ")
       .map((n) => n[0])
       .join("")
       .toUpperCase();
-  };
 
   const getColorForDriver = (index: number) => {
     const colors = [
@@ -165,6 +308,10 @@ export default function ManagerProfile() {
       "bg-red-100 text-red-800",
     ];
     return colors[index % colors.length];
+  };
+
+  const navigateToDashboard = () => {
+    router.push("/dashboard?feature=shifts");
   };
 
   return (
@@ -192,44 +339,60 @@ export default function ManagerProfile() {
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="text-sm font-medium text-blue-800">Total Shifts</p>
-                        <p className="text-3xl font-bold text-blue-900">{activitySummary.totalShifts}</p>
+                        <p className="text-sm font-medium text-blue-800">
+                          Total Shifts
+                        </p>
+                        <p className="text-3xl font-bold text-blue-900">
+                          {activitySummary.totalShifts}
+                        </p>
                       </div>
                       <Calendar className="h-6 w-8 text-blue-600" />
                     </div>
                   </CardContent>
                 </Card>
-                
+
                 <Card className="bg-green-50">
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="text-sm font-medium text-green-800">Upcoming Shifts</p>
-                        <p className="text-3xl font-bold text-green-900">{activitySummary.upcomingShifts}</p>
+                        <p className="text-sm font-medium text-green-800">
+                          Upcoming Shifts
+                        </p>
+                        <p className="text-3xl font-bold text-green-900">
+                          {activitySummary.upcomingShifts}
+                        </p>
                       </div>
                       <Clock className="h-6 w-8 text-green-600" />
                     </div>
                   </CardContent>
                 </Card>
-                
+
                 <Card className="bg-purple-50">
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="text-sm font-medium text-purple-800">Active Drivers</p>
-                        <p className="text-3xl font-bold text-purple-900">{activitySummary.activeDrivers}</p>
+                        <p className="text-sm font-medium text-purple-800">
+                          Active Drivers
+                        </p>
+                        <p className="text-3xl font-bold text-purple-900">
+                          {activitySummary.activeDrivers}
+                        </p>
                       </div>
                       <Users className="h-6 w-8 text-purple-600" />
                     </div>
                   </CardContent>
                 </Card>
-                
+
                 <Card className="bg-amber-50">
                   <CardContent className="p-8">
                     <div className="flex justify-between items-start gap-6">
                       <div>
-                        <p className="text-sm font-medium text-amber-800">Available Vehicles</p>
-                        <p className="text-3xl font-bold text-amber-900">{activitySummary.availableVehicles}</p>
+                        <p className="text-sm font-medium text-amber-800">
+                          Available Vehicles
+                        </p>
+                        <p className="text-3xl font-bold text-amber-900">
+                          {activitySummary.availableVehicles}
+                        </p>
                       </div>
                       <Car className="h-6 w-8 text-amber-600" />
                     </div>
@@ -238,13 +401,15 @@ export default function ManagerProfile() {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Recent shifts */}
+                {/* Recent Shifts */}
                 <Card>
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <div>
                         <CardTitle>Recent Shifts</CardTitle>
-                        <CardDescription>Latest shift activities</CardDescription>
+                        <CardDescription>
+                          Latest shift activities
+                        </CardDescription>
                       </div>
                       <Calendar className="h-5 w-5 text-gray-500" />
                     </div>
@@ -256,50 +421,119 @@ export default function ManagerProfile() {
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        {recentShifts.map((shift) => (
-                          <div key={shift._id} className="bg-gray-50 p-4 rounded-lg">
-                            <div className="flex justify-between items-center mb-2">
-                              <span className="font-medium">{shift.driverName}</span>
-                              <Badge 
-                                variant="outline"
-                                className={shift.endTime ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800"}
-                              >
-                                {shift.endTime ? "Completed" : "Active"}
-                              </Badge>
-                            </div>
-                            <div className="text-sm text-gray-600 space-y-1">
-                              <div className="flex items-center gap-2">
-                                <MapPin className="h-4 w-4" />
-                                <span>
-                                  {shift.origin} → {shift.destination}
+                        {recentShifts.map((shift, idx) => {
+                          const status = getShiftStatus(shift);
+                          return (
+                            <div
+                              key={shift._id}
+                              className="bg-gray-50 p-4 rounded-lg"
+                            >
+                              <div className="flex justify-between items-center mb-2">
+                                <span className="font-medium">
+                                  {shift.driverName}
                                 </span>
+                                <Badge
+                                  variant="outline"
+                                  className={getBadgeClasses(status)}
+                                >
+                                  {status}
+                                </Badge>
                               </div>
-                              <div className="flex items-center gap-2">
-                                <Clock className="h-4 w-4" />
-                                <span>
-                                  {formatTime(shift.startTime)}
-                                  {shift.endTime ? ` - ${formatTime(shift.endTime)}` : " (Ongoing)"}
-                                </span>
+
+                              <div className="text-sm text-gray-600 space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <MapPin className="h-4 w-4" />
+                                  <span>
+                                    {shift.origin} → {shift.destination}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Clock className="h-4 w-4" />
+                                  <span>
+                                    {formatTime(shift.startTime)}
+                                    {shift.endTime
+                                      ? ` - ${formatTime(shift.endTime)}`
+                                      : ""}
+                                  </span>
+                                </div>
+                                {shift.actualEndTime && (
+                                  <div className="flex items-center gap-2">
+                                    <ClipboardCheck className="h-4 w-4 text-green-600" />
+                                    <span className="text-green-700 font-medium">
+                                      Actual end:{" "}
+                                      {formatTime(shift.actualEndTime)}
+                                    </span>
+                                  </div>
+                                )}
+                                <div className="flex items-center gap-2">
+                                  <Car className="h-4 w-4" />
+                                  <span>{shift.plateNumber}</span>
+                                </div>
                               </div>
-                              <div className="flex items-center gap-2">
-                                <Car className="h-4 w-4" />
-                                <span>{shift.plateNumber}</span>
+
+                              {/* Buttons */}
+                              <div className="mt-3 pt-2 border-t border-gray-200">
+                                {status === "Scheduled" && (
+                                  // If shift is scheduled for future, no action
+                                  <p className="text-sm text-gray-500 italic">
+                                    Shift not started yet.
+                                  </p>
+                                )}
+
+                                {status === "In Progress" && (
+                                  // Show complete button
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full mt-1 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700 focus:ring-green-500 transition-colors duration-200"
+                                    onClick={() => completeShift(shift._id)}
+                                    disabled={isCompletingShift === shift._id}
+                                  >
+                                    {isCompletingShift === shift._id ? (
+                                      <>
+                                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                        Completing...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <CheckCircle className="h-4 w-4 mr-2" />
+                                        Complete Shift
+                                      </>
+                                    )}
+                                  </Button>
+                                )}
+
+                                {status === "Completed" &&
+                                  !shift.actualEndTime && (
+                                    // Only show 'Record End Time' if not set
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="mt-1 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700 focus:ring-green-500"
+                                      onClick={() => setEditingShift(shift)}
+                                    >
+                                      <ClipboardCheck className="h-4 w-4 mr-1" />
+                                      Record End Time
+                                    </Button>
+                                  )}
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </CardContent>
                 </Card>
 
-                {/* Top drivers */}
+                {/* Top Drivers */}
                 <Card>
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <div>
                         <CardTitle>Top Drivers</CardTitle>
-                        <CardDescription>Drivers with most shifts</CardDescription>
+                        <CardDescription>
+                          Drivers with most shifts
+                        </CardDescription>
                       </div>
                       <TrendingUp className="h-5 w-5 text-gray-500" />
                     </div>
@@ -313,21 +547,27 @@ export default function ManagerProfile() {
                       <div className="space-y-4">
                         {topDrivers.map((driver, index) => (
                           <div key={index} className="flex items-center gap-4">
-                            <Avatar className={`h-10 w-10 ${getColorForDriver(index)}`}>
+                            <Avatar
+                              className={`h-10 w-10 ${getColorForDriver(
+                                index
+                              )}`}
+                            >
                               <AvatarFallback>
                                 {getInitials(driver.name)}
                               </AvatarFallback>
                             </Avatar>
                             <div className="flex-1">
                               <div className="flex justify-between mb-1">
-                                <span className="font-medium">{driver.name}</span>
+                                <span className="font-medium">
+                                  {driver.name}
+                                </span>
                                 <span className="text-sm text-gray-600">
                                   {driver.count} shifts
                                 </span>
                               </div>
-                              <Progress 
-                                value={driver.count * 10} 
-                                className="h-2" 
+                              <Progress
+                                value={driver.count * 10}
+                                className="h-2"
                               />
                             </div>
                           </div>
@@ -339,8 +579,8 @@ export default function ManagerProfile() {
               </div>
 
               <div className="flex justify-center">
-                <Button 
-                  onClick={navigateToDashboard}  
+                <Button
+                  onClick={navigateToDashboard}
                   className="bg-green-600 hover:bg-green-700"
                 >
                   Go to Dashboard
@@ -350,6 +590,110 @@ export default function ManagerProfile() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Dialog for editing the actual end time */}
+      <Dialog
+        open={editingShift !== null}
+        onOpenChange={(open) => !open && setEditingShift(null)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold text-green-700">
+              Record Actual End Time
+            </DialogTitle>
+            <DialogDescription>
+              Enter the actual time when the shift ended
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {editingShift && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-4 items-center bg-gray-50 p-3 rounded-md">
+                  <p className="text-sm font-medium text-gray-600">Driver:</p>
+                  <p className="col-span-2 font-medium">
+                    {editingShift.driverName}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4 items-center bg-gray-50 p-3 rounded-md">
+                  <p className="text-sm font-medium text-gray-600">Route:</p>
+                  <p className="col-span-2">
+                    {editingShift.origin} → {editingShift.destination}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4 items-center bg-gray-50 p-3 rounded-md">
+                  <p className="text-sm font-medium text-gray-600">
+                    System End Time:
+                  </p>
+                  <p className="col-span-2">
+                    {editingShift.endTime
+                      ? new Date(editingShift.endTime).toLocaleString()
+                      : "Not set"}
+                  </p>
+                </div>
+
+                {editingShift.actualEndTime && (
+                  <div className="grid grid-cols-3 gap-4 items-center bg-gray-50 p-3 rounded-md">
+                    <p className="text-sm font-medium text-gray-600">
+                      Current Actual End:
+                    </p>
+                    <p className="col-span-2 text-green-700 font-medium">
+                      {new Date(editingShift.actualEndTime).toLocaleString()}
+                    </p>
+                  </div>
+                )}
+
+                <div className="space-y-2 pt-2">
+                  <Label
+                    htmlFor="actualEndTime"
+                    className="text-sm font-medium"
+                  >
+                    Actual End Time
+                  </Label>
+                  <Input
+                    id="actualEndTime"
+                    type="datetime-local"
+                    value={actualEndTime}
+                    onChange={(e) => setActualEndTime(e.target.value)}
+                    className="border-green-200 focus:border-green-300 focus:ring focus:ring-green-200 focus:ring-opacity-50"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              onClick={() => setEditingShift(null)}
+              disabled={isUpdatingEndTime}
+              className="border-gray-300"
+            >
+              <X className="h-4 w-4 mr-2" />
+              Cancel
+            </Button>
+            <Button
+              onClick={updateActualEndTime}
+              disabled={!actualEndTime || isUpdatingEndTime}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              {isUpdatingEndTime ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                <>
+                  <ClipboardCheck className="h-4 w-4 mr-2" />
+                  Save Actual End Time
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

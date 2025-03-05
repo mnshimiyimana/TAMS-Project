@@ -4,10 +4,8 @@ import Bus from "../models/busModel.js";
 import Driver from "../models/driverModel.js";
 import Shift from "../models/shiftModel.js";
 
-// Create a new agency (superadmin only)
 export const createAgency = async (req, res) => {
   try {
-    // Verify user is superadmin
     const user = await User.findById(req.userId);
     if (!user || user.role !== "superadmin") {
       return res
@@ -17,7 +15,6 @@ export const createAgency = async (req, res) => {
 
     const { agencyName, location } = req.body;
 
-    // Check if agency already exists
     const existingAgency = await Agency.findOne({ agencyName });
     if (existingAgency) {
       return res
@@ -25,7 +22,6 @@ export const createAgency = async (req, res) => {
         .json({ error: "Agency with this name already exists" });
     }
 
-    // Create new agency
     const agency = new Agency({
       agencyName,
       location,
@@ -39,12 +35,10 @@ export const createAgency = async (req, res) => {
   }
 };
 
-// Get all agencies (with proper filtering)
 export const getAgencies = async (req, res) => {
   try {
     console.log("GetAgencies called with userId:", req.userId);
 
-    // Try to find the user
     const user = await User.findById(req.userId);
     console.log(
       "User lookup result:",
@@ -55,13 +49,11 @@ export const getAgencies = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // If not superadmin, only return user's agency
     if (user.role !== "superadmin") {
       const agency = await Agency.findOne({ agencyName: user.agencyName });
       return res.status(200).json(agency ? [agency] : []);
     }
 
-    // Superadmin can see all agencies
     const agencies = await Agency.find();
     console.log(`Found ${agencies.length} agencies for superadmin`);
     res.status(200).json(agencies);
@@ -71,7 +63,6 @@ export const getAgencies = async (req, res) => {
   }
 };
 
-// Get agency by ID (with permission check)
 export const getAgencyById = async (req, res) => {
   try {
     const user = await User.findById(req.userId);
@@ -86,7 +77,6 @@ export const getAgencyById = async (req, res) => {
       return res.status(404).json({ message: "Agency not found" });
     }
 
-    // Check permission: superadmin can access any agency, others only their own
     if (user.role !== "superadmin" && agency.agencyName !== user.agencyName) {
       return res.status(403).json({ message: "Access denied to this agency" });
     }
@@ -98,7 +88,6 @@ export const getAgencyById = async (req, res) => {
   }
 };
 
-// Update agency (superadmin or agency admin only)
 export const updateAgency = async (req, res) => {
   try {
     const user = await User.findById(req.userId);
@@ -113,7 +102,6 @@ export const updateAgency = async (req, res) => {
       return res.status(404).json({ message: "Agency not found" });
     }
 
-    // Permission check
     if (
       user.role !== "superadmin" &&
       (user.role !== "admin" || agency.agencyName !== user.agencyName)
@@ -123,7 +111,6 @@ export const updateAgency = async (req, res) => {
       });
     }
 
-    // Admin can only update location, not agency name
     if (user.role === "admin") {
       const { location } = req.body;
       agency.location = location;
@@ -131,7 +118,6 @@ export const updateAgency = async (req, res) => {
       return res.status(200).json(agency);
     }
 
-    // Superadmin can update all fields
     const updatedAgency = await Agency.findByIdAndUpdate(
       req.params.id,
       req.body,
@@ -145,7 +131,6 @@ export const updateAgency = async (req, res) => {
   }
 };
 
-// Delete agency (superadmin only)
 export const deleteAgency = async (req, res) => {
   try {
     const user = await User.findById(req.userId);
@@ -154,7 +139,6 @@ export const deleteAgency = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Only superadmin can delete agencies
     if (user.role !== "superadmin") {
       return res
         .status(403)
@@ -166,7 +150,6 @@ export const deleteAgency = async (req, res) => {
       return res.status(404).json({ message: "Agency not found" });
     }
 
-    // Check if agency has associated users
     const usersExist = await User.exists({ agencyName: agency.agencyName });
     if (usersExist) {
       return res.status(400).json({
@@ -182,7 +165,6 @@ export const deleteAgency = async (req, res) => {
   }
 };
 
-// Get agency stats (admin or superadmin)
 export const getAgencyStats = async (req, res) => {
   try {
     const user = await User.findById(req.userId);
@@ -191,24 +173,20 @@ export const getAgencyStats = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Determine which agency to get stats for
     const agencyName =
       user.role === "superadmin" && req.query.agencyName
         ? req.query.agencyName
         : user.agencyName;
 
-    // Check access permission
     if (user.role !== "superadmin" && agencyName !== user.agencyName) {
       return res.status(403).json({ message: "Access denied" });
     }
 
-    // Verify agency exists
     const agency = await Agency.findOne({ agencyName });
     if (!agency) {
       return res.status(404).json({ message: "Agency not found" });
     }
 
-    // Get counts from various collections
     const userCounts = await User.aggregate([
       { $match: { agencyName } },
       {
@@ -226,7 +204,6 @@ export const getAgencyStats = async (req, res) => {
       },
     ]);
 
-    // For superadmin, only return high-level stats
     if (user.role === "superadmin") {
       const totalUsers = userCounts.reduce(
         (sum, roleData) => sum + roleData.count,
@@ -250,7 +227,6 @@ export const getAgencyStats = async (req, res) => {
       });
     }
 
-    // For admin, return detailed agency stats
     const totalUsers = userCounts.reduce(
       (sum, roleData) => sum + roleData.count,
       0

@@ -54,25 +54,25 @@ export default function SignUp() {
   const { isLoading, error } = useSelector((state: RootState) => state.auth);
   const router = useRouter();
 
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    formState: { errors },
-    reset,
-  } = useForm<SignUpFormData>({
-    resolver: zodResolver(signUpSchema),
-    defaultValues: {
-      agencyName: "",
-      username: "",
-      email: "",
-      phone: "",
-      location: "",
-      password: "",
-      confirmPassword: "",
-      role: undefined,
-    },
-  });
+  // const {
+  //   register,
+  //   handleSubmit,
+  //   setValue,
+  //   formState: { errors },
+  //   reset,
+  // } = useForm<SignUpFormData>({
+  //   resolver: zodResolver(signUpSchema),
+  //   defaultValues: {
+  //     agencyName: "",
+  //     username: "",
+  //     email: "",
+  //     phone: "",
+  //     location: "",
+  //     password: "",
+  //     confirmPassword: "",
+  //     role: undefined,
+  //   },
+  // });
 
   useEffect(() => {
     dispatch(clearError());
@@ -88,18 +88,18 @@ export default function SignUp() {
     }
   }, [error]);
 
-  const onSubmit = async (data: SignUpFormData) => {
-    try {
-      await dispatch(signUp(data)).unwrap();
-      toast.success("Sign-up successful! Please log in.");
-      reset();
-      setTimeout(() => {
-        router.push("/auth/sign-in");
-      }, 1500);
-    } catch (err) {
-      console.error("Sign-up failed");
-    }
-  };
+  // const onSubmit = async (data: SignUpFormData) => {
+  //   try {
+  //     await dispatch(signUp(data)).unwrap();
+  //     toast.success("Sign-up successful! Please log in.");
+  //     reset();
+  //     setTimeout(() => {
+  //       router.push("/auth/sign-in");
+  //     }, 1500);
+  //   } catch (err) {
+  //     console.error("Sign-up failed");
+  //   }
+  // };
 
   return (
     <div className="flex min-h-screen">
@@ -116,7 +116,7 @@ export default function SignUp() {
         {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
         <form
-          onSubmit={handleSubmit(onSubmit)}
+          // onSubmit={handleSubmit(onSubmit)}
           className="space-y-4 text-gray-700"
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -124,28 +124,28 @@ export default function SignUp() {
               <Label htmlFor="agencyName">Agency Name</Label>
               <Input
                 id="agencyName"
-                {...register("agencyName")}
+                // {...register("agencyName")}
                 placeholder="Enter agency name"
               />
-              {errors.agencyName && (
+              {/* {errors.agencyName && (
                 <p className="text-red-500 text-sm mt-1">
                   {errors.agencyName.message}
                 </p>
-              )}
+              )} */}
             </div>
 
             <div>
               <Label htmlFor="username">Username </Label>
               <Input
                 id="username"
-                {...register("username")}
+                // {...register("username")}
                 placeholder="Enter username"
               />
-              {errors.username && (
+              {/* {errors.username && (
                 <p className="text-red-500 text-sm mt-1">
                   {errors.username.message}
                 </p>
-              )}
+              )} */}
             </div>
           </div>
 
@@ -155,15 +155,15 @@ export default function SignUp() {
               <Input
                 id="email"
                 type="email"
-                {...register("email")}
+                // {...register("email")}
                 placeholder="Enter email"
                 autoComplete="email"
               />
-              {errors.email && (
+              {/* {errors.email && (
                 <p className="text-red-500 text-sm mt-1">
                   {errors.email.message}
                 </p>
-              )}
+              )} */}
             </div>
 
             <div>
@@ -171,15 +171,15 @@ export default function SignUp() {
               <Input
                 id="phone"
                 type="tel"
-                {...register("phone")}
+                // {...register("phone")}
                 placeholder="+123 456 7890"
                 autoComplete="tel"
               />
-              {errors.phone && (
+              {/* {errors.phone && (
                 <p className="text-red-500 text-sm mt-1">
                   {errors.phone.message}
                 </p>
-              )}
+              )} */}
             </div>
           </div>
 
@@ -188,22 +188,22 @@ export default function SignUp() {
               <Label htmlFor="location">Location </Label>
               <Input
                 id="location"
-                {...register("location")}
+                // {...register("location")}
                 placeholder="Enter location"
               />
-              {errors.location && (
+              {/* {errors.location && (
                 <p className="text-red-500 text-sm mt-1">
                   {errors.location.message}
                 </p>
-              )}
+              )} */}
             </div>
 
             <div>
               <Label htmlFor="role">Role </Label>
               <Select
-                onValueChange={(value) =>
-                  setValue("role", value as "admin" | "manager" | "fuel")
-                }
+                // onValueChange={(value) =>
+                //   setValue("role", value as "admin" | "manager" | "fuel")
+                // }
               >
                 <SelectTrigger id="role">
                   <SelectValue placeholder="Select a role" />
@@ -214,11 +214,11 @@ export default function SignUp() {
                   <SelectItem value="fuel">Fuel</SelectItem>
                 </SelectContent>
               </Select>
-              {errors.role && (
+              {/* {errors.role && (
                 <p className="text-red-500 text-sm mt-1">
                   {errors.role.message}
                 </p>
-              )}
+              )} */}
             </div>
           </div>
 
@@ -228,15 +228,15 @@ export default function SignUp() {
               <Input
                 id="password"
                 type="password"
-                {...register("password")}
+                // {...register("password")}
                 placeholder="Enter password"
                 autoComplete="new-password"
               />
-              {errors.password && (
+              {/* {errors.password && (
                 <p className="text-red-500 text-sm mt-1">
                   {errors.password.message}
                 </p>
-              )}
+              )} */}
             </div>
 
             <div>
@@ -244,15 +244,15 @@ export default function SignUp() {
               <Input
                 id="confirmPassword"
                 type="password"
-                {...register("confirmPassword")}
+                // {...register("confirmPassword")}
                 placeholder="Confirm password"
                 autoComplete="new-password"
               />
-              {errors.confirmPassword && (
+              {/* {errors.confirmPassword && (
                 <p className="text-red-500 text-sm mt-1">
                   {errors.confirmPassword.message}
                 </p>
-              )}
+              )} */}
             </div>
           </div>
 

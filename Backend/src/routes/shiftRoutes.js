@@ -1,5 +1,5 @@
 import express from "express";
-import { protect } from "../middlewares/authMiddleware.js";
+import { protect, authorize } from "../middlewares/authMiddleware.js";
 import {
   createShift,
   getShifts,
@@ -10,11 +10,12 @@ import {
 
 const router = express.Router();
 
-router.post("/", protect, createShift);
 router.get("/", getShifts);
 router.get("/:id", getShiftById);
-router.put("/:id", protect, updateShift);
-router.patch("/:id", protect, updateShift);
-router.delete("/:id", protect, deleteShift);
+
+router.post("/", protect, authorize("shifts:create"), createShift);
+router.put("/:id", protect, authorize("shifts:update"), updateShift);
+router.patch("/:id", protect, authorize("shifts:update"), updateShift);
+router.delete("/:id", protect, authorize("shifts:delete"), deleteShift);
 
 export default router;

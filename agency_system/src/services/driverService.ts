@@ -96,8 +96,8 @@ export interface CreateDriverData {
 
 export const createDriver = async (driverData: CreateDriverData) => {
   try {
-    console.log("Request URL:", "/drivers");
-    console.log("Request Data:", driverData);
+    // console.log("Request URL:", "/drivers");
+    // console.log("Request Data:", driverData);
 
     const response = await driverAPI.post("/drivers", driverData);
     return response.data;

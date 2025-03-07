@@ -53,6 +53,20 @@ export default function Vehicles() {
     setIsDialogOpen(true);
   };
 
+  useEffect(() => {
+    const handleShiftUpdate = () => {
+      // Refresh vehicles data when shifts are updated
+      dispatch(fetchVehicles());
+    };
+
+    // Listen for the shift updated event
+    window.addEventListener("shift_updated", handleShiftUpdate);
+
+    return () => {
+      window.removeEventListener("shift_updated", handleShiftUpdate);
+    };
+  }, [dispatch]);
+
   const handleExport = async () => {
     try {
       setIsExporting(true);

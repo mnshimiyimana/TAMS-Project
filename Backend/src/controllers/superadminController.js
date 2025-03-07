@@ -5,6 +5,7 @@ import Driver from "../models/driverModel.js";
 import Shift from "../models/shiftModel.js";
 import FuelManagement from "../models/fuelManagementModel.js";
 import Feedback from "../models/feedbackModel.js";
+import Package from "../models/packageModel.js";
 
 export const getAgenciesOverview = async (req, res) => {
   try {
@@ -203,6 +204,9 @@ export const getAgencyHighLevelStats = async (req, res) => {
       drivers: await Driver.countDocuments({ agencyName }),
       shifts: await Shift.countDocuments({ agencyName }),
       fuelTransactions: await FuelManagement.countDocuments({ agencyName }),
+      packages: await Package.countDocuments({ agencyName }),
+      pendingPackages: await Package.countDocuments({ agencyName, status: "Pending" }),
+      deliveredPackages: await Package.countDocuments({ agencyName, status: "Delivered" })
     };
 
     const activityMetrics = {
@@ -435,6 +439,8 @@ export const getEnhancedSystemSummary = async (req, res) => {
     const totalDrivers = await Driver.countDocuments();
     const totalShifts = await Shift.countDocuments();
     const totalFeedback = await Feedback.countDocuments();
+    const totalPackages = await Package.countDocuments();
+    const deliveredPackages = await Package.countDocuments({ status: "Delivered" });
 
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -481,6 +487,9 @@ export const getEnhancedSystemSummary = async (req, res) => {
         totalDrivers,
         totalShifts,
         totalFeedback,
+        totalPackages,
+        deliveredPackages,
+        packageDeliveryRate: totalPackages > 0 ? ((deliveredPackages / totalPackages) * 100).toFixed(2) : 0,
       },
       recentActivity: {
         newUsersLast30Days,

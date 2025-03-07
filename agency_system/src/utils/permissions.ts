@@ -2,8 +2,16 @@ export type UserRole = "superadmin" | "admin" | "manager" | "fuel";
 
 const ROLE_PERMISSIONS = {
   superadmin: ["superadmin-portal"],
-  admin: ["drivers", "vehicles", "shifts", "fuels", "insights", "profile"],
-  manager: ["drivers", "vehicles", "shifts", "profile"],
+  admin: [
+    "drivers",
+    "vehicles",
+    "shifts",
+    "fuels",
+    "packages",
+    "insights",
+    "profile",
+  ],
+  manager: ["drivers", "vehicles", "shifts", "packages", "profile"],
   fuel: ["fuels", "profile"],
 };
 

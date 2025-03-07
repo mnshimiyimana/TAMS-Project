@@ -22,3 +22,7 @@
 [2025-03-05T21:48:43.024Z] Subject: New Shift Assignment
 [2025-03-05T21:48:43.025Z] Email configuration: {"from":"TAMS <onboarding@resend.dev>","to":"davidkw2@gmail.com","subject":"New Shift Assignment"}
 [2025-03-05T21:48:44.487Z] Email API error: {"statusCode":403,"message":"You can only send testing emails to your own email address (m.nshimiyim@alustudent.com). To send emails to other recipients, please verify a domain at resend.com/domains, and change the `from` address to an email using this domain.","name":"validation_error"}
+[2025-03-07T06:23:27.132Z] Attempting to send email to: davidkw2@gmail.com
+[2025-03-07T06:23:27.137Z] Subject: New Shift Assignment
+[2025-03-07T06:23:27.139Z] Email configuration: {"from":"TAMS <onboarding@resend.dev>","to":"davidkw2@gmail.com","subject":"New Shift Assignment"}
+[2025-03-07T06:23:28.253Z] Email API error: {"statusCode":403,"message":"You can only send testing emails to your own email address (m.nshimiyim@alustudent.com). To send emails to other recipients, please verify a domain at resend.com/domains, and change the `from` address to an email using this domain.","name":"validation_error"}

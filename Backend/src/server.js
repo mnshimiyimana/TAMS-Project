@@ -17,6 +17,7 @@ import authRoutes from "./routes/authRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 import superadminRoutes from "./routes/superAdminRoutes.js";
 import feedbackRoutes from "./routes/feedbackRoutes.js";
+import packageRoutes from "./routes/packageRoutes.js";
 import { auditLogin } from "./middlewares/auditLogger.js";
 // import auditLogRoutes from "./routes/auditLogRoutes.js";
 
@@ -47,6 +48,7 @@ app.use("/api/insights", insightRoutes);
 app.use("/api/superadmin", superadminRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/feedback", feedbackRoutes);
+app.use("/api/packages", packageRoutes);
 // app.use("/api/audit-logs", auditLogRoutes);
 
 // Test route

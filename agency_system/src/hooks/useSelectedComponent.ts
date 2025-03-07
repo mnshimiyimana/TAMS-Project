@@ -7,6 +7,7 @@ import Shifts from "@/components/dashboard/Shifts";
 import Fuels from "@/components/dashboard/Fuels";
 import Insights from "@/components/dashboard/Insights";
 import Profile from "@/components/dashboard/Profile";
+import Packages from "@/components/dashboard/Packages";
 
 
 const components: Record<string, React.FC> = {
@@ -14,8 +15,10 @@ const components: Record<string, React.FC> = {
   vehicles: Vehicles,
   shifts: Shifts,
   fuels: Fuels,
+  packages:Packages,
   insights: Insights,
   profile: Profile,
+  
 };
 
 export function useSelectedComponent() {

@@ -11,16 +11,23 @@ import {
   clearFilters,
   fetchShifts,
 } from "@/redux/slices/shiftsSlice";
+import { fetchVehicles } from "@/redux/slices/vehiclesSlice";
 import AddShiftDialog from "../AddShift";
 import ShiftsDropdowns from "../Dropdowns/Shifts";
 import ShiftsTable from "../Tables/Shifts";
 import { toast } from "sonner";
 import { exportToExcel } from "@/utils/excelExport";
+import { getDrivers } from "@/services/driverService";
+
+export const ShiftEvents = {
+  SHIFT_UPDATED: "shift_updated",
+};
 
 export default function Shifts() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [shiftToEdit, setShiftToEdit] = useState<any>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const dispatch = useDispatch<AppDispatch>();
   const { searchQuery, filteredShifts, status, filters } = useSelector(
@@ -34,6 +41,23 @@ export default function Shifts() {
 
   useEffect(() => {
     dispatch(fetchShifts());
+  }, [dispatch, refreshTrigger]);
+
+  useEffect(() => {
+    const handleShiftUpdate = () => {
+      dispatch(fetchVehicles());
+      setRefreshTrigger((prev) => prev + 1);
+
+      if (typeof window !== "undefined") {
+        const event = new CustomEvent("drivers-data-refresh");
+        window.dispatchEvent(event);
+      }
+    };
+
+    window.addEventListener(ShiftEvents.SHIFT_UPDATED, handleShiftUpdate);
+    return () => {
+      window.removeEventListener(ShiftEvents.SHIFT_UPDATED, handleShiftUpdate);
+    };
   }, [dispatch]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -61,6 +85,12 @@ export default function Shifts() {
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
     setShiftToEdit(null);
+
+    setRefreshTrigger((prev) => prev + 1);
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent(ShiftEvents.SHIFT_UPDATED));
+    }
   };
 
   const handleExport = async () => {

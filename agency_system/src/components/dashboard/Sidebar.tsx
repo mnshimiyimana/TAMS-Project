@@ -7,6 +7,7 @@ import {
   ChartColumnIncreasing,
   Blinds,
   Shield,
+  PackageIcon,
 } from "lucide-react";
 import {
   Separator,
@@ -31,6 +32,7 @@ const ALL_ITEMS = [
   { title: "Drivers", key: "drivers", icon: UsersRound },
   { title: "Vehicles", key: "vehicles", icon: BusFront },
   { title: "Shifts", key: "shifts", icon: Blinds },
+  { title: "Packages", key: "packages", icon: PackageIcon },
   { title: "Fuels", key: "fuels", icon: Fuel },
   { title: "Insights", key: "insights", icon: ChartColumnIncreasing },
   { title: "Profile", key: "profile", icon: UserPen },

@@ -32,7 +32,6 @@ const UserSchema = new mongoose.Schema(
         return this.role !== "superadmin";
       }, 
     },
-    // Adding fields for password setup
     passwordResetToken: { type: String },
     passwordResetExpires: { type: Date },
     passwordSet: { type: Boolean, default: false },

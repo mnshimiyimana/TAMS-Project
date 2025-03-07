@@ -23,7 +23,6 @@ export default function DashboardPage() {
   const dispatch = useDispatch<AppDispatch>();
   const user = useSelector((state: RootState) => state.auth.user);
 
-  // Redirect superadmin to superadmin portal
   useEffect(() => {
     if (user?.role === "superadmin") {
       router.push("/superadmin");
@@ -39,6 +38,7 @@ export default function DashboardPage() {
         "drivers",
         "vehicles",
         "shifts",
+        "packages",
         "fuels",
         "profile",
       ];
@@ -86,7 +86,6 @@ export default function DashboardPage() {
     return null;
   }
 
-  // If superadmin, don't render the dashboard
   if (user?.role === "superadmin") {
     return null;
   }

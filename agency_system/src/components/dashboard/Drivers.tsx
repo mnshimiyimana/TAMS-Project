@@ -7,6 +7,7 @@ import { Input } from "../ui/input";
 import DriversDropdowns from "../Dropdowns/Drivers";
 import DriversTable from "../Tables/Drivers";
 import AddDriverDialog from "../AddDriver";
+import DriversTableEnhancer from "../DriversTableEnhancer";
 import { exportToExcel } from "@/utils/excelExport";
 import { getDrivers, Driver } from "@/services/driverService";
 import { toast } from "sonner";
@@ -35,6 +36,11 @@ export default function Drivers() {
   }, [activeTab]);
 
   const handleDriverUpdated = () => {
+    setRefreshTrigger((prev) => prev + 1);
+  };
+
+  const handleTableRefresh = () => {
+    console.log("Refreshing drivers table due to shift changes");
     setRefreshTrigger((prev) => prev + 1);
   };
 
@@ -189,14 +195,17 @@ export default function Drivers() {
       </div>
 
       <div>
-        <DriversTable
-          searchQuery={searchQuery}
-          statusFilter={statusFilter}
-          shiftFilter={shiftFilter}
-          refreshTrigger={refreshTrigger}
-          agencyName={agencyName}
-          onEdit={handleEdit}
-        />
+        {/* Wrap DriversTable with DriversTableEnhancer to get automatic updates */}
+        <DriversTableEnhancer onRefresh={handleTableRefresh}>
+          <DriversTable
+            searchQuery={searchQuery}
+            statusFilter={statusFilter}
+            shiftFilter={shiftFilter}
+            refreshTrigger={refreshTrigger}
+            agencyName={agencyName}
+            onEdit={handleEdit}
+          />
+        </DriversTableEnhancer>
       </div>
 
       <AddDriverDialog

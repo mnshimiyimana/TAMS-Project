@@ -13,6 +13,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -39,6 +40,7 @@ import {
   CheckCircle,
   X,
   ClipboardCheck,
+  Filter,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -69,7 +71,8 @@ export default function ManagerProfile() {
     activeDrivers: 0,
     availableVehicles: 0,
   });
-  const [recentShifts, setRecentShifts] = useState<RecentShift[]>([]);
+  const [allShifts, setAllShifts] = useState<RecentShift[]>([]);
+  const [displayedShifts, setDisplayedShifts] = useState<RecentShift[]>([]);
   const [topDrivers, setTopDrivers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCompletingShift, setIsCompletingShift] = useState<string | null>(
@@ -78,14 +81,25 @@ export default function ManagerProfile() {
   const [editingShift, setEditingShift] = useState<RecentShift | null>(null);
   const [actualEndTime, setActualEndTime] = useState<string>("");
   const [isUpdatingEndTime, setIsUpdatingEndTime] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [refreshCounter, setRefreshCounter] = useState(0);
 
   const user = useSelector((state: RootState) => state.auth.user);
   const token =
     typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
+  // Refresh data every 30 seconds to update statuses
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setRefreshCounter((prev) => prev + 1);
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(intervalId);
+  }, []);
+
   useEffect(() => {
     fetchManagerData();
-  }, []);
+  }, [refreshCounter]);
 
   const fetchManagerData = async () => {
     try {
@@ -100,8 +114,20 @@ export default function ManagerProfile() {
         }
       );
 
+      let shifts: RecentShift[] = [];
+
       if (Array.isArray(shiftsResponse.data)) {
-        setRecentShifts(shiftsResponse.data.slice(0, 5));
+        shifts = shiftsResponse.data;
+        // Sort shifts by start time, most recent first
+        shifts.sort(
+          (a, b) =>
+            new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+        );
+        setAllShifts(shifts);
+        filterShifts(shifts, statusFilter);
+      } else {
+        console.error("Shifts response is not an array:", shiftsResponse.data);
+        toast.error("Invalid shifts data format");
       }
 
       const driversResponse = await axios.get(
@@ -127,9 +153,6 @@ export default function ManagerProfile() {
         : [];
 
       const today = new Date();
-      const shifts = Array.isArray(shiftsResponse.data)
-        ? shiftsResponse.data
-        : [];
 
       const summary = {
         totalShifts: shifts.length,
@@ -164,22 +187,43 @@ export default function ManagerProfile() {
   };
 
   function getShiftStatus(shift: RecentShift) {
-    const now = new Date();
-    const start = new Date(shift.startTime);
+    try {
+      const now = new Date();
+      const start = new Date(shift.startTime);
 
-    if (start > now) {
-      return "Scheduled";
-    }
-
-    if (shift.endTime && !isNaN(new Date(shift.endTime).getTime())) {
-      const end = new Date(shift.endTime);
-
-      if (end <= now) {
-        return "Completed";
+      // Debug check - log any invalid dates
+      if (isNaN(start.getTime())) {
+        console.error("Invalid start time for shift:", shift);
+        return "Unknown";
       }
+
+      if (start > now) {
+        return "Scheduled";
+      }
+
+      if (shift.endTime && !isNaN(new Date(shift.endTime).getTime())) {
+        const end = new Date(shift.endTime);
+        if (now >= end) {
+          return "Completed";
+        }
+      }
+
+      // If start time has passed but no end time or end time is in future
+      return "In Progress";
+    } catch (error) {
+      console.error("Error determining shift status:", error, shift);
+      return "Unknown";
+    }
+  }
+
+  function filterShifts(shifts: RecentShift[], status: string) {
+    if (status === "all") {
+      setDisplayedShifts(shifts);
+      return;
     }
 
-    return "In Progress";
+    const filtered = shifts.filter((shift) => getShiftStatus(shift) === status);
+    setDisplayedShifts(filtered);
   }
 
   function getBadgeClasses(status: string) {
@@ -188,8 +232,10 @@ export default function ManagerProfile() {
         return "bg-green-100 text-green-800";
       case "Scheduled":
         return "bg-blue-100 text-blue-800";
-      default:
+      case "In Progress":
         return "bg-yellow-100 text-yellow-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   }
 
@@ -212,12 +258,19 @@ export default function ManagerProfile() {
 
       toast.success("Shift completed successfully");
 
-      setRecentShifts((prevShifts) =>
+      // Update the shift in our state
+      setAllShifts((prevShifts) =>
         prevShifts.map((shift) =>
           shift._id === shiftId ? { ...shift, endTime } : shift
         )
       );
 
+      // Also dispatch a global shift updated event to update other components
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("shift_updated"));
+      }
+
+      // Refresh all data
       fetchManagerData();
     } catch (error) {
       console.error("Error completing shift:", error);
@@ -247,7 +300,7 @@ export default function ManagerProfile() {
 
       toast.success("Actual end time recorded successfully");
 
-      setRecentShifts((prevShifts) =>
+      setAllShifts((prevShifts) =>
         prevShifts.map((shift) =>
           shift._id === editingShift._id
             ? { ...shift, actualEndTime: actualEndTimeValue }
@@ -257,6 +310,11 @@ export default function ManagerProfile() {
 
       setEditingShift(null);
       setActualEndTime("");
+
+      // Trigger a global shift updated event
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("shift_updated"));
+      }
 
       fetchManagerData();
     } catch (error) {
@@ -312,6 +370,15 @@ export default function ManagerProfile() {
 
   const navigateToDashboard = () => {
     router.push("/dashboard?feature=shifts");
+  };
+
+  const handleFilterChange = (status: string) => {
+    setStatusFilter(status);
+    filterShifts(allShifts, status);
+  };
+
+  const handleRefresh = () => {
+    setRefreshCounter((prev) => prev + 1);
   };
 
   return (
@@ -406,22 +473,64 @@ export default function ManagerProfile() {
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <div>
-                        <CardTitle>Recent Shifts</CardTitle>
+                        <CardTitle>All Shifts</CardTitle>
                         <CardDescription>
-                          Latest shift activities
+                          View and manage your shifts
                         </CardDescription>
                       </div>
-                      <Calendar className="h-5 w-5 text-gray-500" />
+                      <Button variant="ghost" size="sm" onClick={handleRefresh}>
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Refresh
+                      </Button>
                     </div>
                   </CardHeader>
+
+                  {/* Filters Row */}
+                  <div className="px-6 pb-2 flex flex-wrap gap-2">
+                    <Badge
+                      variant={statusFilter === "all" ? "default" : "outline"}
+                      className="cursor-pointer"
+                      onClick={() => handleFilterChange("all")}
+                    >
+                      All
+                    </Badge>
+                    <Badge
+                      variant={
+                        statusFilter === "Scheduled" ? "default" : "outline"
+                      }
+                      className="cursor-pointer bg-blue-100 text-blue-800 hover:bg-blue-200"
+                      onClick={() => handleFilterChange("Scheduled")}
+                    >
+                      Scheduled
+                    </Badge>
+                    <Badge
+                      variant={
+                        statusFilter === "In Progress" ? "default" : "outline"
+                      }
+                      className="cursor-pointer bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
+                      onClick={() => handleFilterChange("In Progress")}
+                    >
+                      In Progress
+                    </Badge>
+                    <Badge
+                      variant={
+                        statusFilter === "Completed" ? "default" : "outline"
+                      }
+                      className="cursor-pointer bg-green-100 text-green-800 hover:bg-green-200"
+                      onClick={() => handleFilterChange("Completed")}
+                    >
+                      Completed
+                    </Badge>
+                  </div>
+
                   <CardContent>
-                    {recentShifts.length === 0 ? (
+                    {displayedShifts.length === 0 ? (
                       <div className="text-center py-6 text-gray-500">
-                        No recent shifts found
+                        No shifts found matching the current filter
                       </div>
                     ) : (
-                      <div className="space-y-4">
-                        {recentShifts.map((shift, idx) => {
+                      <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                        {displayedShifts.map((shift, idx) => {
                           const status = getShiftStatus(shift);
                           return (
                             <div
@@ -456,6 +565,10 @@ export default function ManagerProfile() {
                                       : ""}
                                   </span>
                                 </div>
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="h-4 w-4" />
+                                  <span>{formatDate(shift.Date)}</span>
+                                </div>
                                 {shift.actualEndTime && (
                                   <div className="flex items-center gap-2">
                                     <ClipboardCheck className="h-4 w-4 text-green-600" />
@@ -481,7 +594,6 @@ export default function ManagerProfile() {
                                 )}
 
                                 {status === "In Progress" && (
-                                  // Show complete button
                                   <Button
                                     variant="outline"
                                     size="sm"
@@ -505,7 +617,6 @@ export default function ManagerProfile() {
 
                                 {status === "Completed" &&
                                   !shift.actualEndTime && (
-                                    // Only show 'Record End Time' if not set
                                     <Button
                                       variant="outline"
                                       size="sm"
@@ -523,9 +634,15 @@ export default function ManagerProfile() {
                       </div>
                     )}
                   </CardContent>
+
+                  <CardFooter className="justify-center pt-2">
+                    <p className="text-sm text-gray-500">
+                      Showing {displayedShifts.length} of {allShifts.length}{" "}
+                      shifts
+                    </p>
+                  </CardFooter>
                 </Card>
 
-                {/* Top Drivers */}
                 <Card>
                   <CardHeader>
                     <div className="flex items-center justify-between">

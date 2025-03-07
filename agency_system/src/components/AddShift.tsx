@@ -1,17 +1,26 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { useEffect, useState } from "react";
-import { useDispatch } from "react-redux";
-import { AppDispatch } from "@/redux/store";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "@/redux/store";
 import { addShift, updateShift, Shift } from "@/redux/slices/shiftsSlice";
+import { fetchVehicles, updateVehicle } from "@/redux/slices/vehiclesSlice";
+import { getDrivers, updateDriver, Driver } from "@/services/driverService";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
 
 const shiftSchema = z.object({
   plateNumber: z.string().min(1, "Plate number is required"),
@@ -42,11 +51,23 @@ export default function AddShiftDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditing = !!shiftToEdit;
 
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [filteredDrivers, setFilteredDrivers] = useState<Driver[]>([]);
+  const [isLoadingDrivers, setIsLoadingDrivers] = useState(false);
+
+  const vehicles = useSelector((state: RootState) => state.vehicles.vehicles);
+  const vehiclesLoading = useSelector(
+    (state: RootState) => state.vehicles.isLoading
+  );
+
+  const [filteredVehicles, setFilteredVehicles] = useState<typeof vehicles>([]);
+
   const {
     register,
     handleSubmit,
     reset,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<ShiftFormData>({
     resolver: zodResolver(shiftSchema),
@@ -60,6 +81,78 @@ export default function AddShiftDialog({
       Date: new Date().toISOString().split("T")[0],
     },
   });
+
+  useEffect(() => {
+    if (vehicles.length === 0 && !vehiclesLoading) {
+      dispatch(fetchVehicles());
+    }
+
+    const fetchDriversData = async () => {
+      try {
+        setIsLoadingDrivers(true);
+        const response = await getDrivers({
+          limit: 100,
+          agencyName: agencyName,
+        });
+        setDrivers(response.drivers || []);
+      } catch (error) {
+        console.error("Error fetching drivers:", error);
+        toast.error("Failed to load drivers data");
+      } finally {
+        setIsLoadingDrivers(false);
+      }
+    };
+
+    fetchDriversData();
+  }, [dispatch, agencyName, vehicles.length, vehiclesLoading]);
+
+  useEffect(() => {
+    const availableVehicles = vehicles.filter(
+      (vehicle) => vehicle.status === "Available"
+    );
+    setFilteredVehicles(availableVehicles);
+  }, [vehicles]);
+
+  useEffect(() => {
+    const availableDrivers = drivers.filter(
+      (driver) => driver.status === "Off shift"
+    );
+    setFilteredDrivers(availableDrivers);
+  }, [drivers]);
+
+  useEffect(() => {
+    if (isEditing && shiftToEdit) {
+
+      const originalVehicle = vehicles.find(
+        (v) => v.plateNumber === shiftToEdit.plateNumber
+      );
+
+      const originalDriver = drivers.find(
+        (d) => d.names === shiftToEdit.driverName
+      );
+
+      if (
+        originalVehicle &&
+        !filteredVehicles.some((v) => v._id === originalVehicle._id)
+      ) {
+        setFilteredVehicles([...filteredVehicles, originalVehicle]);
+      }
+
+      if (
+        originalDriver &&
+        !filteredDrivers.some((d) => d._id === originalDriver._id)
+      ) {
+        setFilteredDrivers([...filteredDrivers, originalDriver]);
+      }
+    }
+  }, [
+    isEditing,
+    shiftToEdit,
+    vehicles,
+    drivers,
+    filteredVehicles,
+    filteredDrivers,
+  ]);
 
   useEffect(() => {
     if (shiftToEdit) {
@@ -99,14 +192,30 @@ export default function AddShiftDialog({
             shiftData,
           })
         ).unwrap();
+
+        if (data.endTime) {
+          await updateResourceStatuses(
+            data.plateNumber,
+            data.driverName,
+            false
+          );
+        } else {
+          await updateResourceStatuses(data.plateNumber, data.driverName, true);
+        }
+
         toast.success("Shift updated successfully!");
       } else {
         await dispatch(addShift(shiftData)).unwrap();
+
+        await updateResourceStatuses(data.plateNumber, data.driverName, true);
+
         toast.success("Shift added successfully!");
       }
 
       reset();
       onClose();
+
+      dispatch(fetchVehicles());
     } catch (error: any) {
       console.error("Error:", error);
       toast.error(
@@ -115,6 +224,39 @@ export default function AddShiftDialog({
       );
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const updateResourceStatuses = async (
+    plateNumber: string,
+    driverName: string,
+    isStarting: boolean
+  ) => {
+    try {
+      const vehicleToUpdate = vehicles.find(
+        (v) => v.plateNumber === plateNumber
+      );
+      if (vehicleToUpdate) {
+        await dispatch(
+          updateVehicle({
+            id: vehicleToUpdate._id,
+            vehicleData: {
+              status: isStarting ? "Assigned" : "Available",
+            },
+          })
+        ).unwrap();
+      }
+
+      const driverToUpdate = drivers.find((d) => d.names === driverName);
+      if (driverToUpdate) {
+        if (driverToUpdate.status !== "On leave") {
+          await updateDriver(driverToUpdate._id, {
+            status: isStarting ? "On Shift" : "Off shift",
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error updating resource statuses:", error);
     }
   };
 
@@ -132,12 +274,28 @@ export default function AddShiftDialog({
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
             <Label htmlFor="plateNumber">Plate Number</Label>
-            <Input
-              id="plateNumber"
-              type="text"
-              placeholder="Enter plate number"
-              {...register("plateNumber")}
-            />
+            <Select
+              value={watch("plateNumber")}
+              onValueChange={(value) => setValue("plateNumber", value)}
+              disabled={vehiclesLoading}
+            >
+              <SelectTrigger id="plateNumber" className="w-full">
+                <SelectValue placeholder="Select a vehicle plate number" />
+              </SelectTrigger>
+              <SelectContent>
+                {filteredVehicles.length > 0 ? (
+                  filteredVehicles.map((vehicle) => (
+                    <SelectItem key={vehicle._id} value={vehicle.plateNumber}>
+                      {vehicle.plateNumber} - {vehicle.type}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <div className="p-2 text-sm text-gray-500 text-center">
+                    No available vehicles
+                  </div>
+                )}
+              </SelectContent>
+            </Select>
             {errors.plateNumber && (
               <p className="text-red-500 text-sm">
                 {errors.plateNumber.message}
@@ -147,12 +305,28 @@ export default function AddShiftDialog({
 
           <div>
             <Label htmlFor="driverName">Driver's Name</Label>
-            <Input
-              id="driverName"
-              type="text"
-              placeholder="Enter driver's name"
-              {...register("driverName")}
-            />
+            <Select
+              value={watch("driverName")}
+              onValueChange={(value) => setValue("driverName", value)}
+              disabled={isLoadingDrivers}
+            >
+              <SelectTrigger id="driverName" className="w-full">
+                <SelectValue placeholder="Select a driver" />
+              </SelectTrigger>
+              <SelectContent>
+                {filteredDrivers.length > 0 ? (
+                  filteredDrivers.map((driver) => (
+                    <SelectItem key={driver._id} value={driver.names}>
+                      {driver.names} - {driver.driverId}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <div className="p-2 text-sm text-gray-500 text-center">
+                    No available drivers
+                  </div>
+                )}
+              </SelectContent>
+            </Select>
             {errors.driverName && (
               <p className="text-red-500 text-sm">
                 {errors.driverName.message}

@@ -247,7 +247,7 @@ export default function FuelProfile() {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-RW", {
+    return new Intl.NumberFormat("RW", {
       style: "currency",
       currency: "RWF",
       minimumFractionDigits: 2,
@@ -372,7 +372,7 @@ export default function FuelProfile() {
                         <p className="text-sm font-medium text-blue-800">
                           Total Spent
                         </p>
-                        <p className="text-2xl font-bold text-blue-900">
+                        <p className="text-xl font-bold text-blue-900">
                           {formatCurrency(fuelStats.totalSpent)}
                         </p>
                       </div>
@@ -404,7 +404,7 @@ export default function FuelProfile() {
                         <p className="text-sm font-medium text-purple-800">
                           Avg. Price
                         </p>
-                        <p className="text-2xl font-bold text-purple-900">
+                        <p className="text-xl font-bold text-purple-900">
                           {formatCurrency(fuelStats.averagePrice)} / L
                         </p>
                       </div>

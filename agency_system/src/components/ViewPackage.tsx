@@ -25,6 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Package, updatePackageStatus } from "@/redux/slices/packagesSlice";
 import { formatPackageStatus } from "@/services/packageService";
 import { toast } from "sonner";
+import { Shield, AlertCircle } from "lucide-react";
 
 interface ViewPackageDialogProps {
   open: boolean;
@@ -49,6 +50,13 @@ export default function ViewPackageDialog({
     if (packageData) {
       setNewStatus(packageData.status);
       setStatusNotes("");
+
+      console.log("Package data loaded:", {
+        packageId: packageData.packageId,
+        receiverId: packageData.receiverId,
+        receiverIdType: typeof packageData.receiverId,
+        receiverIdExists: Boolean(packageData.receiverId),
+      });
     }
   }, [packageData]);
 
@@ -62,6 +70,11 @@ export default function ViewPackageDialog({
 
     setIsUpdating(true);
     try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Authentication required");
+      }
+
       await dispatch(
         updatePackageStatus({
           id: packageData._id,
@@ -72,14 +85,19 @@ export default function ViewPackageDialog({
 
       toast.success(`Status updated to ${newStatus}`);
       onPackageUpdated();
-    } catch (error) {
-      toast.error("Failed to update status");
+    } catch (error: any) {
+      console.error("Update status error:", error);
+      toast.error(error.message || "Failed to update status");
     } finally {
       setIsUpdating(false);
     }
   };
 
   const statusInfo = formatPackageStatus(packageData.status);
+
+  const hasReceiverId = Boolean(
+    packageData.receiverId && packageData.receiverId.trim() !== ""
+  );
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -118,6 +136,40 @@ export default function ViewPackageDialog({
               <p className="font-medium">{packageData.description}</p>
             </div>
 
+            {/* NATIONAL ID SECTION - Simplified with direct access */}
+            <div className="border rounded-md p-3 bg-blue-50">
+              <Label className="font-medium text-blue-700 flex items-center mb-2">
+                <Shield className="h-5 w-5 mr-1" />
+                National ID Verification
+              </Label>
+
+              {hasReceiverId ? (
+                <div className="bg-white rounded p-2 border border-blue-200">
+                  <p className="text-sm font-medium text-blue-800 mb-1">
+                    Verified Identity
+                  </p>
+                  <div className="flex items-center">
+                    <Badge
+                      variant="outline"
+                      className="border-green-500 text-green-600 bg-green-50"
+                    >
+                      ID: {packageData.receiverId}
+                    </Badge>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-white rounded p-2 border border-yellow-200">
+                  <p className="text-sm font-medium text-yellow-800 mb-1 flex items-center">
+                    <AlertCircle className="h-4 w-4 mr-1" />
+                    No National ID on record
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    This package was created without National ID verification
+                  </p>
+                </div>
+              )}
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-sm text-gray-500">Sender</Label>
@@ -128,10 +180,17 @@ export default function ViewPackageDialog({
                 <Label className="text-sm text-gray-500">Receiver</Label>
                 <p className="font-medium">{packageData.receiverName}</p>
                 <p className="text-sm">{packageData.receiverPhone}</p>
+                {/* Add the receiver ID here as well */}
+                {hasReceiverId && (
+                  <p className="text-sm mt-1">
+                    <span className="font-medium">National ID:</span>{" "}
+                    {packageData.receiverId}
+                  </p>
+                )}
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4 bg-pink-900">
               <div>
                 <Label className="text-sm text-gray-500">Pickup Location</Label>
                 <p className="font-medium">{packageData.pickupLocation}</p>
@@ -147,11 +206,15 @@ export default function ViewPackageDialog({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-sm text-gray-500">Driver</Label>
-                <p className="font-medium">{packageData.driverName}</p>
+                <p className="font-medium">
+                  {packageData.driverName || "Not assigned"}
+                </p>
               </div>
               <div>
                 <Label className="text-sm text-gray-500">Vehicle</Label>
-                <p className="font-medium">{packageData.plateNumber}</p>
+                <p className="font-medium">
+                  {packageData.plateNumber || "Not assigned"}
+                </p>
               </div>
             </div>
 
@@ -166,7 +229,9 @@ export default function ViewPackageDialog({
               <div>
                 <Label className="text-sm text-gray-500">Created At</Label>
                 <p className="font-medium">
-                  {new Date(packageData.createdAt).toLocaleString()}
+                  {packageData.createdAt
+                    ? new Date(packageData.createdAt).toLocaleString()
+                    : "N/A"}
                 </p>
               </div>
               {packageData.deliveredAt && (
@@ -224,7 +289,9 @@ export default function ViewPackageDialog({
                   <div>
                     <p className="font-medium">Created</p>
                     <p className="text-sm text-gray-500">
-                      {new Date(packageData.createdAt).toLocaleString()}
+                      {packageData.createdAt
+                        ? new Date(packageData.createdAt).toLocaleString()
+                        : "N/A"}
                     </p>
                   </div>
                 </div>

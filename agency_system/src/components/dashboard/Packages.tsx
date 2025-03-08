@@ -12,6 +12,7 @@ import {
   X,
   Calendar,
   RefreshCw,
+  Shield,
 } from "lucide-react";
 import {
   fetchPackages,
@@ -47,8 +48,14 @@ import ViewPackage from "./ViewPackage";
 export default function Packages() {
   const dispatch = useDispatch<AppDispatch>();
   const user = useSelector((state: RootState) => state.auth.user);
-  const { packages, filteredPackages, status, searchQuery, filters } =
-    useSelector((state: RootState) => state.packages);
+  const {
+    packages,
+    filteredPackages,
+    status,
+    searchQuery,
+    filters,
+    currentPage,
+  } = useSelector((state: RootState) => state.packages);
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
@@ -58,14 +65,43 @@ export default function Packages() {
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [receiverIdFilter, setReceiverIdFilter] = useState("");
 
+  // Function to fetch packages with current filters
+  const fetchPackagesWithFilters = async () => {
+    await dispatch(
+      fetchPackages({
+        page: currentPage,
+        search: searchQuery,
+        status: filters.status,
+        driverName: filters.driverName,
+        plateNumber: filters.plateNumber,
+        receiverId: filters.receiverId,
+        dateFrom: filters.dateRange.from,
+        dateTo: filters.dateRange.to,
+      })
+    );
+  };
+
+  // Initial data load
   useEffect(() => {
-    const fetchData = async () => {
-      await dispatch(fetchPackages({}));
-      await dispatch(fetchPackageStats({}));
-    };
-    fetchData();
-  }, [dispatch]);
+    fetchPackagesWithFilters();
+    dispatch(fetchPackageStats({}));
+  }, []);
+
+  // Refetch when filters change
+  useEffect(() => {
+    fetchPackagesWithFilters();
+  }, [
+    currentPage,
+    searchQuery,
+    filters.status,
+    filters.driverName,
+    filters.plateNumber,
+    filters.receiverId,
+    filters.dateRange.from,
+    filters.dateRange.to,
+  ]);
 
   const handleAddPackage = () => {
     setIsAddDialogOpen(true);
@@ -83,11 +119,28 @@ export default function Packages() {
   };
 
   const handlePackageUpdated = () => {
-    dispatch(fetchPackages({}));
+    fetchPackagesWithFilters();
   };
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     dispatch(setSearchQuery(e.target.value));
+  };
+
+  const handleReceiverIdFilterChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setReceiverIdFilter(e.target.value);
+  };
+
+  const applyReceiverIdFilter = () => {
+    if (receiverIdFilter.trim()) {
+      dispatch(
+        setFilter({
+          key: "receiverId",
+          value: receiverIdFilter.trim(),
+        })
+      );
+    }
   };
 
   const handleDateRangeChange = () => {
@@ -106,10 +159,11 @@ export default function Packages() {
     dispatch(clearFilters());
     setDateFrom(undefined);
     setDateTo(undefined);
+    setReceiverIdFilter("");
   };
 
   const refreshData = async () => {
-    await dispatch(fetchPackages({}));
+    await fetchPackagesWithFilters();
     await dispatch(fetchPackageStats({}));
     toast.success("Package data refreshed");
   };
@@ -131,6 +185,7 @@ export default function Packages() {
         { header: "Sender Phone", key: "senderPhone", width: 15 },
         { header: "Receiver", key: "receiverName", width: 20 },
         { header: "Receiver Phone", key: "receiverPhone", width: 15 },
+        { header: "Receiver ID", key: "receiverId", width: 20 }, // Added Receiver ID column
         { header: "Status", key: "status", width: 15 },
         { header: "Driver", key: "driverName", width: 20 },
         { header: "Vehicle", key: "plateNumber", width: 15 },
@@ -169,6 +224,16 @@ export default function Packages() {
     (val) => val !== null && (typeof val === "string" || val.from || val.to)
   ).length;
 
+  // Debug filters and search for troubleshooting
+  console.log("Current filters:", {
+    search: searchQuery,
+    status: filters.status,
+    driverName: filters.driverName,
+    receiverId: filters.receiverId,
+    dateRange: filters.dateRange,
+    activeFilterCount,
+  });
+
   return (
     <div>
       <div>
@@ -186,7 +251,6 @@ export default function Packages() {
             }`}
             onClick={() => setActiveTab("packages")}
           >
-            {/* Package List */}
             {activeTab === "packages" && (
               <span className="absolute left-0 w-full h-1 bg-green-500 bottom-[-9px]" />
             )}
@@ -295,7 +359,31 @@ export default function Packages() {
                 </SelectContent>
               </Select>
 
-              {/* Date Range Filter */}
+              <div className="flex items-center border border-gray-300 rounded-md overflow-hidden bg-white">
+                <div className="pl-2">
+                  <Shield className="w-4 h-4 text-gray-500" />
+                </div>
+                <Input
+                  type="text"
+                  placeholder="Receiver ID"
+                  className="border-none focus:ring-0 focus:outline-none w-32"
+                  value={receiverIdFilter}
+                  onChange={handleReceiverIdFilterChange}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      applyReceiverIdFilter();
+                    }
+                  }}
+                />
+                <Button
+                  variant="ghost"
+                  className="h-8 px-2"
+                  onClick={applyReceiverIdFilter}
+                >
+                  <Search className="w-3 h-3" />
+                </Button>
+              </div>
+
               <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -346,7 +434,6 @@ export default function Packages() {
                 </PopoverContent>
               </Popover>
 
-              {/* Clear Filters Button - Show only when filters are active */}
               {activeFilterCount > 0 && (
                 <Button
                   variant="outline"
@@ -380,7 +467,6 @@ export default function Packages() {
 
       {/* {activeTab === "dashboard" && <PackageDashboard />} */}
 
-      {/* Package Dialogs */}
       <AddPackage
         open={isAddDialogOpen}
         onClose={handleDialogClose}

@@ -31,6 +31,14 @@ const packageSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    receiverId: {
+      type: String,
+      required: true,
+      index: true,
+      trim: true,
+      minLength: [4, "National ID must be at least 4 characters long"],
+      maxLength: [30, "National ID cannot exceed 30 characters"],
+    },
     pickupLocation: {
       type: String,
       required: true,
@@ -73,6 +81,10 @@ const packageSchema = new mongoose.Schema(
 
 packageSchema.pre("save", async function (next) {
   try {
+    if (this.isModified("receiverId")) {
+      this.receiverId = this.receiverId.replace(/[^\w\d\-]/g, "");
+    }
+
     if (this.isModified("shiftId")) {
       const Shift = mongoose.model("Shift");
       const shift = await Shift.findById(this.shiftId);

@@ -41,6 +41,11 @@ import {
   X,
   ClipboardCheck,
   Filter,
+  Package,
+  Truck,
+  CheckSquare,
+  XCircle,
+  RotateCcw,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -49,6 +54,35 @@ interface ActivitySummary {
   upcomingShifts: number;
   activeDrivers: number;
   availableVehicles: number;
+}
+
+interface Package {
+  _id: string;
+  packageId: string;
+  status: string;
+  description: string;
+  weight: number;
+  senderName: string;
+  senderPhone: string;
+  receiverName: string;
+  receiverPhone: string;
+  receiverId?: string;
+  pickupLocation: string;
+  deliveryLocation: string;
+  driverName?: string;
+  plateNumber?: string;
+  notes?: string;
+  createdAt?: string;
+  deliveredAt?: string;
+}
+
+interface PackageStatusCounts {
+  pending: number;
+  inTransit: number;
+  delivered: number;
+  cancelled: number;
+  returned: number;
+  total: number;
 }
 
 interface RecentShift {
@@ -71,6 +105,14 @@ export default function ManagerProfile() {
     activeDrivers: 0,
     availableVehicles: 0,
   });
+  const [packageCounts, setPackageCounts] = useState<PackageStatusCounts>({
+    pending: 0,
+    inTransit: 0,
+    delivered: 0,
+    cancelled: 0,
+    returned: 0,
+    total: 0,
+  });
   const [allShifts, setAllShifts] = useState<RecentShift[]>([]);
   const [displayedShifts, setDisplayedShifts] = useState<RecentShift[]>([]);
   const [topDrivers, setTopDrivers] = useState<any[]>([]);
@@ -88,11 +130,10 @@ export default function ManagerProfile() {
   const token =
     typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
-  // Refresh data every 30 seconds to update statuses
   useEffect(() => {
     const intervalId = setInterval(() => {
       setRefreshCounter((prev) => prev + 1);
-    }, 30000); // 30 seconds
+    }, 30000);
 
     return () => clearInterval(intervalId);
   }, []);
@@ -118,7 +159,6 @@ export default function ManagerProfile() {
 
       if (Array.isArray(shiftsResponse.data)) {
         shifts = shiftsResponse.data;
-        // Sort shifts by start time, most recent first
         shifts.sort(
           (a, b) =>
             new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
@@ -151,6 +191,48 @@ export default function ManagerProfile() {
       const vehicles = Array.isArray(vehiclesResponse.data)
         ? vehiclesResponse.data
         : [];
+
+      const packagesResponse = await axios.get(
+        "http://localhost:5000/api/packages",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      let packages: Package[] = [];
+      if (Array.isArray(packagesResponse.data)) {
+        packages = packagesResponse.data;
+      } else if (
+        packagesResponse.data &&
+        Array.isArray(packagesResponse.data.packages)
+      ) {
+        packages = packagesResponse.data.packages;
+      } else {
+        console.error(
+          "Packages response invalid format:",
+          packagesResponse.data
+        );
+        packages = [];
+      }
+
+      const packageStatusCounts = {
+        pending: packages.filter((pkg: Package) => pkg.status === "Pending")
+          .length,
+        inTransit: packages.filter(
+          (pkg: Package) => pkg.status === "In Transit"
+        ).length,
+        delivered: packages.filter((pkg: Package) => pkg.status === "Delivered")
+          .length,
+        cancelled: packages.filter((pkg: Package) => pkg.status === "Cancelled")
+          .length,
+        returned: packages.filter((pkg: Package) => pkg.status === "Returned")
+          .length,
+        total: packages.length,
+      };
+
+      setPackageCounts(packageStatusCounts);
 
       const today = new Date();
 
@@ -191,7 +273,6 @@ export default function ManagerProfile() {
       const now = new Date();
       const start = new Date(shift.startTime);
 
-      // Debug check - log any invalid dates
       if (isNaN(start.getTime())) {
         console.error("Invalid start time for shift:", shift);
         return "Unknown";
@@ -208,7 +289,6 @@ export default function ManagerProfile() {
         }
       }
 
-      // If start time has passed but no end time or end time is in future
       return "In Progress";
     } catch (error) {
       console.error("Error determining shift status:", error, shift);
@@ -258,19 +338,16 @@ export default function ManagerProfile() {
 
       toast.success("Shift completed successfully");
 
-      // Update the shift in our state
       setAllShifts((prevShifts) =>
         prevShifts.map((shift) =>
           shift._id === shiftId ? { ...shift, endTime } : shift
         )
       );
 
-      // Also dispatch a global shift updated event to update other components
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("shift_updated"));
       }
 
-      // Refresh all data
       fetchManagerData();
     } catch (error) {
       console.error("Error completing shift:", error);
@@ -311,7 +388,6 @@ export default function ManagerProfile() {
       setEditingShift(null);
       setActualEndTime("");
 
-      // Trigger a global shift updated event
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("shift_updated"));
       }
@@ -381,6 +457,40 @@ export default function ManagerProfile() {
     setRefreshCounter((prev) => prev + 1);
   };
 
+  const getPackageStatusIcon = (status: string) => {
+    switch (status) {
+      case "pending":
+        return <Clock className="h-5 w-5 text-blue-600" />;
+      case "inTransit":
+        return <Truck className="h-5 w-5 text-yellow-600" />;
+      case "delivered":
+        return <CheckSquare className="h-5 w-5 text-green-600" />;
+      case "cancelled":
+        return <XCircle className="h-5 w-5 text-red-600" />;
+      case "returned":
+        return <RotateCcw className="h-5 w-5 text-purple-600" />;
+      default:
+        return <Package className="h-5 w-5 text-gray-600" />;
+    }
+  };
+
+  const getPackageStatusColor = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "bg-blue-50 text-blue-800";
+      case "inTransit":
+        return "bg-yellow-50 text-yellow-800";
+      case "delivered":
+        return "bg-green-50 text-green-800";
+      case "cancelled":
+        return "bg-red-50 text-red-800";
+      case "returned":
+        return "bg-purple-50 text-purple-800";
+      default:
+        return "bg-gray-50 text-gray-800";
+    }
+  };
+
   return (
     <div>
       <Tabs defaultValue="profile" className="w-full">
@@ -399,9 +509,9 @@ export default function ManagerProfile() {
               <RefreshCw className="h-10 w-10 animate-spin text-green-600" />
             </div>
           ) : (
-            <div className="space-y-8">
-              {/* Activity summary cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
+            <div className="space-y-16">
+              {/* Activity summary cards - First row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
                 <Card className="bg-blue-50">
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start">
@@ -413,7 +523,7 @@ export default function ManagerProfile() {
                           {activitySummary.totalShifts}
                         </p>
                       </div>
-                      <Calendar className="h-6 w-8 text-blue-600" />
+                      <Calendar className="h-6 w-6 text-blue-600" />
                     </div>
                   </CardContent>
                 </Card>
@@ -429,7 +539,7 @@ export default function ManagerProfile() {
                           {activitySummary.upcomingShifts}
                         </p>
                       </div>
-                      <Clock className="h-6 w-8 text-green-600" />
+                      <Clock className="h-6 w-6 text-green-600" />
                     </div>
                   </CardContent>
                 </Card>
@@ -445,14 +555,14 @@ export default function ManagerProfile() {
                           {activitySummary.activeDrivers}
                         </p>
                       </div>
-                      <Users className="h-6 w-8 text-purple-600" />
+                      <Users className="h-6 w-6 text-purple-600" />
                     </div>
                   </CardContent>
                 </Card>
 
                 <Card className="bg-amber-50">
-                  <CardContent className="p-8">
-                    <div className="flex justify-between items-start gap-6">
+                  <CardContent className="p-6">
+                    <div className="flex justify-between items-start gap-10">
                       <div>
                         <p className="text-sm font-medium text-amber-800">
                           Available Vehicles
@@ -461,10 +571,324 @@ export default function ManagerProfile() {
                           {activitySummary.availableVehicles}
                         </p>
                       </div>
-                      <Car className="h-6 w-8 text-amber-600" />
+                      <Car className="h-6 w-6 text-amber-600" />
                     </div>
                   </CardContent>
                 </Card>
+              </div>
+
+              {/* Package Status Cards */}
+              {/* Package Status Summary - Minimal, Elegant Design */}
+              <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                <div className="p-6 border-b border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-800">
+                        Package Status Summary
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        Overview of packages by status
+                      </p>
+                    </div>
+                    <Package className="h-5 w-5" />
+                  </div>
+                </div>
+
+                {/* Package Totals */}
+                <div className="p-6 pb-2">
+                  <div className="flex items-end gap-2">
+                    <span className="text-3xl font-semibold text-gray-800">
+                      {packageCounts.total}
+                    </span>
+                    <span className="text-sm text-gray-500 mb-1">
+                      total packages
+                    </span>
+                  </div>
+                </div>
+
+                {/* Status List - Minimal Design */}
+                <div className="px-6 pb-4">
+                  <div className="space-y-5">
+                    {/* Pending Packages */}
+                    <div>
+                      <div className="flex justify-between mb-1.5">
+                        <div className="flex items-center">
+                          <div className="w-2 h-2 bg-gray-400 rounded-full mr-2"></div>
+                          <span className="text-sm font-medium text-gray-700">
+                            Pending
+                          </span>
+                        </div>
+                        <span className="text-sm font-medium text-gray-900">
+                          {packageCounts.pending}
+                        </span>
+                      </div>
+                      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gray-400"
+                          style={{
+                            width:
+                              packageCounts.total > 0
+                                ? `${
+                                    (packageCounts.pending /
+                                      packageCounts.total) *
+                                    100
+                                  }%`
+                                : "0%",
+                          }}
+                        ></div>
+                      </div>
+                    </div>
+
+                    {/* In Transit Packages */}
+                    <div>
+                      <div className="flex justify-between mb-1.5">
+                        <div className="flex items-center">
+                          <div className="w-2 h-2 bg-gray-600 rounded-full mr-2"></div>
+                          <span className="text-sm font-medium text-gray-700">
+                            In Transit
+                          </span>
+                        </div>
+                        <span className="text-sm font-medium text-gray-900">
+                          {packageCounts.inTransit}
+                        </span>
+                      </div>
+                      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gray-600"
+                          style={{
+                            width:
+                              packageCounts.total > 0
+                                ? `${
+                                    (packageCounts.inTransit /
+                                      packageCounts.total) *
+                                    100
+                                  }%`
+                                : "0%",
+                          }}
+                        ></div>
+                      </div>
+                    </div>
+
+                    {/* Delivered Packages */}
+                    <div>
+                      <div className="flex justify-between mb-1.5">
+                        <div className="flex items-center">
+                          <div className="w-2 h-2 bg-gray-800 rounded-full mr-2"></div>
+                          <span className="text-sm font-medium text-gray-700">
+                            Delivered
+                          </span>
+                        </div>
+                        <span className="text-sm font-medium text-gray-900">
+                          {packageCounts.delivered}
+                        </span>
+                      </div>
+                      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gray-800"
+                          style={{
+                            width:
+                              packageCounts.total > 0
+                                ? `${
+                                    (packageCounts.delivered /
+                                      packageCounts.total) *
+                                    100
+                                  }%`
+                                : "0%",
+                          }}
+                        ></div>
+                      </div>
+                    </div>
+
+                    {/* Other Statuses (Combined) */}
+                    <div>
+                      <div className="flex justify-between mb-1.5">
+                        <div className="flex items-center">
+                          <div className="w-2 h-2 bg-gray-300 rounded-full mr-2"></div>
+                          <span className="text-sm font-medium text-gray-700">
+                            Other
+                          </span>
+                        </div>
+                        <span className="text-sm font-medium text-gray-900">
+                          {packageCounts.cancelled + packageCounts.returned}
+                        </span>
+                      </div>
+                      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gray-300"
+                          style={{
+                            width:
+                              packageCounts.total > 0
+                                ? `${
+                                    ((packageCounts.cancelled +
+                                      packageCounts.returned) /
+                                      packageCounts.total) *
+                                    100
+                                  }%`
+                                : "0%",
+                          }}
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Package Details Table */}
+                <div className="px-6 py-4 border-t border-gray-100">
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-2.5">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-gray-500">Pending</span>
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-3.5 w-3.5 text-gray-400" />
+                          <span className="text-sm font-medium text-gray-800">
+                            {packageCounts.pending}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-gray-500">
+                          In Transit
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <Truck className="h-3.5 w-3.5 text-gray-600" />
+                          <span className="text-sm font-medium text-gray-800">
+                            {packageCounts.inTransit}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-2.5">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-gray-500">Delivered</span>
+                        <div className="flex items-center gap-1">
+                          <CheckSquare className="h-3.5 w-3.5 text-gray-800" />
+                          <span className="text-sm font-medium text-gray-800">
+                            {packageCounts.delivered}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-gray-500">Cancelled</span>
+                        <div className="flex items-center gap-1">
+                          <XCircle className="h-3.5 w-3.5 text-gray-500" />
+                          <span className="text-sm font-medium text-gray-800">
+                            {packageCounts.cancelled}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-gray-500">Returned</span>
+                        <div className="flex items-center gap-1">
+                          <RotateCcw className="h-3.5 w-3.5 text-gray-500" />
+                          <span className="text-sm font-medium text-gray-800">
+                            {packageCounts.returned}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="px-6 pt-2 pb-4 border-t border-gray-100">
+                  <div className="mb-3 flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-500">
+                      Package Flow
+                    </span>
+                    {packageCounts.total > 0 && (
+                      <span className="text-xs text-gray-500">
+                        {Math.round(
+                          (packageCounts.delivered / packageCounts.total) * 100
+                        )}
+                        % delivered
+                      </span>
+                    )}
+                  </div>
+                  <div className="h-2 flex rounded-full overflow-hidden bg-gray-100">
+                    {/* Pending segment */}
+                    {packageCounts.pending > 0 && (
+                      <div
+                        className="h-full bg-gray-400"
+                        style={{
+                          width:
+                            packageCounts.total > 0
+                              ? `${
+                                  (packageCounts.pending /
+                                    packageCounts.total) *
+                                  100
+                                }%`
+                              : "0%",
+                        }}
+                      ></div>
+                    )}
+
+                    {/* In Transit segment */}
+                    {packageCounts.inTransit > 0 && (
+                      <div
+                        className="h-full bg-gray-600"
+                        style={{
+                          width:
+                            packageCounts.total > 0
+                              ? `${
+                                  (packageCounts.inTransit /
+                                    packageCounts.total) *
+                                  100
+                                }%`
+                              : "0%",
+                        }}
+                      ></div>
+                    )}
+
+                    {/* Delivered segment */}
+                    {packageCounts.delivered > 0 && (
+                      <div
+                        className="h-full bg-gray-800"
+                        style={{
+                          width:
+                            packageCounts.total > 0
+                              ? `${
+                                  (packageCounts.delivered /
+                                    packageCounts.total) *
+                                  100
+                                }%`
+                              : "0%",
+                        }}
+                      ></div>
+                    )}
+
+                    {/* Other segment */}
+                    {packageCounts.cancelled + packageCounts.returned > 0 && (
+                      <div
+                        className="h-full bg-gray-300"
+                        style={{
+                          width:
+                            packageCounts.total > 0
+                              ? `${
+                                  ((packageCounts.cancelled +
+                                    packageCounts.returned) /
+                                    packageCounts.total) *
+                                  100
+                                }%`
+                              : "0%",
+                        }}
+                      ></div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+                  <span className="text-xs text-gray-500">
+                    Updated {new Date().toLocaleTimeString()}
+                  </span>
+                  <Button
+                    onClick={() => router.push("/dashboard?feature=packages")}
+                    variant="outline"
+                    className="h-8 text-xs flex items-center gap-1.5 border-gray-300 text-gray-700"
+                  >
+                    <Package className="h-3.5 w-3.5" />
+                    <span>View All Packages</span>
+                  </Button>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -584,10 +1008,10 @@ export default function ManagerProfile() {
                                 </div>
                               </div>
 
-                              {/* Buttons */}
+
                               <div className="mt-3 pt-2 border-t border-gray-200">
                                 {status === "Scheduled" && (
-                                  // If shift is scheduled for future, no action
+
                                   <p className="text-sm text-gray-500 italic">
                                     Shift not started yet.
                                   </p>

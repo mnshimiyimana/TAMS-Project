@@ -18,6 +18,7 @@ export interface Package {
   senderPhone: string;
   receiverName: string;
   receiverPhone: string;
+  receiverId: string;
   pickupLocation: string;
   deliveryLocation: string;
   shiftId: string;
@@ -46,6 +47,7 @@ interface PackagesState {
     status: string | null;
     driverName: string | null;
     plateNumber: string | null;
+    receiverId: string | null; 
     dateRange: {
       from: string | null;
       to: string | null;
@@ -85,6 +87,7 @@ const initialState: PackagesState = {
     status: null,
     driverName: null,
     plateNumber: null,
+    receiverId: null,
     dateRange: {
       from: null,
       to: null,
@@ -105,6 +108,7 @@ export const fetchPackages = createAsyncThunk(
       status = null,
       driverName = null,
       plateNumber = null,
+      receiverId = null, 
       dateFrom = null,
       dateTo = null,
     }: {
@@ -114,6 +118,7 @@ export const fetchPackages = createAsyncThunk(
       status?: string | null;
       driverName?: string | null;
       plateNumber?: string | null;
+      receiverId?: string | null;
       dateFrom?: string | null;
       dateTo?: string | null;
     },
@@ -131,6 +136,7 @@ export const fetchPackages = createAsyncThunk(
       if (status) url += `&status=${encodeURIComponent(status)}`;
       if (driverName) url += `&driverName=${encodeURIComponent(driverName)}`;
       if (plateNumber) url += `&plateNumber=${encodeURIComponent(plateNumber)}`;
+      if (receiverId) url += `&receiverId=${encodeURIComponent(receiverId)}`;
       if (dateFrom) url += `&dateFrom=${encodeURIComponent(dateFrom)}`;
       if (dateTo) url += `&dateTo=${encodeURIComponent(dateTo)}`;
 
@@ -229,6 +235,7 @@ export const fetchPackageStats = createAsyncThunk(
   }
 );
 
+
 export const createPackage = createAsyncThunk(
   "packages/createPackage",
   async (packageData: any, { rejectWithValue }) => {
@@ -246,6 +253,7 @@ export const createPackage = createAsyncThunk(
         "senderPhone",
         "receiverName",
         "receiverPhone",
+        "receiverId", // Added receiverId to required fields
         "pickupLocation",
         "deliveryLocation",
         "shiftId",
@@ -265,7 +273,16 @@ export const createPackage = createAsyncThunk(
         status: packageData.status || "Pending",
       };
 
-      console.log("Sending package data:", processedData);
+      console.log("Sending package data:", {
+        ...processedData,
+        agencyName: processedData.agencyName || "Not set",
+        userAgency: "From user context",
+        shiftAgency: "From shift",
+      });
+
+      const API_URL =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+      console.log("API URL:", `${API_URL}/api/packages`);
 
       const response = await axios.post(
         `${API_URL}/api/packages`,
@@ -282,6 +299,12 @@ export const createPackage = createAsyncThunk(
       return response.data.package;
     } catch (error: any) {
       console.error("Create package error:", error.response || error);
+
+      if (error.response && error.response.data) {
+        console.error("Server error message:", error.response.data.message);
+        console.error("Server error details:", error.response.data);
+      }
+
       return rejectWithValue(
         error.response?.data?.message ||
           error.message ||
@@ -343,7 +366,6 @@ export const updatePackageStatus = createAsyncThunk(
         return rejectWithValue("Authentication required");
       }
 
-      // Validate status
       const validStatuses = [
         "Pending",
         "In Transit",
@@ -355,7 +377,6 @@ export const updatePackageStatus = createAsyncThunk(
         return rejectWithValue(`Invalid status: ${status}`);
       }
 
-      // Add delivery date for Delivered status
       const requestBody: any = { status, notes };
       if (status === "Delivered") {
         requestBody.deliveredAt = new Date().toISOString();

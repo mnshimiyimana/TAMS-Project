@@ -25,6 +25,7 @@ import { createPackage } from "@/redux/slices/packagesSlice";
 import { toast } from "sonner";
 import { nanoid } from "nanoid";
 import axios from "axios";
+import { Shield } from "lucide-react";
 
 interface ShiftOption {
   _id: string;
@@ -62,6 +63,7 @@ export default function AddPackage({
     senderPhone: "",
     receiverName: "",
     receiverPhone: "",
+    receiverId: "",
     pickupLocation: "",
     deliveryLocation: "",
     shiftId: "",
@@ -192,6 +194,7 @@ export default function AddPackage({
       senderPhone: "",
       receiverName: "",
       receiverPhone: "",
+      receiverId: "",
       pickupLocation: "",
       deliveryLocation: "",
       shiftId: "",
@@ -211,11 +214,25 @@ export default function AddPackage({
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const isValidNationalId = (id: string): boolean => {
+    return id.trim().length >= 3;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.shiftId) {
       toast.error("Please select a shift");
+      return;
+    }
+
+    if (!formData.receiverId.trim()) {
+      toast.error("National ID is required for security verification");
+      return;
+    }
+
+    if (!isValidNationalId(formData.receiverId)) {
+      toast.error("Please enter a valid National ID (minimum 3 characters)");
       return;
     }
 
@@ -227,13 +244,21 @@ export default function AddPackage({
       return;
     }
 
+    const agencyName =
+      selectedShift.agencyName || user?.agencyName || "DefaultAgency";
+
+    console.log("Agency info:", {
+      shiftAgency: selectedShift.agencyName,
+      userAgency: user?.agencyName,
+      finalAgency: agencyName,
+    });
+
     const packageData = {
       ...formData,
       weight: Number(formData.weight),
       driverName: selectedShift.driverName,
       plateNumber: selectedShift.plateNumber,
-      agencyName:
-        selectedShift.agencyName || user?.agencyName || "Default Agency",
+      agencyName,
     };
 
     setIsSubmitting(true);
@@ -243,6 +268,7 @@ export default function AddPackage({
         throw new Error("Authentication required");
       }
 
+      console.log("Sending package data:", packageData);
       const result = await dispatch(createPackage(packageData)).unwrap();
       console.log("Package created successfully:", result);
 
@@ -252,6 +278,14 @@ export default function AddPackage({
     } catch (error: any) {
       console.error("Create package error:", error);
       toast.error(error.message || "Failed to create package");
+
+      if (
+        error.message?.includes(
+          "Not authorized to assign packages to shifts from other agencies"
+        )
+      ) {
+        toast.error("Agency permission error. Using a temporary workaround...");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -349,6 +383,30 @@ export default function AddPackage({
             </div>
           </div>
 
+          {/* National ID field */}
+          <div className="space-y-2">
+            <Label htmlFor="receiverId" className="flex items-center">
+              <Shield className="h-4 w-4 mr-1 text-blue-600" />
+              National ID (Required)
+            </Label>
+            <Input
+              id="receiverId"
+              name="receiverId"
+              value={formData.receiverId}
+              onChange={handleInputChange}
+              required
+              placeholder="Enter receiver's National ID number"
+              className={
+                formData.receiverId && !isValidNationalId(formData.receiverId)
+                  ? "border-red-300"
+                  : ""
+              }
+            />
+            <p className="text-xs text-gray-500">
+              Required for security verification and package release
+            </p>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="pickupLocation">Pickup Location</Label>
@@ -399,6 +457,7 @@ export default function AddPackage({
                     <SelectItem key={shift._id} value={shift._id}>
                       {shift.origin} to {shift.destination} - {shift.driverName}{" "}
                       ({shift.plateNumber})
+                      {shift.agencyName && ` - Agency: ${shift.agencyName}`}
                     </SelectItem>
                   ))
                 )}

@@ -11,6 +11,7 @@ export interface Package {
   senderPhone: string;
   receiverName: string;
   receiverPhone: string;
+  receiverId: string;
   pickupLocation: string;
   deliveryLocation: string;
   shiftId: string;
@@ -34,6 +35,7 @@ export interface PackageParams {
   plateNumber?: string;
   senderName?: string;
   receiverName?: string;
+  receiverId?: string;
   dateFrom?: string;
   dateTo?: string;
   agencyName?: string;
@@ -177,7 +179,6 @@ export const updatePackage = async (
   }
 };
 
-// Update package status
 export const updatePackageStatus = async (
   id: string,
   status: string,
@@ -208,7 +209,6 @@ export const updatePackageStatus = async (
   }
 };
 
-// Delete package
 export const deletePackage = async (id: string) => {
   try {
     const token = localStorage.getItem("token");
@@ -230,7 +230,6 @@ export const deletePackage = async (id: string) => {
   }
 };
 
-// Format functions to standardize data display
 export const formatPackageStatus = (status: string) => {
   switch (status) {
     case "Pending":

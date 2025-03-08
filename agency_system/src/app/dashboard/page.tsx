@@ -98,7 +98,7 @@ export default function DashboardPage() {
           selected={selectedComponent}
         />
         <SidebarTrigger />
-        <div className="flex-1 bg-gray-50">
+        <div className="flex-1 bg-gray-50 sticky top-0">
           <div className="w-full flex justify-between items-center p-5 bg-white shadow-sm">
             <div></div>
 

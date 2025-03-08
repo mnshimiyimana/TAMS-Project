@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Eye, MoreHorizontal } from "lucide-react";
+import { Eye, MoreHorizontal, Shield } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +24,12 @@ import { Package, updatePackageStatus } from "@/redux/slices/packagesSlice";
 import { formatPackageStatus } from "@/services/packageService";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface PackagesTableProps {
   onView: (packageItem: Package) => void;
@@ -102,7 +108,7 @@ export default function PackagesTable({
     if (filteredPackages.length === 0) {
       return (
         <TableRow>
-          <TableCell colSpan={8} className="text-center py-6 text-gray-500">
+          <TableCell colSpan={9} className="text-center py-6 text-gray-500">
             No packages found
           </TableCell>
         </TableRow>
@@ -128,6 +134,26 @@ export default function PackagesTable({
             <div>
               <p className="font-medium">{pkg.receiverName}</p>
               <p className="text-xs text-gray-500">{pkg.receiverPhone}</p>
+              {/* Show National ID with a security icon */}
+              <div className="flex items-center mt-1">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center text-xs text-blue-600">
+                        <Shield className="h-3 w-3 mr-1" />
+                        {pkg.receiverId ? (
+                          <>National ID: {pkg.receiverId.slice(0, 3)}****</>
+                        ) : (
+                          <>No National ID</>
+                        )}
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>National ID (for security verification)</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
             </div>
           </TableCell>
           <TableCell>
@@ -219,8 +245,8 @@ export default function PackagesTable({
             <TableHead className="w-[160px]">Description</TableHead>
             <TableHead className="w-[80px]">Weight</TableHead>
             <TableHead className="w-[180px]">Sender</TableHead>
-            <TableHead className="w-[180px]">Receiver</TableHead>
-            <TableHead className="w-[180px]">Driver / Vehicle</TableHead>
+            <TableHead className="w-[200px]">Receiver</TableHead>
+            <TableHead className="w-[220px]">Driver / Vehicle</TableHead>
             <TableHead className="w-[100px]">Status</TableHead>
             <TableHead className="w-[80px] text-right">Actions</TableHead>
           </TableRow>
@@ -239,6 +265,7 @@ export default function PackagesTable({
               size="sm"
               disabled={currentPage === 1}
               onClick={() => {
+                // Handle pagination
               }}
             >
               Previous
@@ -248,6 +275,7 @@ export default function PackagesTable({
               size="sm"
               disabled={currentPage === totalPages}
               onClick={() => {
+                // Handle pagination
               }}
             >
               Next

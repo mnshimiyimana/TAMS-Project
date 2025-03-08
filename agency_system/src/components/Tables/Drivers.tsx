@@ -52,6 +52,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
 
 type Status = "On Shift" | "Off shift" | "On leave";
 
@@ -62,6 +64,7 @@ const tableHeaders = [
   "Phone Number",
   "Status",
   "Last Shift",
+  "Agency",
   "Actions",
 ];
 
@@ -77,6 +80,7 @@ interface DriversTableProps {
   searchQuery: string;
   statusFilter: string;
   shiftFilter?: string;
+  agencyFilter?: string;
   refreshTrigger: number;
   agencyName: string;
   onEdit?: (driver: Driver) => void;
@@ -86,6 +90,7 @@ export default function DriversTable({
   searchQuery,
   statusFilter,
   shiftFilter,
+  agencyFilter,
   refreshTrigger,
   agencyName,
   onEdit,
@@ -99,6 +104,11 @@ export default function DriversTable({
   const [totalPages, setTotalPages] = useState(1);
   const [totalDrivers, setTotalDrivers] = useState(0);
   const [error, setError] = useState<string | null>(null);
+
+  // Get user role from redux store
+  const user = useSelector((state: RootState) => state.auth.user);
+  const userRole = user?.role || "";
+  const isSuperAdmin = userRole === "superadmin";
 
   const fetchDrivers = async () => {
     setIsLoading(true);
@@ -118,8 +128,13 @@ export default function DriversTable({
         params.status = statusFilter;
       }
 
-      if (agencyName) {
+      // Apply agency filter based on role
+      if (!isSuperAdmin) {
+        // Force user's agency for non-superadmins
         params.agencyName = agencyName;
+      } else if (agencyFilter) {
+        // Allow superadmins to filter by agency
+        params.agencyName = agencyFilter;
       }
 
       const response = await getDrivers(params);
@@ -199,7 +214,7 @@ export default function DriversTable({
 
   useEffect(() => {
     fetchDrivers();
-  }, [currentPage, searchQuery, statusFilter, refreshTrigger, agencyName]);
+  }, [currentPage, searchQuery, statusFilter, agencyFilter, refreshTrigger]);
 
   useEffect(() => {
     if (drivers.length > 0) {
@@ -293,7 +308,7 @@ export default function DriversTable({
             {isLoading ? (
               Array.from({ length: 5 }).map((_, index) => (
                 <TableRow key={`skeleton-${index}`}>
-                  {Array.from({ length: 7 }).map((_, cellIndex) => (
+                  {Array.from({ length: 8 }).map((_, cellIndex) => (
                     <TableCell
                       key={`cell-${index}-${cellIndex}`}
                       className="px-8 py-4"
@@ -305,9 +320,9 @@ export default function DriversTable({
               ))
             ) : driversToDisplay.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-10">
+                <TableCell colSpan={8} className="text-center py-10">
                   No drivers found.{" "}
-                  {searchQuery || statusFilter || shiftFilter
+                  {searchQuery || statusFilter || shiftFilter || agencyFilter
                     ? "Try adjusting your filters."
                     : ""}
                 </TableCell>
@@ -322,15 +337,16 @@ export default function DriversTable({
                   phoneNumber = "",
                   status = "",
                   lastShift = null,
+                  agencyName: driverAgency = "",
                 } = driver || {};
 
                 return (
                   <TableRow key={_id}>
-                    <TableCell className="px-6 py-4">{driverId}</TableCell>
-                    <TableCell className="px-6 py-4">{names}</TableCell>
-                    <TableCell className="px-6 py-4">{email}</TableCell>
-                    <TableCell className="px-6 py-4">{phoneNumber}</TableCell>
-                    <TableCell className="px-6 py-4">
+                    <TableCell className="px-4 py-4">{driverId}</TableCell>
+                    <TableCell className="px- py-4">{names}</TableCell>
+                    <TableCell className="px- py-4">{email}</TableCell>
+                    <TableCell className="px-4 py-4">{phoneNumber}</TableCell>
+                    <TableCell className="px-5 py-4">
                       <span
                         className={`${getStatusStyle(
                           status
@@ -343,6 +359,9 @@ export default function DriversTable({
                       {lastShift
                         ? format(new Date(lastShift), "yyyy-MM-dd")
                         : "N/A"}
+                    </TableCell>
+                    <TableCell className="px-5 py-4 text-xs">
+                      {driverAgency || agencyName}
                     </TableCell>
                     <TableCell className="px-8 py-4 text-center">
                       <DropdownMenu>

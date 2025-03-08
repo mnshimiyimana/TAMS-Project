@@ -28,9 +28,12 @@ export default function Fuels() {
   );
 
   const user = useSelector((state: RootState) => state.auth.user);
+  const userRole = user?.role || "";
   const agencyName = user?.agencyName || "";
+  const isSuperAdmin = userRole === "superadmin";
 
-  const filtersActive = !!filters.plateNumber || !!filters.date;
+  const filtersActive =
+    !!filters.plateNumber || !!filters.date || !!filters.agencyName;
 
   useEffect(() => {
     dispatch(fetchFuelTransactions());
@@ -38,14 +41,21 @@ export default function Fuels() {
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     dispatch(setSearchQuery(e.target.value));
+    // Trigger search with slight delay to avoid excessive API calls
+    const timer = setTimeout(() => {
+      dispatch(fetchFuelTransactions());
+    }, 500);
+    return () => clearTimeout(timer);
   };
 
   const handleClearSearch = () => {
     dispatch(setSearchQuery(""));
+    dispatch(fetchFuelTransactions());
   };
 
   const handleClearFilters = () => {
     dispatch(clearFilters());
+    dispatch(fetchFuelTransactions());
   };
 
   const handleAddTransaction = () => {
@@ -61,6 +71,9 @@ export default function Fuels() {
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
     setTransactionToEdit(null);
+
+    // Refresh the list after dialog closes
+    dispatch(fetchFuelTransactions());
   };
 
   const handleExport = async () => {
@@ -77,8 +90,15 @@ export default function Fuels() {
         { header: "Driver Name", key: "driverName", width: 25 },
         { header: "Fuel Date", key: "fuelDate", width: 20 },
         { header: "Amount (L)", key: "amount", width: 15 },
+        { header: "Amount Price", key: "amountPrice", width: 15 },
         { header: "Last Fill (L)", key: "lastFill", width: 15 },
+        { header: "Last Fill Price", key: "lastFillPrice", width: 15 },
       ];
+
+      // Add agency column for superadmins
+      if (isSuperAdmin) {
+        columns.push({ header: "Agency", key: "agencyName", width: 20 });
+      }
 
       const processedData = filteredTransactions.map((transaction) => ({
         plateNumber: transaction.plateNumber,
@@ -90,11 +110,29 @@ export default function Fuels() {
         amountPrice: transaction.amountPrice,
         lastFill: transaction.lastFill + " L",
         lastFillPrice: transaction.lastFillPrice,
+        agencyName: transaction.agencyName,
       }));
 
-      const filename = `Fuel_Transactions_Export_${
+      let filename = `Fuel_Transactions_Export_${
         new Date().toISOString().split("T")[0]
       }`;
+
+      // Add filters to filename
+      if (filters.agencyName) {
+        filename += `_Agency-${filters.agencyName}`;
+      }
+
+      if (filters.plateNumber) {
+        filename += `_Plate-${filters.plateNumber}`;
+      }
+
+      if (filters.date) {
+        filename += `_Date-${filters.date}`;
+      }
+
+      if (searchQuery) {
+        filename += "_Search";
+      }
 
       const worksheet = XLSX.utils.json_to_sheet(processedData);
 

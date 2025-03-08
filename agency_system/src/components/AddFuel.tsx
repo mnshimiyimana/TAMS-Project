@@ -11,8 +11,9 @@ import {
   addFuelTransaction,
   updateFuelTransaction,
   FuelTransaction,
+  fetchFuelTransactions,
 } from "@/redux/slices/fuelsSlice";
-import { fetchVehicles, Vehicle } from "@/redux/slices/vehiclesSlice";
+import { fetchVehicles } from "@/redux/slices/vehiclesSlice";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
@@ -37,6 +38,7 @@ const fuelSchema = z.object({
   lastFillPrice: z.coerce
     .number()
     .min(0.01, "Last fill price must be greater than 0"),
+  agencyName: z.string().min(1, "Agency name is required"),
 });
 
 type FuelFormData = z.infer<typeof fuelSchema>;
@@ -58,9 +60,23 @@ export default function AddFuelDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditing = !!fuelToEdit;
 
+  // Get user role to determine if agency can be changed
+  const userRole = useSelector((state: RootState) => state.auth.user?.role || "");
+  const isSuperAdmin = userRole === "superadmin";
+
+  // Get agency options from vehicles for superadmin
+  const agencyOptions = useSelector((state: RootState) => 
+    Array.from(new Set(state.vehicles.vehicles.map(v => v.agencyName).filter(Boolean)))
+  );
+
   const vehicles = useSelector((state: RootState) => state.vehicles.vehicles);
   const vehiclesLoading = useSelector(
     (state: RootState) => state.vehicles.isLoading
+  );
+
+  const [filteredVehicles, setFilteredVehicles] = useState(vehicles);
+  const selectedAgency = useSelector((state: RootState) => 
+    state.fuels.filters.agencyName || agencyName
   );
 
   useEffect(() => {
@@ -68,6 +84,15 @@ export default function AddFuelDialog({
       dispatch(fetchVehicles());
     }
   }, [dispatch, vehicles, vehiclesLoading]);
+
+  // Filter vehicles by selected agency
+  useEffect(() => {
+    if (selectedAgency) {
+      setFilteredVehicles(vehicles.filter(v => v.agencyName === selectedAgency));
+    } else {
+      setFilteredVehicles(vehicles);
+    }
+  }, [vehicles, selectedAgency]);
 
   const {
     register,
@@ -86,6 +111,7 @@ export default function AddFuelDialog({
       amountPrice: undefined,
       lastFill: undefined,
       lastFillPrice: undefined,
+      agencyName: agencyName,
     },
   });
 
@@ -93,21 +119,32 @@ export default function AddFuelDialog({
     if (fuelToEdit) {
       setValue("plateNumber", fuelToEdit.plateNumber);
       setValue("driverName", fuelToEdit.driverName);
-      setValue("fuelDate", fuelToEdit.fuelDate);
+      setValue("fuelDate", new Date(fuelToEdit.fuelDate).toISOString().split('T')[0]);
       setValue("amount", fuelToEdit.amount);
       setValue("amountPrice", fuelToEdit.amountPrice);
       setValue("lastFill", fuelToEdit.lastFill);
       setValue("lastFillPrice", fuelToEdit.lastFillPrice);
+      setValue("agencyName", fuelToEdit.agencyName || agencyName);
+    } else {
+      // Set default agency for new transactions
+      setValue("agencyName", agencyName);
     }
-  }, [fuelToEdit, setValue]);
+  }, [fuelToEdit, setValue, agencyName]);
 
   const onSubmit = async (data: FuelFormData) => {
     try {
       setIsSubmitting(true);
 
+      // Validate agency permission
+      if (!isSuperAdmin && data.agencyName !== agencyName) {
+        toast.error("You don't have permission to create fuel transactions for other agencies");
+        return;
+      }
+
+      // Ensure agency is set
       const fuelData = {
         ...data,
-        agencyName,
+        agencyName: data.agencyName || agencyName,
       };
 
       if (isEditing && fuelToEdit) {
@@ -123,6 +160,9 @@ export default function AddFuelDialog({
         toast.success("Fuel transaction added successfully!");
       }
 
+      // Refresh the fuel transactions list
+      dispatch(fetchFuelTransactions());
+      
       reset();
       onClose();
     } catch (error: any) {
@@ -155,6 +195,42 @@ export default function AddFuelDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {/* Agency selection for superadmin */}
+          {isSuperAdmin && (
+            <div>
+              <Label htmlFor="agencyName">Agency</Label>
+              <Select
+                value={watch("agencyName")}
+                onValueChange={(value) => setValue("agencyName", value)}
+              >
+                <SelectTrigger id="agencyName" className="w-full">
+                  <SelectValue placeholder="Select an agency" />
+                </SelectTrigger>
+                <SelectContent>
+                  {agencyOptions.map((agency) => (
+                    <SelectItem key={agency} value={agency || ""}>
+                      {agency}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.agencyName && (
+                <p className="text-red-500 text-sm">
+                  {errors.agencyName.message}
+                </p>
+              )}
+            </div>
+          )}
+          
+          {/* Hidden agency field for non-superadmins */}
+          {!isSuperAdmin && (
+            <input 
+              type="hidden" 
+              {...register("agencyName")} 
+              value={agencyName} 
+            />
+          )}
+
           {/* Plate Number */}
           <div>
             <Label htmlFor="plateNumber">Plate Number</Label>
@@ -173,7 +249,7 @@ export default function AddFuelDialog({
                 <SelectValue placeholder="Select a bus" />
               </SelectTrigger>
               <SelectContent>
-                {vehicles.map((vehicle) => (
+                {filteredVehicles.map((vehicle) => (
                   <SelectItem key={vehicle._id} value={vehicle.plateNumber}>
                     {vehicle.plateNumber} - {vehicle.type}
                   </SelectItem>

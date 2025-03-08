@@ -35,10 +35,7 @@ export const createPackage = async (req, res) => {
 
     console.log("Shift's agency name:", shift.agencyName);
 
-    // TEMPORARY: Bypassing agency authorization check
-    console.log("NOTICE: Agency authorization check temporarily bypassed");
-    // Original check commented out
-    /*
+    // Enforce agency isolation - only superadmin can cross agency boundaries
     if (user.role !== "superadmin" && shift.agencyName !== user.agencyName) {
       console.log("Mismatch: user vs shift agency =>", {
         userAgency: user.agencyName,
@@ -49,18 +46,16 @@ export const createPackage = async (req, res) => {
           "Not authorized to assign packages to shifts from other agencies",
       });
     }
-    */
 
-    // Determine agency name (use any available agency name)
-    const finalAgencyName =
-      shift.agencyName ||
-      user.agencyName ||
-      req.body.agencyName ||
-      "DefaultAgency";
+    // Determine agency name based on user's role
+    const agencyName =
+      user.role === "superadmin" && req.body.agencyName
+        ? req.body.agencyName
+        : user.agencyName;
 
     const packageData = {
       ...req.body,
-      agencyName: finalAgencyName,
+      agencyName,
       driverName: shift.driverName,
       plateNumber: shift.plateNumber,
       status: shift.endTime ? "Delivered" : "In Transit",
@@ -79,7 +74,7 @@ export const createPackage = async (req, res) => {
       userRole: user.role,
       agencyName: user.agencyName || "Superadmin",
       action: "create",
-      resourceType: "other", 
+      resourceType: "package",
       resourceId: newPackage._id,
       description: `Created new package ${newPackage.packageId}`,
       metadata: { packageData: req.body },
@@ -120,21 +115,13 @@ export const getPackages = async (req, res) => {
       agencyName,
     } = req.query;
 
+    // Build query object with agency isolation
     let query = {};
 
-    // TEMPORARY: Bypass agency filtering for all users
-    console.log("NOTICE: Agency filtering temporarily bypassed");
-    // Original check commented out
-    /*
+    // Apply agency isolation
     if (user.role !== "superadmin") {
       query.agencyName = user.agencyName;
     } else if (agencyName) {
-      query.agencyName = agencyName;
-    }
-    */
-
-    // Use agency filter only if explicitly provided
-    if (agencyName) {
       query.agencyName = agencyName;
     }
 
@@ -223,12 +210,7 @@ export const getPackageById = async (req, res) => {
       return res.status(404).json({ message: "Package not found" });
     }
 
-    // TEMPORARY: Bypass agency authorization check
-    console.log(
-      "NOTICE: Agency authorization check temporarily bypassed for package access"
-    );
-    // Original check commented out
-    /*
+    // Apply agency isolation
     if (
       user.role !== "superadmin" &&
       packageItem.agencyName !== user.agencyName
@@ -237,7 +219,6 @@ export const getPackageById = async (req, res) => {
         .status(403)
         .json({ message: "Not authorized to access this package" });
     }
-    */
 
     res.status(200).json(packageItem);
   } catch (error) {
@@ -270,12 +251,7 @@ export const updatePackage = async (req, res) => {
       return res.status(404).json({ message: "Package not found" });
     }
 
-    // TEMPORARY: Bypass agency authorization check
-    console.log(
-      "NOTICE: Agency authorization check temporarily bypassed for package update"
-    );
-    // Original check commented out
-    /*
+    // Apply agency isolation
     if (
       user.role !== "superadmin" &&
       packageItem.agencyName !== user.agencyName
@@ -284,7 +260,6 @@ export const updatePackage = async (req, res) => {
         .status(403)
         .json({ message: "Not authorized to update this package" });
     }
-    */
 
     if (
       req.body.shiftId &&
@@ -295,12 +270,7 @@ export const updatePackage = async (req, res) => {
         return res.status(404).json({ message: "New shift not found" });
       }
 
-      // TEMPORARY: Bypass agency authorization check for shift
-      console.log(
-        "NOTICE: Agency authorization check temporarily bypassed for shift assignment"
-      );
-      // Original check commented out
-      /*
+      // Apply agency isolation for shift assignment
       if (
         user.role !== "superadmin" &&
         newShift.agencyName !== user.agencyName
@@ -310,7 +280,6 @@ export const updatePackage = async (req, res) => {
             "Not authorized to assign packages to shifts from other agencies",
         });
       }
-      */
 
       req.body.driverName = newShift.driverName;
       req.body.plateNumber = newShift.plateNumber;
@@ -403,12 +372,7 @@ export const updatePackageStatus = async (req, res) => {
       return res.status(404).json({ message: "Package not found" });
     }
 
-    // TEMPORARY: Bypass agency authorization check
-    console.log(
-      "NOTICE: Agency authorization check temporarily bypassed for status update"
-    );
-    // Original check commented out
-    /*
+    // Apply agency isolation
     if (
       user.role !== "superadmin" &&
       packageItem.agencyName !== user.agencyName
@@ -417,7 +381,6 @@ export const updatePackageStatus = async (req, res) => {
         .status(403)
         .json({ message: "Not authorized to update this package" });
     }
-    */
 
     const prevStatus = packageItem.status;
     packageItem.status = status;
@@ -480,12 +443,7 @@ export const deletePackage = async (req, res) => {
       return res.status(404).json({ message: "Package not found" });
     }
 
-    // TEMPORARY: Bypass agency authorization check
-    console.log(
-      "NOTICE: Agency authorization check temporarily bypassed for package deletion"
-    );
-    // Original check commented out
-    /*
+    // Apply agency isolation
     if (
       user.role !== "superadmin" &&
       packageItem.agencyName !== user.agencyName
@@ -494,7 +452,6 @@ export const deletePackage = async (req, res) => {
         .status(403)
         .json({ message: "Not authorized to delete this package" });
     }
-    */
 
     const packageData = packageItem.toObject();
 
@@ -532,19 +489,10 @@ export const getPackageStats = async (req, res) => {
 
     let matchQuery = {};
 
-    // TEMPORARY: Bypass agency filtering for stats
-    console.log("NOTICE: Agency filtering temporarily bypassed for stats");
-    // Original check commented out
-    /*
+    // Apply agency isolation
     if (user.role !== "superadmin") {
       matchQuery.agencyName = user.agencyName;
     } else if (req.query.agencyName) {
-      matchQuery.agencyName = req.query.agencyName;
-    }
-    */
-
-    // Only filter by agency if explicitly provided
-    if (req.query.agencyName) {
       matchQuery.agencyName = req.query.agencyName;
     }
 

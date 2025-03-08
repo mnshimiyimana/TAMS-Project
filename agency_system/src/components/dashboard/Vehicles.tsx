@@ -26,11 +26,15 @@ export default function Vehicles() {
   );
 
   const user = useSelector((state: RootState) => state.auth.user);
+  const userRole = user?.role || "";
+  const isSuperAdmin = userRole === "superadmin";
   const agencyName = user?.agencyName || "";
 
   const filtersActive = useSelector(
     (state: RootState) =>
-      !!state.vehicles.filters.status || !!state.vehicles.filters.capacity
+      !!state.vehicles.filters.status ||
+      !!state.vehicles.filters.capacity ||
+      !!state.vehicles.filters.agencyName
   );
 
   useEffect(() => {
@@ -39,14 +43,21 @@ export default function Vehicles() {
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     dispatch(setSearchQuery(e.target.value));
+    // Trigger search after a short delay
+    const timer = setTimeout(() => {
+      dispatch(fetchVehicles());
+    }, 500);
+    return () => clearTimeout(timer);
   };
 
   const handleClearSearch = () => {
     dispatch(setSearchQuery(""));
+    dispatch(fetchVehicles());
   };
 
   const handleClearFilters = () => {
     dispatch(clearFilters());
+    dispatch(fetchVehicles());
   };
 
   const handleEdit = (id: string) => {
@@ -73,22 +84,27 @@ export default function Vehicles() {
 
       let vehiclesToExport: Vehicle[] = [];
 
-      if (searchQuery || filters.status || filters.capacity) {
-        vehiclesToExport = [...filteredVehicles];
-      } else {
-        try {
-          const params: any = {};
-          if (agencyName) {
-            params.agencyName = agencyName;
-          }
+      // Use the API to get vehicles with filters applied
+      try {
+        const params: any = {};
 
-          const response = await vehiclesAPI.getAllVehicles(params);
-          vehiclesToExport = response;
-        } catch (error) {
-          console.error("Error fetching all vehicles for export:", error);
+        // Apply all current filters
+        if (filters.status) params.status = filters.status;
+        if (searchQuery) params.search = searchQuery;
 
-          vehiclesToExport = [...filteredVehicles];
+        // Apply agency filter based on role
+        if (!isSuperAdmin) {
+          params.agencyName = agencyName;
+        } else if (filters.agencyName) {
+          params.agencyName = filters.agencyName;
         }
+
+        const response = await vehiclesAPI.getAllVehicles(params);
+        vehiclesToExport = response.buses || response;
+      } catch (error) {
+        console.error("Error fetching vehicles for export:", error);
+        // Fallback to current filtered data if API call fails
+        vehiclesToExport = [...filteredVehicles];
       }
 
       if (vehiclesToExport.length === 0) {
@@ -117,6 +133,10 @@ export default function Vehicles() {
       let filename = `Vehicles_Export_${
         new Date().toISOString().split("T")[0]
       }`;
+
+      if (filters.agencyName) {
+        filename += `_Agency-${filters.agencyName}`;
+      }
 
       if (filters.status) {
         filename += `_Status-${filters.status}`;

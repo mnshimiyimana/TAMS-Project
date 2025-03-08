@@ -10,13 +10,30 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { setFilter } from "@/redux/slices/vehiclesSlice";
+import { setFilter, fetchVehicles } from "@/redux/slices/vehiclesSlice";
 
 export default function VehiclesDropdowns() {
   const dispatch = useDispatch<AppDispatch>();
   const { vehicles, filters } = useSelector(
     (state: RootState) => state.vehicles
   );
+  const userRole = useSelector(
+    (state: RootState) => state.auth.user?.role || ""
+  );
+  const userAgency = useSelector(
+    (state: RootState) => state.auth.user?.agencyName || ""
+  );
+
+  // Only superadmins should see the agency filter
+  const isSuperAdmin = userRole === "superadmin";
+
+  // Get list of agencies for superadmin
+  const agencyOptions = useMemo(() => {
+    if (!isSuperAdmin) return [];
+    return Array.from(
+      new Set(vehicles.map((vehicle) => vehicle.agencyName))
+    ).sort();
+  }, [vehicles, isSuperAdmin]);
 
   // Extract unique status values and sort
   const statusOptions = useMemo(() => {
@@ -36,16 +53,50 @@ export default function VehiclesDropdowns() {
     dispatch(
       setFilter({ key: "status", value: value === "all" ? null : value })
     );
+    // Trigger refetch with updated filters
+    dispatch(fetchVehicles());
   };
 
   const handleCapacityChange = (value: string | null) => {
     dispatch(
       setFilter({ key: "capacity", value: value === "all" ? null : value })
     );
+    // Trigger refetch with updated filters
+    dispatch(fetchVehicles());
+  };
+
+  const handleAgencyChange = (value: string | null) => {
+    dispatch(
+      setFilter({ key: "agencyName", value: value === "all" ? null : value })
+    );
+    // Trigger refetch with updated filters
+    dispatch(fetchVehicles());
   };
 
   return (
     <div className="flex gap-6">
+      {/* Agency Dropdown (Superadmin only) */}
+      {isSuperAdmin && (
+        <div className="w-48">
+          <Select
+            value={filters.agencyName || ""}
+            onValueChange={(value) => handleAgencyChange(value || null)}
+          >
+            <SelectTrigger className="flex items-center justify-between">
+              <span>{filters.agencyName || "All Agencies"}</span>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Agencies</SelectItem>
+              {agencyOptions.map((agency) => (
+                <SelectItem key={agency} value={agency}>
+                  {agency}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       {/* Status Dropdown */}
       <div className="w-40">
         <Select

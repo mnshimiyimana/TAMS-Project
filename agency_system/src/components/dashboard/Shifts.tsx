@@ -35,14 +35,20 @@ export default function Shifts() {
   );
 
   const user = useSelector((state: RootState) => state.auth.user);
+  const userRole = user?.role || "";
   const agencyName = user?.agencyName || "";
+  const isSuperAdmin = userRole === "superadmin";
 
-  const filtersActive = !!filters.destination || !!filters.date;
+  // Check if any filters are active
+  const filtersActive =
+    !!filters.destination || !!filters.date || !!filters.agencyName;
 
+  // Load shifts data on component mount and when filters/search/page change
   useEffect(() => {
     dispatch(fetchShifts());
   }, [dispatch, refreshTrigger]);
 
+  // Listen for shift update events
   useEffect(() => {
     const handleShiftUpdate = () => {
       dispatch(fetchVehicles());
@@ -62,14 +68,21 @@ export default function Shifts() {
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     dispatch(setSearchQuery(e.target.value));
+    // Trigger search with a slight delay to avoid too many API calls
+    const timer = setTimeout(() => {
+      dispatch(fetchShifts());
+    }, 500);
+    return () => clearTimeout(timer);
   };
 
   const handleClearSearch = () => {
     dispatch(setSearchQuery(""));
+    dispatch(fetchShifts());
   };
 
   const handleClearFilters = () => {
     dispatch(clearFilters());
+    dispatch(fetchShifts());
   };
 
   const handleAddShift = () => {
@@ -110,6 +123,7 @@ export default function Shifts() {
         { header: "Destination", key: "destination", width: 20 },
         { header: "Origin", key: "origin", width: 20 },
         { header: "Date", key: "Date", width: 15 },
+        { header: "Agency", key: "agencyName", width: 20 },
       ];
 
       const processedData = filteredShifts.map((shift) => ({
@@ -121,6 +135,10 @@ export default function Shifts() {
       }));
 
       let filename = `Shifts_Export_${new Date().toISOString().split("T")[0]}`;
+
+      if (filters.agencyName) {
+        filename += `_Agency-${filters.agencyName}`;
+      }
 
       if (filters.destination) {
         filename += `_Destination-${filters.destination}`;

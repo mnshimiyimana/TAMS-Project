@@ -20,6 +20,23 @@ driverAPI.interceptors.request.use(
   }
 );
 
+driverAPI.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+
+      if (window.location.pathname !== "/auth/sign-in") {
+        window.location.href = "/auth/sign-in";
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export interface Driver {
   _id: string;
   driverId: string;
@@ -46,34 +63,52 @@ export interface DriverParams {
   search?: string;
   status?: string;
   agencyName?: string;
+  shift?: string;
 }
 
 export const getDrivers = async (
   params: DriverParams = {}
 ): Promise<DriverResponse> => {
   try {
-    const {
-      page = 1,
-      limit = 50,
-      search = "",
-      status = "",
-      agencyName = "",
-    } = params;
+    // Get user info from localStorage to apply agency isolation
+    const userString = localStorage.getItem("user");
+    let userAgency = "";
+    let userRole = "";
 
+    if (userString) {
+      try {
+        const user = JSON.parse(userString);
+        userAgency = user.agencyName || "";
+        userRole = user.role || "";
+      } catch (e) {
+        console.error("Error parsing user data:", e);
+      }
+    }
+
+    // Apply agency isolation for non-superadmins
     const queryParams = new URLSearchParams();
-    queryParams.append("page", page.toString());
-    queryParams.append("limit", limit.toString());
 
-    if (search) {
-      queryParams.append("search", search);
+    // Apply pagination
+    queryParams.append("page", (params.page || 1).toString());
+    queryParams.append("limit", (params.limit || 50).toString());
+
+    // Apply search if provided
+    if (params.search) {
+      queryParams.append("search", params.search);
     }
 
-    if (status) {
-      queryParams.append("status", status);
+    // Apply status filter if provided
+    if (params.status) {
+      queryParams.append("status", params.status);
     }
 
-    if (agencyName) {
-      queryParams.append("agencyName", agencyName);
+    // Apply agency isolation based on user role
+    if (userRole !== "superadmin") {
+      // Force user's agency for non-superadmins
+      queryParams.append("agencyName", userAgency);
+    } else if (params.agencyName) {
+      // Allow superadmins to filter by agency if they want
+      queryParams.append("agencyName", params.agencyName);
     }
 
     const response = await driverAPI.get(`/drivers?${queryParams.toString()}`);
@@ -96,8 +131,28 @@ export interface CreateDriverData {
 
 export const createDriver = async (driverData: CreateDriverData) => {
   try {
-    // console.log("Request URL:", "/drivers");
-    // console.log("Request Data:", driverData);
+    // Get user info from localStorage for agency isolation
+    const userString = localStorage.getItem("user");
+    let userAgency = "";
+    let userRole = "";
+
+    if (userString) {
+      try {
+        const user = JSON.parse(userString);
+        userAgency = user.agencyName || "";
+        userRole = user.role || "";
+      } catch (e) {
+        console.error("Error parsing user data:", e);
+      }
+    }
+
+    // If not superadmin, enforce user's agency
+    if (userRole !== "superadmin") {
+      driverData.agencyName = userAgency;
+    } else if (!driverData.agencyName) {
+      // If superadmin doesn't specify agency, use their agency as default
+      driverData.agencyName = userAgency;
+    }
 
     const response = await driverAPI.post("/drivers", driverData);
     return response.data;
@@ -112,6 +167,35 @@ export const updateDriver = async (
   driverData: Partial<Driver>
 ): Promise<Driver> => {
   try {
+    // Get user info from localStorage for agency isolation
+    const userString = localStorage.getItem("user");
+    let userAgency = "";
+    let userRole = "";
+
+    if (userString) {
+      try {
+        const user = JSON.parse(userString);
+        userAgency = user.agencyName || "";
+        userRole = user.role || "";
+      } catch (e) {
+        console.error("Error parsing user data:", e);
+      }
+    }
+
+    // If not superadmin and trying to change agency, block it
+    if (
+      userRole !== "superadmin" &&
+      driverData.agencyName &&
+      driverData.agencyName !== userAgency
+    ) {
+      throw new Error("You do not have permission to change the agency");
+    }
+
+    // If not superadmin, enforce user's agency
+    if (userRole !== "superadmin") {
+      driverData.agencyName = userAgency;
+    }
+
     const response = await driverAPI.put(`/drivers/${id}`, driverData);
     return response.data;
   } catch (error) {

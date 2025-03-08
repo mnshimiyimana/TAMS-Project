@@ -47,7 +47,7 @@ export const protect = async (req, res, next) => {
       if (alternativeUser) {
         req.userId = alternativeUser._id;
         req.userRole = alternativeUser.role;
-        req.agencyName = alternativeUser.agencyName;
+        req.userAgency = alternativeUser.agencyName;
         console.log("Using alternative user:", alternativeUser._id);
         return next();
       }
@@ -64,7 +64,7 @@ export const protect = async (req, res, next) => {
 
     req.userId = user._id;
     req.userRole = user.role;
-    req.agencyName = user.agencyName;
+    req.userAgency = user.agencyName;
 
     console.log("Auth successful for user:", {
       id: user._id,

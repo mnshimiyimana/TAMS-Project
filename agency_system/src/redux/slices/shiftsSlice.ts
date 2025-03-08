@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import { shiftsAPI } from "@/services/api";
+import { RootState } from "@/redux/store";
 
 export interface Shift {
   _id: string;
@@ -29,6 +30,7 @@ interface ShiftsState {
   filters: {
     destination: string | null;
     date: string | null;
+    agencyName: string | null;
   };
 }
 
@@ -45,14 +47,54 @@ const initialState: ShiftsState = {
   filters: {
     destination: null,
     date: null,
+    agencyName: null,
   },
 };
 
+// Fetch shifts with agency isolation
 export const fetchShifts = createAsyncThunk(
   "shifts/fetchShifts",
-  async (_, { rejectWithValue }) => {
+  async (_, { getState, rejectWithValue }) => {
     try {
-      const response = await shiftsAPI.getAllShifts();
+      // Get current state
+      const state = getState() as RootState;
+      const userRole = state.auth.user?.role || "";
+      const userAgency = state.auth.user?.agencyName || "";
+      const shiftsState = state.shifts;
+
+      // Build params object
+      const params: any = {
+        page: shiftsState.currentPage,
+        limit: 50,
+      };
+
+      // Apply search if present
+      if (shiftsState.searchQuery) {
+        // Search can be for driver, plate, or destination
+        params.search = shiftsState.searchQuery;
+      }
+
+      // Apply date filter if present
+      if (shiftsState.filters.date) {
+        params.date = shiftsState.filters.date;
+      }
+
+      // Apply destination filter if present
+      if (shiftsState.filters.destination) {
+        params.destination = shiftsState.filters.destination;
+      }
+
+      // Apply agency filter - automatic for non-superadmins
+      if (userRole !== "superadmin") {
+        // Regular users can only see their agency data
+        params.agencyName = userAgency;
+      } else if (shiftsState.filters.agencyName) {
+        // Superadmins can filter by agency if they choose
+        params.agencyName = shiftsState.filters.agencyName;
+      }
+
+      const response = await shiftsAPI.getAllShifts(params);
+
       return response;
     } catch (error: any) {
       return rejectWithValue(
@@ -66,9 +108,19 @@ export const fetchShifts = createAsyncThunk(
 
 export const addShift = createAsyncThunk(
   "shifts/addShift",
-  async (shiftData: Omit<Shift, "_id">, { rejectWithValue }) => {
+  async (shiftData: Omit<Shift, "_id">, { getState, rejectWithValue }) => {
     try {
-      const response = await shiftsAPI.createShift(shiftData);
+      // Get user info
+      const state = getState() as RootState;
+      const userAgency = state.auth.user?.agencyName || "";
+
+      // Ensure agency is set
+      const dataWithAgency = {
+        ...shiftData,
+        agencyName: shiftData.agencyName || userAgency,
+      };
+
+      const response = await shiftsAPI.createShift(dataWithAgency);
       return response;
     } catch (error: any) {
       return rejectWithValue(
@@ -84,9 +136,25 @@ export const updateShift = createAsyncThunk(
   "shifts/updateShift",
   async (
     { id, shiftData }: { id: string; shiftData: Partial<Shift> },
-    { rejectWithValue }
+    { getState, rejectWithValue }
   ) => {
     try {
+      // Get user info
+      const state = getState() as RootState;
+      const userRole = state.auth.user?.role || "";
+      const userAgency = state.auth.user?.agencyName || "";
+
+      // For non-superadmins, check agency permission
+      if (
+        userRole !== "superadmin" &&
+        shiftData.agencyName &&
+        shiftData.agencyName !== userAgency
+      ) {
+        return rejectWithValue(
+          "You do not have permission to change the agency"
+        );
+      }
+
       const response = await shiftsAPI.updateShift(id, shiftData);
       return response;
     } catch (error: any) {
@@ -122,7 +190,7 @@ const shiftsSlice = createSlice({
     setSearchQuery: (state, action: PayloadAction<string>) => {
       state.searchQuery = action.payload;
       state.currentPage = 1;
-      applyFiltersAndSearch(state);
+      // Don't apply filters immediately since we'll fetch from API
     },
     setFilter: (
       state,
@@ -134,7 +202,7 @@ const shiftsSlice = createSlice({
       const { key, value } = action.payload;
       state.filters[key] = value === "all" ? null : value;
       state.currentPage = 1;
-      applyFiltersAndSearch(state);
+      // Don't apply filters immediately since we'll fetch from API
     },
     setPage: (state, action: PayloadAction<number>) => {
       state.currentPage = action.payload;
@@ -143,7 +211,7 @@ const shiftsSlice = createSlice({
       state.filters = initialState.filters;
       state.searchQuery = "";
       state.currentPage = 1;
-      state.filteredShifts = [...state.shifts];
+      // Will trigger a re-fetch from API
     },
     selectShift: (state, action: PayloadAction<string>) => {
       state.selectedShift =
@@ -155,7 +223,6 @@ const shiftsSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-
       .addCase(fetchShifts.pending, (state) => {
         state.status = "loading";
         state.isLoading = true;
@@ -163,10 +230,23 @@ const shiftsSlice = createSlice({
       .addCase(fetchShifts.fulfilled, (state, action) => {
         state.status = "succeeded";
         state.isLoading = false;
-        state.shifts = action.payload;
-        state.filteredShifts = action.payload;
-        state.totalCount = action.payload.length;
-        applyFiltersAndSearch(state);
+
+        // Handle both response formats (array or paginated object)
+        if (Array.isArray(action.payload)) {
+          state.shifts = action.payload;
+          state.filteredShifts = action.payload;
+          state.totalCount = action.payload.length;
+        } else if (action.payload.shifts) {
+          state.shifts = action.payload.shifts;
+          state.filteredShifts = action.payload.shifts;
+          state.totalCount =
+            action.payload.totalShifts || action.payload.shifts.length;
+        } else {
+          // Fallback if response format is unexpected
+          state.shifts = [];
+          state.filteredShifts = [];
+          state.totalCount = 0;
+        }
       })
       .addCase(fetchShifts.rejected, (state, action) => {
         state.status = "failed";
@@ -179,8 +259,9 @@ const shiftsSlice = createSlice({
       })
       .addCase(addShift.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.shifts.push(action.payload);
-        applyFiltersAndSearch(state);
+        state.shifts.unshift(action.payload); // Add to beginning
+        state.filteredShifts.unshift(action.payload);
+        state.totalCount += 1;
       })
       .addCase(addShift.rejected, (state) => {
         state.isLoading = false;
@@ -197,10 +278,17 @@ const shiftsSlice = createSlice({
         if (index !== -1) {
           state.shifts[index] = action.payload;
         }
+
+        const filteredIndex = state.filteredShifts.findIndex(
+          (shift) => shift._id === action.payload._id
+        );
+        if (filteredIndex !== -1) {
+          state.filteredShifts[filteredIndex] = action.payload;
+        }
+
         if (state.selectedShift?._id === action.payload._id) {
           state.selectedShift = action.payload;
         }
-        applyFiltersAndSearch(state);
       })
       .addCase(updateShift.rejected, (state) => {
         state.isLoading = false;
@@ -210,43 +298,17 @@ const shiftsSlice = createSlice({
         state.shifts = state.shifts.filter(
           (shift) => shift._id !== action.payload
         );
+        state.filteredShifts = state.filteredShifts.filter(
+          (shift) => shift._id !== action.payload
+        );
+        state.totalCount -= 1;
+
         if (state.selectedShift?._id === action.payload) {
           state.selectedShift = null;
         }
-        applyFiltersAndSearch(state);
       });
   },
 });
-
-function applyFiltersAndSearch(state: ShiftsState) {
-  let filtered = [...state.shifts];
-
-  if (state.searchQuery) {
-    const query = state.searchQuery.toLowerCase();
-    filtered = filtered.filter(
-      (shift) =>
-        shift.plateNumber.toLowerCase().includes(query) ||
-        shift.driverName.toLowerCase().includes(query) ||
-        shift.destination.toLowerCase().includes(query) ||
-        shift.origin.toLowerCase().includes(query)
-    );
-  }
-
-  if (state.filters.destination) {
-    filtered = filtered.filter(
-      (shift) =>
-        shift.destination.toLowerCase() ===
-        state.filters.destination?.toLowerCase()
-    );
-  }
-
-  if (state.filters.date) {
-    filtered = filtered.filter((shift) => shift.Date === state.filters.date);
-  }
-
-  state.filteredShifts = filtered;
-  state.totalCount = filtered.length;
-}
 
 export const {
   setSearchQuery,

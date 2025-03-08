@@ -46,7 +46,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-const tableHeaders = [
+// Define table headers with agency column for superadmins
+const standardHeaders = [
   "Plate Number",
   "Driver Name",
   "Start Time",
@@ -67,6 +68,17 @@ export default function ShiftsTable({ onEdit, agencyName }: ShiftsTableProps) {
   const { filteredShifts, status, error, currentPage, totalCount } =
     useSelector((state: RootState) => state.shifts);
 
+  // Get user info for role-based access control
+  const userRole = useSelector(
+    (state: RootState) => state.auth.user?.role || ""
+  );
+  const isSuperAdmin = userRole === "superadmin";
+
+  // Define table headers based on role
+  const tableHeaders = isSuperAdmin
+    ? [...standardHeaders.slice(0, -1), "Agency", "Actions"]
+    : standardHeaders;
+
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [shiftToDelete, setShiftToDelete] = useState<string | null>(null);
 
@@ -77,7 +89,7 @@ export default function ShiftsTable({ onEdit, agencyName }: ShiftsTableProps) {
     if (status === "idle") {
       dispatch(fetchShifts());
     }
-  }, [dispatch, status]);
+  }, [dispatch, status, currentPage]);
 
   const handleEdit = (shift: Shift) => {
     dispatch(selectShift(shift._id));
@@ -95,6 +107,8 @@ export default function ShiftsTable({ onEdit, agencyName }: ShiftsTableProps) {
     try {
       await dispatch(deleteShift(shiftToDelete)).unwrap();
       toast.success("Shift deleted successfully");
+      // Refresh data after deletion
+      dispatch(fetchShifts());
     } catch (error) {
       toast.error("Failed to delete shift");
     } finally {
@@ -106,70 +120,28 @@ export default function ShiftsTable({ onEdit, agencyName }: ShiftsTableProps) {
   const handlePrevPage = () => {
     if (currentPage > 1) {
       dispatch(setPage(currentPage - 1));
+      dispatch(fetchShifts());
     }
   };
 
   const handleNextPage = () => {
     if (currentPage < totalPages) {
       dispatch(setPage(currentPage + 1));
+      dispatch(fetchShifts());
     }
   };
 
-  const displayShifts = filteredShifts.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
+  // Use the filteredShifts directly without pagination if the API already paginates
+  const displayShifts = filteredShifts;
 
-  const formatDate = (dateStr: string | Date) => {
+  const formatDate = (dateStr: string | Date | undefined) => {
+    if (!dateStr) return "N/A";
     try {
       return new Date(dateStr).toLocaleString();
     } catch (error) {
       return "Invalid date";
     }
   };
-
-  if (status === "loading" && filteredShifts.length === 0) {
-    return (
-      <div className="w-full py-6 bg-white rounded-lg overflow-x-auto">
-        <Table className="table-auto w-full">
-          <TableHeader>
-            <TableRow className="bg-gray-100">
-              {tableHeaders.map((header) => (
-                <TableHead key={header} className="px-5 py-3 text-left">
-                  {header}
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {Array.from({ length: 5 }).map((_, index) => (
-              <TableRow key={`skeleton-${index}`}>
-                {Array.from({ length: 8 }).map((_, cellIndex) => (
-                  <TableCell
-                    key={`cell-${index}-${cellIndex}`}
-                    className="px-5 py-4"
-                  >
-                    <Skeleton className="h-4 w-full" />
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    );
-  }
-
-  if (status === "failed") {
-    return (
-      <div className="w-full py-10 flex flex-col items-center justify-center text-center">
-        <AlertCircle className="h-10 w-10 text-red-500 mb-4" />
-        <h3 className="text-lg font-medium">Something went wrong</h3>
-        <p className="text-sm text-gray-500 mb-4">{error}</p>
-        <Button onClick={() => dispatch(fetchShifts())}>Try Again</Button>
-      </div>
-    );
-  }
 
   return (
     <>
@@ -206,13 +178,34 @@ export default function ShiftsTable({ onEdit, agencyName }: ShiftsTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredShifts.length === 0 ? (
+            {status === "loading" && filteredShifts.length === 0 ? (
+              // Loading skeleton state
+              Array.from({ length: 5 }).map((_, index) => (
+                <TableRow key={`skeleton-${index}`}>
+                  {Array.from({ length: tableHeaders.length }).map(
+                    (_, cellIndex) => (
+                      <TableCell
+                        key={`cell-${index}-${cellIndex}`}
+                        className="px-5 py-4"
+                      >
+                        <Skeleton className="h-4 w-full" />
+                      </TableCell>
+                    )
+                  )}
+                </TableRow>
+              ))
+            ) : filteredShifts.length === 0 ? (
+              // Empty state
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-10">
+                <TableCell
+                  colSpan={tableHeaders.length}
+                  className="text-center py-10"
+                >
                   No shifts found.
                 </TableCell>
               </TableRow>
             ) : (
+              // Normal data display
               displayShifts.map((shift) => (
                 <TableRow key={shift._id}>
                   <TableCell className="px-5 py-4">
@@ -236,6 +229,12 @@ export default function ShiftsTable({ onEdit, agencyName }: ShiftsTableProps) {
                       ? new Date(shift.Date).toLocaleDateString()
                       : "N/A"}
                   </TableCell>
+                  {/* Show agency column for superadmins */}
+                  {isSuperAdmin && (
+                    <TableCell className="px-5 py-4">
+                      {shift.agencyName || agencyName}
+                    </TableCell>
+                  )}
                   <TableCell className="px-8 py-4 text-center">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -265,8 +264,7 @@ export default function ShiftsTable({ onEdit, agencyName }: ShiftsTableProps) {
         {filteredShifts.length > 0 && (
           <div className="flex items-center justify-between px-5 py-4 border-t">
             <div className="text-sm text-gray-500">
-              Showing {Math.min(displayShifts.length, pageSize)} of {totalCount}{" "}
-              shifts
+              Showing {displayShifts.length} of {totalCount} shifts
             </div>
             <div className="flex items-center space-x-2">
               <Button

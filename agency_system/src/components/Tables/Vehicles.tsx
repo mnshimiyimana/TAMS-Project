@@ -81,7 +81,12 @@ export default function VehiclesTable({
     searchQuery,
   } = useSelector((state: RootState) => state.vehicles);
 
-  const pageSize = 5;
+  const userRole = useSelector(
+    (state: RootState) => state.auth.user?.role || ""
+  );
+  const isSuperAdmin = userRole === "superadmin";
+
+  const pageSize = 5; // This should match the backend pagination
   const totalPages = Math.ceil(totalCount / pageSize);
 
   const [deleteDialog, setDeleteDialog] = useState<{
@@ -96,7 +101,7 @@ export default function VehiclesTable({
     if (status === "idle") {
       dispatch(fetchVehicles());
     }
-  }, [dispatch, status]);
+  }, [dispatch, status, currentPage, searchQuery]);
 
   const confirmDelete = async () => {
     if (!deleteDialog.vehicleId) return;
@@ -104,6 +109,8 @@ export default function VehiclesTable({
     try {
       await dispatch(deleteVehicle(deleteDialog.vehicleId)).unwrap();
       toast.success("Vehicle deleted successfully!");
+      // Refresh data after deletion
+      dispatch(fetchVehicles());
     } catch (error) {
       toast.error(
         typeof error === "string" ? error : "Failed to delete vehicle."
@@ -129,11 +136,6 @@ export default function VehiclesTable({
       dispatch(setPage(currentPage + 1));
     }
   };
-
-  const displayVehicles = filteredVehicles.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
 
   if (status === "loading" && filteredVehicles.length === 0) {
     return (
@@ -226,7 +228,7 @@ export default function VehiclesTable({
                 </TableCell>
               </TableRow>
             ) : (
-              displayVehicles.map((vehicle) => (
+              filteredVehicles.map((vehicle) => (
                 <TableRow key={vehicle._id}>
                   <TableCell className="px-5 py-4">{vehicle.busId}</TableCell>
                   <TableCell className="px-5 py-4">
@@ -234,7 +236,7 @@ export default function VehiclesTable({
                   </TableCell>
                   <TableCell className="px-5 py-4">{vehicle.type}</TableCell>
                   <TableCell className="px-5 py-4">
-                    {agencyName || vehicle.agencyName}
+                    {vehicle.agencyName}
                   </TableCell>
                   <TableCell className="px-8 py-4">
                     <span
@@ -289,7 +291,7 @@ export default function VehiclesTable({
         {filteredVehicles.length > 0 && (
           <div className="flex items-center justify-between px-5 py-4 border-t">
             <div className="text-sm text-gray-500">
-              Showing {Math.min(displayVehicles.length, pageSize)} of{" "}
+              Showing {Math.min(filteredVehicles.length, pageSize)} of{" "}
               {totalCount} vehicles
             </div>
             <div className="flex items-center space-x-2">

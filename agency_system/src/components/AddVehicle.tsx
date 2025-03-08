@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -24,6 +24,7 @@ import {
   updateVehicle,
   clearSelectedVehicle,
   Vehicle,
+  fetchVehicles,
 } from "@/redux/slices/vehiclesSlice";
 
 const vehicleSchema = z.object({
@@ -35,6 +36,7 @@ const vehicleSchema = z.object({
   }),
   capacity: z.coerce.number().min(1, "Capacity must be at least 1"),
   busHistory: z.string().min(1, "Bus history is required"),
+  agencyName: z.string().min(1, "Agency name is required"),
 });
 
 type VehicleFormData = z.infer<typeof vehicleSchema>;
@@ -54,6 +56,19 @@ export default function AddVehiclesDialog({
   const { selectedVehicle, status } = useSelector(
     (state: RootState) => state.vehicles
   );
+
+  // Get user role to determine if agency can be changed
+  const userRole = useSelector(
+    (state: RootState) => state.auth.user?.role || ""
+  );
+  const isSuperAdmin = userRole === "superadmin";
+
+  // Get available agencies for superadmin dropdown
+  const [agencies, setAgencies] = useState<string[]>([]);
+  const agencyOptions = useSelector((state: RootState) =>
+    Array.from(new Set(state.vehicles.vehicles.map((v) => v.agencyName)))
+  );
+
   const isEditing = !!selectedVehicle;
 
   const {
@@ -62,6 +77,7 @@ export default function AddVehiclesDialog({
     formState: { errors },
     reset,
     setValue,
+    watch,
   } = useForm<VehicleFormData>({
     resolver: zodResolver(vehicleSchema),
     defaultValues: {
@@ -71,8 +87,12 @@ export default function AddVehiclesDialog({
       status: "Available",
       capacity: 0,
       busHistory: "",
+      agencyName: agencyName, // Default to current user's agency
     },
   });
+
+  // Watch the agency value to detect changes
+  const currentAgency = watch("agencyName");
 
   useEffect(() => {
     if (selectedVehicle) {
@@ -90,8 +110,19 @@ export default function AddVehiclesDialog({
           ? selectedVehicle.busHistory.join(", ")
           : selectedVehicle.busHistory
       );
+      setValue("agencyName", selectedVehicle.agencyName);
+    } else {
+      // For new vehicles, always set the agency to the current user's agency
+      setValue("agencyName", agencyName);
     }
-  }, [selectedVehicle, setValue]);
+  }, [selectedVehicle, setValue, agencyName]);
+
+  useEffect(() => {
+    // Gather available agencies (for superadmin use)
+    if (isSuperAdmin) {
+      setAgencies(agencyOptions);
+    }
+  }, [isSuperAdmin, agencyOptions]);
 
   const handleClose = () => {
     reset();
@@ -101,9 +132,16 @@ export default function AddVehiclesDialog({
 
   const onSubmit = async (data: VehicleFormData) => {
     try {
+      // Check for agency permission
+      if (!isSuperAdmin && data.agencyName !== agencyName) {
+        toast.error("You do not have permission to change the agency");
+        return;
+      }
+
       const vehicleData = {
         ...data,
-        agencyName: agencyName,
+        // Ensure busHistory is an array for API
+        busHistory: data.busHistory.split(",").map((item) => item.trim()),
       };
 
       if (isEditing && selectedVehicle) {
@@ -118,6 +156,9 @@ export default function AddVehiclesDialog({
         await dispatch(addVehicle(vehicleData)).unwrap();
         toast.success("Vehicle added successfully!");
       }
+
+      // Refresh vehicles list to get updated data
+      dispatch(fetchVehicles());
       handleClose();
     } catch (error) {
       toast.error(typeof error === "string" ? error : "Failed to save vehicle");
@@ -176,18 +217,42 @@ export default function AddVehiclesDialog({
 
           <div>
             <Label htmlFor="agency-name">Agency Name</Label>
-            <Input
-              id="agency-name"
-              value={agencyName}
-              disabled
-              className="bg-gray-100"
-            />
+            {isSuperAdmin ? (
+              <Select
+                defaultValue={agencyName}
+                onValueChange={(value) => setValue("agencyName", value)}
+              >
+                <SelectTrigger id="agency-name">
+                  <SelectValue placeholder="Select agency" />
+                </SelectTrigger>
+                <SelectContent>
+                  {agencies.map((agency) => (
+                    <SelectItem key={agency} value={agency}>
+                      {agency}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                id="agency-name"
+                value={agencyName}
+                disabled
+                className="bg-gray-100"
+                {...register("agencyName")}
+              />
+            )}
+            {errors.agencyName && (
+              <p className="text-red-500 text-sm">
+                {errors.agencyName.message}
+              </p>
+            )}
           </div>
 
           <div>
             <Label htmlFor="status">Status</Label>
             <Select
-              defaultValue="Available"
+              defaultValue={watch("status")}
               onValueChange={(value) =>
                 setValue(
                   "status",
@@ -195,7 +260,7 @@ export default function AddVehiclesDialog({
                 )
               }
             >
-              <SelectTrigger>
+              <SelectTrigger id="status">
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
@@ -229,7 +294,7 @@ export default function AddVehiclesDialog({
             <Input
               id="bus-history"
               {...register("busHistory")}
-              placeholder="Enter bus history"
+              placeholder="Enter bus history (comma separated)"
             />
             {errors.busHistory && (
               <p className="text-red-500 text-sm">

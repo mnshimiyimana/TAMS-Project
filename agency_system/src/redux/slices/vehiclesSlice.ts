@@ -1,13 +1,8 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import { vehiclesAPI } from "@/services/api";
+import { RootState } from "@/redux/store";
 
-export type Status =
-  | "Available"
-  | "Assigned"
-  | "Under Maintenance"
-  | "Active"
-  | "Inactive"
-  | "Maintenance";
+export type Status = "Available" | "Assigned" | "Under Maintenance";
 
 export interface Vehicle {
   _id: string;
@@ -35,6 +30,7 @@ interface VehiclesState {
   filters: {
     status: string | null;
     capacity: string | null;
+    agencyName: string | null;
   };
 }
 
@@ -51,15 +47,45 @@ const initialState: VehiclesState = {
   filters: {
     status: null,
     capacity: null,
+    agencyName: null,
   },
 };
 
+// Fetch vehicles with agency isolation built-in
 export const fetchVehicles = createAsyncThunk(
   "vehicles/fetchVehicles",
-  async (_, { rejectWithValue }) => {
+  async (_, { getState, rejectWithValue }) => {
     try {
-      const response = await vehiclesAPI.getAllVehicles();
-      return response;
+      // Get the current user's agency from auth state
+      const state = getState() as RootState;
+      const userAgency = state.auth.user?.agencyName || "";
+      const userRole = state.auth.user?.role || "";
+
+      // If not superadmin, force agency filter
+      const params: any = {};
+      if (userRole !== "superadmin") {
+        params.agencyName = userAgency;
+      } else if (state.vehicles.filters.agencyName) {
+        // Allow superadmin to filter by agency if desired
+        params.agencyName = state.vehicles.filters.agencyName;
+      }
+
+      // Add other filters
+      if (state.vehicles.filters.status) {
+        params.status = state.vehicles.filters.status;
+      }
+
+      // Add search if present
+      if (state.vehicles.searchQuery) {
+        params.search = state.vehicles.searchQuery;
+      }
+
+      // Add pagination
+      params.page = state.vehicles.currentPage;
+      params.limit = 50; // Match backend default
+
+      const response = await vehiclesAPI.getAllVehicles(params);
+      return response.buses || response; // Handle both response formats
     } catch (error: any) {
       return rejectWithValue(
         error.response?.data?.message ||
@@ -72,9 +98,19 @@ export const fetchVehicles = createAsyncThunk(
 
 export const addVehicle = createAsyncThunk(
   "vehicles/addVehicle",
-  async (vehicleData: Omit<Vehicle, "_id">, { rejectWithValue }) => {
+  async (vehicleData: Omit<Vehicle, "_id">, { getState, rejectWithValue }) => {
     try {
-      const response = await vehiclesAPI.createVehicle(vehicleData);
+      // Get the current user's agency
+      const state = getState() as RootState;
+      const userAgency = state.auth.user?.agencyName || "";
+
+      // Ensure agencyName is set if not provided
+      const dataWithAgency = {
+        ...vehicleData,
+        agencyName: vehicleData.agencyName || userAgency,
+      };
+
+      const response = await vehiclesAPI.createVehicle(dataWithAgency);
       return response;
     } catch (error: any) {
       return rejectWithValue(
@@ -90,10 +126,32 @@ export const updateVehicle = createAsyncThunk(
   "vehicles/updateVehicle",
   async (
     { id, vehicleData }: { id: string; vehicleData: Partial<Vehicle> },
-    { rejectWithValue }
+    { getState, rejectWithValue }
   ) => {
     try {
-      const response = await vehiclesAPI.updateVehicle(id, vehicleData);
+      // Get the current user's agency
+      const state = getState() as RootState;
+      const userAgency = state.auth.user?.agencyName || "";
+      const userRole = state.auth.user?.role || "";
+
+      // Non-superadmins cannot change agency
+      if (
+        userRole !== "superadmin" &&
+        vehicleData.agencyName &&
+        vehicleData.agencyName !== userAgency
+      ) {
+        return rejectWithValue(
+          "You do not have permission to change the agency"
+        );
+      }
+
+      // Ensure agencyName is set if not provided (non-superadmin only)
+      let dataToUpdate = { ...vehicleData };
+      if (userRole !== "superadmin" && !dataToUpdate.agencyName) {
+        dataToUpdate.agencyName = userAgency;
+      }
+
+      const response = await vehiclesAPI.updateVehicle(id, dataToUpdate);
       return response;
     } catch (error: any) {
       return rejectWithValue(
@@ -128,7 +186,7 @@ const vehiclesSlice = createSlice({
     setSearchQuery: (state, action: PayloadAction<string>) => {
       state.searchQuery = action.payload;
       state.currentPage = 1;
-      applyFiltersAndSearch(state);
+      // Don't apply filter immediately - wait for API call
     },
     setFilter: (
       state,
@@ -140,7 +198,7 @@ const vehiclesSlice = createSlice({
       const { key, value } = action.payload;
       state.filters[key] = value === "all" ? null : value;
       state.currentPage = 1;
-      applyFiltersAndSearch(state);
+      // Don't apply filter immediately - wait for API call
     },
     setPage: (state, action: PayloadAction<number>) => {
       state.currentPage = action.payload;
@@ -149,7 +207,7 @@ const vehiclesSlice = createSlice({
       state.filters = initialState.filters;
       state.searchQuery = "";
       state.currentPage = 1;
-      state.filteredVehicles = [...state.vehicles];
+      // Reset to fetch from API again
     },
     selectVehicle: (state, action: PayloadAction<string>) => {
       state.selectedVehicle =
@@ -158,6 +216,13 @@ const vehiclesSlice = createSlice({
     },
     clearSelectedVehicle: (state) => {
       state.selectedVehicle = null;
+    },
+    // New reducer to handle pagination response from backend
+    setTotalCount: (
+      state,
+      action: PayloadAction<{ total: number; pages: number }>
+    ) => {
+      state.totalCount = action.payload.total;
     },
   },
   extraReducers: (builder) => {
@@ -169,10 +234,18 @@ const vehiclesSlice = createSlice({
       .addCase(fetchVehicles.fulfilled, (state, action) => {
         state.status = "succeeded";
         state.isLoading = false;
-        state.vehicles = action.payload;
-        state.filteredVehicles = action.payload;
-        state.totalCount = action.payload.length;
-        applyFiltersAndSearch(state);
+
+        // Handle both response formats (array or paginated object)
+        if (Array.isArray(action.payload)) {
+          state.vehicles = action.payload;
+          state.filteredVehicles = action.payload;
+          state.totalCount = action.payload.length;
+        } else {
+          // Handle paginated response
+          state.vehicles = action.payload.buses || [];
+          state.filteredVehicles = action.payload.buses || [];
+          state.totalCount = action.payload.totalBuses || 0;
+        }
       })
       .addCase(fetchVehicles.rejected, (state, action) => {
         state.status = "failed";
@@ -185,8 +258,9 @@ const vehiclesSlice = createSlice({
       })
       .addCase(addVehicle.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.vehicles.push(action.payload);
-        applyFiltersAndSearch(state);
+        state.vehicles.unshift(action.payload); // Add to beginning
+        state.filteredVehicles.unshift(action.payload);
+        state.totalCount += 1;
       })
       .addCase(addVehicle.rejected, (state) => {
         state.isLoading = false;
@@ -203,10 +277,17 @@ const vehiclesSlice = createSlice({
         if (index !== -1) {
           state.vehicles[index] = action.payload;
         }
+
+        const filteredIndex = state.filteredVehicles.findIndex(
+          (vehicle) => vehicle._id === action.payload._id
+        );
+        if (filteredIndex !== -1) {
+          state.filteredVehicles[filteredIndex] = action.payload;
+        }
+
         if (state.selectedVehicle?._id === action.payload._id) {
           state.selectedVehicle = action.payload;
         }
-        applyFiltersAndSearch(state);
       })
       .addCase(updateVehicle.rejected, (state) => {
         state.isLoading = false;
@@ -216,44 +297,17 @@ const vehiclesSlice = createSlice({
         state.vehicles = state.vehicles.filter(
           (vehicle) => vehicle._id !== action.payload
         );
+        state.filteredVehicles = state.filteredVehicles.filter(
+          (vehicle) => vehicle._id !== action.payload
+        );
+        state.totalCount -= 1;
+
         if (state.selectedVehicle?._id === action.payload) {
           state.selectedVehicle = null;
         }
-        applyFiltersAndSearch(state);
       });
   },
 });
-
-function applyFiltersAndSearch(state: VehiclesState) {
-  let filtered = [...state.vehicles];
-
-  if (state.searchQuery) {
-    const query = state.searchQuery.toLowerCase().trim();
-    filtered = filtered.filter(
-      (vehicle) =>
-        vehicle.plateNumber.toLowerCase().includes(query) ||
-        vehicle.busId.toLowerCase().includes(query) ||
-        vehicle.type.toLowerCase().includes(query) ||
-        vehicle.agencyName.toLowerCase().includes(query)
-    );
-  }
-
-  if (state.filters.status) {
-    filtered = filtered.filter(
-      (vehicle) => vehicle.status === state.filters.status
-    );
-  }
-
-  if (state.filters.capacity) {
-    const capacity = parseInt(state.filters.capacity);
-    if (!isNaN(capacity)) {
-      filtered = filtered.filter((vehicle) => vehicle.capacity === capacity);
-    }
-  }
-
-  state.filteredVehicles = filtered;
-  state.totalCount = filtered.length;
-}
 
 export const {
   setSearchQuery,
@@ -262,6 +316,7 @@ export const {
   clearFilters,
   selectVehicle,
   clearSelectedVehicle,
+  setTotalCount,
 } = vehiclesSlice.actions;
 
 export default vehiclesSlice.reducer;

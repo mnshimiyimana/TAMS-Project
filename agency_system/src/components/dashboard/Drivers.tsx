@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Button } from "../ui/button";
-import { FileDown, Search } from "lucide-react";
+import { FileDown, Search, X } from "lucide-react";
 import { Input } from "../ui/input";
 import DriversDropdowns from "../Dropdowns/Drivers";
 import DriversTable from "../Tables/Drivers";
@@ -20,12 +20,16 @@ export default function Drivers() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [shiftFilter, setShiftFilter] = useState("");
+  const [agencyFilter, setAgencyFilter] = useState("");
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isExporting, setIsExporting] = useState(false);
   const [driverToEdit, setDriverToEdit] = useState<Driver | null>(null);
 
+  // Get user from redux store
   const user = useSelector((state: RootState) => state.auth.user);
   const agencyName = user?.agencyName || "";
+  const userRole = user?.role || "";
+  const isSuperAdmin = userRole === "superadmin";
 
   useEffect(() => {
     if (activeTab === "scheduled") {
@@ -54,8 +58,16 @@ export default function Drivers() {
     setShiftFilter(shift);
   };
 
+  const handleAgencyFilterChange = (agency: string) => {
+    setAgencyFilter(agency);
+  };
+
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery("");
   };
 
   const handleEdit = (driver: Driver) => {
@@ -68,18 +80,38 @@ export default function Drivers() {
     setDriverToEdit(null);
   };
 
+  const handleClearFilters = () => {
+    setSearchQuery("");
+    setStatusFilter("");
+    setShiftFilter("");
+    setAgencyFilter("");
+    if (activeTab === "scheduled") {
+      setStatusFilter("On Shift");
+    }
+  };
+
   const handleExportToExcel = async () => {
     try {
       setIsExporting(true);
 
-      const response = await getDrivers({
+      const params: any = {
         limit: 1000,
-        search: searchQuery,
-        status: statusFilter,
-        ...(shiftFilter && { shift: shiftFilter }),
-      });
+      };
 
-      if (response.drivers.length === 0) {
+      // Apply filters to export
+      if (searchQuery) params.search = searchQuery;
+      if (statusFilter) params.status = statusFilter;
+
+      // Apply agency isolation
+      if (!isSuperAdmin) {
+        params.agencyName = agencyName;
+      } else if (agencyFilter) {
+        params.agencyName = agencyFilter;
+      }
+
+      const response = await getDrivers(params);
+
+      if (!response.drivers || response.drivers.length === 0) {
         toast.warning("No data to export");
         return;
       }
@@ -91,8 +123,10 @@ export default function Drivers() {
         { header: "Phone Number", key: "phoneNumber", width: 20 },
         { header: "Status", key: "status", width: 15 },
         { header: "Last Shift", key: "lastShift", width: 20 },
+        { header: "Agency", key: "agencyName", width: 20 },
       ];
 
+      // Process data for export
       const processedData = response.drivers.map((driver) => ({
         ...driver,
         lastShift: driver.lastShift
@@ -100,13 +134,24 @@ export default function Drivers() {
           : "N/A",
       }));
 
-      exportToExcel(
-        processedData,
-        columns,
-        `Drivers_Export_${new Date().toISOString().split("T")[0]}`
-      );
+      // Build filename with filters
+      let filename = `Drivers_Export_${new Date().toISOString().split("T")[0]}`;
 
-      toast.success("Drivers exported successfully");
+      if (agencyFilter) {
+        filename += `_Agency-${agencyFilter}`;
+      }
+
+      if (statusFilter) {
+        filename += `_Status-${statusFilter}`;
+      }
+
+      if (searchQuery) {
+        filename += `_Search`;
+      }
+
+      exportToExcel(processedData, columns, filename);
+
+      toast.success(`${processedData.length} drivers exported successfully`);
     } catch (error) {
       console.error("Export error:", error);
       toast.error("Failed to export drivers");
@@ -114,6 +159,10 @@ export default function Drivers() {
       setIsExporting(false);
     }
   };
+
+  // Check if any filters are active
+  const filtersActive =
+    searchQuery || statusFilter || shiftFilter || agencyFilter;
 
   return (
     <div>
@@ -176,7 +225,7 @@ export default function Drivers() {
       </div>
 
       <div className="flex justify-between mb-6">
-        <div className="flex items-center gap-2 border border-gray-300 rounded-md px-2 w-64 bg-white">
+        <div className="flex items-center gap-2 border border-gray-300 rounded-md px-2 w-64 bg-white relative">
           <Search className="w-5 h-5 text-gray-500" />
           <Input
             type="text"
@@ -185,13 +234,37 @@ export default function Drivers() {
             value={searchQuery}
             onChange={handleSearchChange}
           />
+          {searchQuery && (
+            <button
+              onClick={handleClearSearch}
+              className="absolute right-2 top-1/2 transform -translate-y-1/2"
+            >
+              <X className="h-4 w-4 text-gray-500" />
+            </button>
+          )}
         </div>
-        {activeTab === "enrolled" && (
-          <DriversDropdowns
-            onStatusChange={handleStatusFilterChange}
-            onShiftChange={handleShiftFilterChange}
-          />
-        )}
+        <div className="flex items-center gap-4">
+          {activeTab === "enrolled" && (
+            <DriversDropdowns
+              onStatusChange={handleStatusFilterChange}
+              onShiftChange={handleShiftFilterChange}
+              onAgencyChange={
+                isSuperAdmin ? handleAgencyFilterChange : undefined
+              }
+            />
+          )}
+
+          {filtersActive && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleClearFilters}
+              className="whitespace-nowrap"
+            >
+              Clear Filters
+            </Button>
+          )}
+        </div>
       </div>
 
       <div>
@@ -201,6 +274,7 @@ export default function Drivers() {
             searchQuery={searchQuery}
             statusFilter={statusFilter}
             shiftFilter={shiftFilter}
+            agencyFilter={agencyFilter}
             refreshTrigger={refreshTrigger}
             agencyName={agencyName}
             onEdit={handleEdit}

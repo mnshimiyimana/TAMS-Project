@@ -46,7 +46,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-const tableHeaders = [
+// Define standard headers
+const standardHeaders = [
   "Plate Number",
   "Driver Name",
   "Fuel Date",
@@ -67,6 +68,17 @@ export default function FuelsTable({ onEdit, agencyName }: FuelsTableProps) {
   const { filteredTransactions, status, error, currentPage, totalCount } =
     useSelector((state: RootState) => state.fuels);
 
+  // Get user role for conditional rendering
+  const userRole = useSelector(
+    (state: RootState) => state.auth.user?.role || ""
+  );
+  const isSuperAdmin = userRole === "superadmin";
+
+  // Define headers based on role - add agency column for superadmin
+  const tableHeaders = isSuperAdmin
+    ? [...standardHeaders.slice(0, -1), "Agency", "Actions"]
+    : standardHeaders;
+
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<string | null>(
     null
@@ -79,7 +91,7 @@ export default function FuelsTable({ onEdit, agencyName }: FuelsTableProps) {
     if (status === "idle") {
       dispatch(fetchFuelTransactions());
     }
-  }, [dispatch, status]);
+  }, [dispatch, status, currentPage]);
 
   const handleEdit = (transaction: FuelTransaction) => {
     dispatch(selectFuelTransaction(transaction._id));
@@ -97,6 +109,9 @@ export default function FuelsTable({ onEdit, agencyName }: FuelsTableProps) {
     try {
       await dispatch(deleteFuelTransaction(transactionToDelete)).unwrap();
       toast.success("Fuel transaction deleted successfully");
+
+      // Refresh data after deletion
+      dispatch(fetchFuelTransactions());
     } catch (error) {
       toast.error("Failed to delete fuel transaction");
     } finally {
@@ -108,19 +123,19 @@ export default function FuelsTable({ onEdit, agencyName }: FuelsTableProps) {
   const handlePrevPage = () => {
     if (currentPage > 1) {
       dispatch(setPage(currentPage - 1));
+      dispatch(fetchFuelTransactions());
     }
   };
 
   const handleNextPage = () => {
     if (currentPage < totalPages) {
       dispatch(setPage(currentPage + 1));
+      dispatch(fetchFuelTransactions());
     }
   };
 
-  const displayTransactions = filteredTransactions.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
+  // Use filtered transactions directly if server pagination is handling this
+  const displayTransactions = filteredTransactions;
 
   const formatDate = (dateStr: string | Date) => {
     try {
@@ -146,14 +161,16 @@ export default function FuelsTable({ onEdit, agencyName }: FuelsTableProps) {
           <TableBody>
             {Array.from({ length: 5 }).map((_, index) => (
               <TableRow key={`skeleton-${index}`}>
-                {Array.from({ length: 6 }).map((_, cellIndex) => (
-                  <TableCell
-                    key={`cell-${index}-${cellIndex}`}
-                    className="px-5 py-4"
-                  >
-                    <Skeleton className="h-4 w-full" />
-                  </TableCell>
-                ))}
+                {Array.from({ length: tableHeaders.length }).map(
+                  (_, cellIndex) => (
+                    <TableCell
+                      key={`cell-${index}-${cellIndex}`}
+                      className="px-5 py-4"
+                    >
+                      <Skeleton className="h-4 w-full" />
+                    </TableCell>
+                  )
+                )}
               </TableRow>
             ))}
           </TableBody>
@@ -212,7 +229,10 @@ export default function FuelsTable({ onEdit, agencyName }: FuelsTableProps) {
           <TableBody>
             {filteredTransactions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-10">
+                <TableCell
+                  colSpan={tableHeaders.length}
+                  className="text-center py-10"
+                >
                   No fuel transactions found.
                 </TableCell>
               </TableRow>
@@ -232,14 +252,20 @@ export default function FuelsTable({ onEdit, agencyName }: FuelsTableProps) {
                     {transaction.amount} L
                   </TableCell>
                   <TableCell className="px-5 py-4">
-                    {transaction.amountPrice}{" "}
+                    {transaction.amountPrice}
                   </TableCell>
                   <TableCell className="px-5 py-4">
                     {transaction.lastFill} L
                   </TableCell>
                   <TableCell className="px-5 py-4">
-                    {transaction.lastFillPrice}{" "}
+                    {transaction.lastFillPrice}
                   </TableCell>
+                  {/* Show agency column for superadmins */}
+                  {isSuperAdmin && (
+                    <TableCell className="px-5 py-4">
+                      {transaction.agencyName || agencyName}
+                    </TableCell>
+                  )}
                   <TableCell className="px-8 py-4 text-center">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -271,8 +297,8 @@ export default function FuelsTable({ onEdit, agencyName }: FuelsTableProps) {
         {filteredTransactions.length > 0 && (
           <div className="flex items-center justify-between px-5 py-4 border-t">
             <div className="text-sm text-gray-500">
-              Showing {Math.min(displayTransactions.length, pageSize)} of{" "}
-              {totalCount} fuel transactions
+              Showing {displayTransactions.length} of {totalCount} fuel
+              transactions
             </div>
             <div className="flex items-center space-x-2">
               <Button
@@ -289,6 +315,7 @@ export default function FuelsTable({ onEdit, agencyName }: FuelsTableProps) {
               </div>
               <Button
                 variant="outline"
+                size="sm"
                 onClick={handleNextPage}
                 disabled={currentPage === totalPages}
               >

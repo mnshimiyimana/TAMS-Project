@@ -30,6 +30,7 @@ const shiftSchema = z.object({
   destination: z.string().min(1, "Destination is required"),
   origin: z.string().min(1, "Origin is required"),
   Date: z.string().min(1, "Date is required"),
+  agencyName: z.string().min(1, "Agency name is required"),
 });
 
 type ShiftFormData = z.infer<typeof shiftSchema>;
@@ -59,6 +60,17 @@ export default function AddShiftDialog({
   const vehiclesLoading = useSelector(
     (state: RootState) => state.vehicles.isLoading
   );
+  const userRole = useSelector(
+    (state: RootState) => state.auth.user?.role || ""
+  );
+  const isSuperAdmin = userRole === "superadmin";
+
+  // Get all agencies for superadmin (from vehicles for convenience)
+  const agencyOptions = useSelector((state: RootState) =>
+    Array.from(
+      new Set(state.vehicles.vehicles.map((v) => v.agencyName).filter(Boolean))
+    )
+  );
 
   const [filteredVehicles, setFilteredVehicles] = useState<typeof vehicles>([]);
 
@@ -79,8 +91,12 @@ export default function AddShiftDialog({
       destination: "",
       origin: "",
       Date: new Date().toISOString().split("T")[0],
+      agencyName: agencyName, // Default to current user's agency
     },
   });
+
+  // Watch agency value to trigger filtering when it changes
+  const selectedAgency = watch("agencyName");
 
   useEffect(() => {
     if (vehicles.length === 0 && !vehiclesLoading) {
@@ -90,10 +106,16 @@ export default function AddShiftDialog({
     const fetchDriversData = async () => {
       try {
         setIsLoadingDrivers(true);
-        const response = await getDrivers({
-          limit: 100,
-          agencyName: agencyName,
-        });
+        // If superadmin selects a different agency, fetch drivers for that agency
+        const params: any = { limit: 100 };
+
+        if (isSuperAdmin && selectedAgency) {
+          params.agencyName = selectedAgency;
+        } else {
+          params.agencyName = agencyName;
+        }
+
+        const response = await getDrivers(params);
         setDrivers(response.drivers || []);
       } catch (error) {
         console.error("Error fetching drivers:", error);
@@ -104,15 +126,33 @@ export default function AddShiftDialog({
     };
 
     fetchDriversData();
-  }, [dispatch, agencyName, vehicles.length, vehiclesLoading]);
+  }, [
+    dispatch,
+    agencyName,
+    vehicles.length,
+    vehiclesLoading,
+    isSuperAdmin,
+    selectedAgency,
+  ]);
 
+  // Filter vehicles based on selected agency
   useEffect(() => {
-    const availableVehicles = vehicles.filter(
+    let agencyVehicles = vehicles;
+
+    // Filter by agency if needed
+    if (selectedAgency) {
+      agencyVehicles = vehicles.filter((v) => v.agencyName === selectedAgency);
+    }
+
+    // Then filter by availability
+    const availableVehicles = agencyVehicles.filter(
       (vehicle) => vehicle.status === "Available"
     );
-    setFilteredVehicles(availableVehicles);
-  }, [vehicles]);
 
+    setFilteredVehicles(availableVehicles);
+  }, [vehicles, selectedAgency]);
+
+  // Filter drivers based on selected agency
   useEffect(() => {
     const availableDrivers = drivers.filter(
       (driver) => driver.status === "Off shift"
@@ -120,9 +160,9 @@ export default function AddShiftDialog({
     setFilteredDrivers(availableDrivers);
   }, [drivers]);
 
+  // Include the original vehicle/driver in the filtered lists when editing
   useEffect(() => {
     if (isEditing && shiftToEdit) {
-
       const originalVehicle = vehicles.find(
         (v) => v.plateNumber === shiftToEdit.plateNumber
       );
@@ -154,6 +194,7 @@ export default function AddShiftDialog({
     filteredDrivers,
   ]);
 
+  // Set form values when editing a shift
   useEffect(() => {
     if (shiftToEdit) {
       setValue("plateNumber", shiftToEdit.plateNumber);
@@ -173,16 +214,28 @@ export default function AddShiftDialog({
       setValue("destination", shiftToEdit.destination);
       setValue("origin", shiftToEdit.origin);
       setValue("Date", shiftToEdit.Date);
+      setValue("agencyName", shiftToEdit.agencyName || agencyName);
+    } else {
+      // For new shifts, always set the default agency
+      setValue("agencyName", agencyName);
     }
-  }, [shiftToEdit, setValue]);
+  }, [shiftToEdit, setValue, agencyName]);
 
   const onSubmit = async (data: ShiftFormData) => {
     try {
       setIsSubmitting(true);
 
+      // Verify agency permission
+      if (!isSuperAdmin && data.agencyName !== agencyName) {
+        toast.error(
+          "You don't have permission to create shifts for other agencies"
+        );
+        return;
+      }
+
       const shiftData = {
         ...data,
-        agencyName,
+        agencyName: data.agencyName || agencyName,
       };
 
       if (isEditing && shiftToEdit) {
@@ -197,17 +250,28 @@ export default function AddShiftDialog({
           await updateResourceStatuses(
             data.plateNumber,
             data.driverName,
-            false
+            false,
+            data.agencyName
           );
         } else {
-          await updateResourceStatuses(data.plateNumber, data.driverName, true);
+          await updateResourceStatuses(
+            data.plateNumber,
+            data.driverName,
+            true,
+            data.agencyName
+          );
         }
 
         toast.success("Shift updated successfully!");
       } else {
         await dispatch(addShift(shiftData)).unwrap();
 
-        await updateResourceStatuses(data.plateNumber, data.driverName, true);
+        await updateResourceStatuses(
+          data.plateNumber,
+          data.driverName,
+          true,
+          data.agencyName
+        );
 
         toast.success("Shift added successfully!");
       }
@@ -230,11 +294,12 @@ export default function AddShiftDialog({
   const updateResourceStatuses = async (
     plateNumber: string,
     driverName: string,
-    isStarting: boolean
+    isStarting: boolean,
+    agencyName: string
   ) => {
     try {
       const vehicleToUpdate = vehicles.find(
-        (v) => v.plateNumber === plateNumber
+        (v) => v.plateNumber === plateNumber && v.agencyName === agencyName
       );
       if (vehicleToUpdate) {
         await dispatch(
@@ -247,11 +312,14 @@ export default function AddShiftDialog({
         ).unwrap();
       }
 
-      const driverToUpdate = drivers.find((d) => d.names === driverName);
+      const driverToUpdate = drivers.find(
+        (d) => d.names === driverName && d.agencyName === agencyName
+      );
       if (driverToUpdate) {
         if (driverToUpdate.status !== "On leave") {
           await updateDriver(driverToUpdate._id, {
             status: isStarting ? "On Shift" : "Off shift",
+            lastShift: new Date().toISOString(),
           });
         }
       }
@@ -272,6 +340,41 @@ export default function AddShiftDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {/* Agency selection for superadmin */}
+          {isSuperAdmin && (
+            <div>
+              <Label htmlFor="agencyName">Agency</Label>
+              <Select
+                value={watch("agencyName")}
+                onValueChange={(value) => setValue("agencyName", value)}
+              >
+                <SelectTrigger id="agencyName" className="w-full">
+                  <SelectValue placeholder="Select an agency" />
+                </SelectTrigger>
+                <SelectContent>
+                  {agencyOptions.map((agency) => (
+                    <SelectItem key={agency} value={agency || ""}>
+                      {agency}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.agencyName && (
+                <p className="text-red-500 text-sm">
+                  {errors.agencyName.message}
+                </p>
+              )}
+            </div>
+          )}
+          {/* Hidden agency field for non-superadmins */}
+          {!isSuperAdmin && (
+            <input
+              type="hidden"
+              {...register("agencyName")}
+              value={agencyName}
+            />
+          )}
+
           <div>
             <Label htmlFor="plateNumber">Plate Number</Label>
             <Select

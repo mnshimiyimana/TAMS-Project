@@ -22,6 +22,8 @@ import { cn } from "@/lib/utils";
 import { Calendar } from "./ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { createDriver, updateDriver, Driver } from "@/services/driverService";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
 
 const driverSchema = z.object({
   driverId: z.string().min(1, "Driver ID is required"),
@@ -31,6 +33,7 @@ const driverSchema = z.object({
   status: z.enum(["On leave", "On Shift", "Off shift"], {
     errorMap: () => ({ message: "Status is required" }),
   }),
+  agencyName: z.string().min(1, "Agency name is required"),
 });
 
 type DriverFormData = z.infer<typeof driverSchema>;
@@ -54,6 +57,12 @@ export default function AddDriverDialog({
   const [lastShiftDate, setLastShiftDate] = useState<Date | undefined>(
     new Date()
   );
+  const [agencies, setAgencies] = useState<string[]>([]);
+
+  // Get user role to determine if agency can be changed
+  const user = useSelector((state: RootState) => state.auth.user);
+  const userRole = user?.role || "";
+  const isSuperAdmin = userRole === "superadmin";
 
   const isEditing = !!driverToEdit;
 
@@ -63,6 +72,7 @@ export default function AddDriverDialog({
     formState: { errors },
     reset,
     setValue,
+    watch,
   } = useForm<DriverFormData>({
     resolver: zodResolver(driverSchema),
     defaultValues: {
@@ -71,8 +81,28 @@ export default function AddDriverDialog({
       email: "",
       phoneNumber: "",
       status: "Off shift",
+      agencyName: agencyName,
     },
   });
+
+  // Watch the agency value
+  const currentAgency = watch("agencyName");
+
+  // Load the list of agencies for superadmin dropdown
+  useEffect(() => {
+    if (isSuperAdmin) {
+      // This would normally come from an API call to get all agencies
+      // For simplicity, we're just checking if we have a value in driverToEdit
+      const knownAgencies = [agencyName];
+      if (
+        driverToEdit?.agencyName &&
+        !knownAgencies.includes(driverToEdit.agencyName)
+      ) {
+        knownAgencies.push(driverToEdit.agencyName);
+      }
+      setAgencies(knownAgencies);
+    }
+  }, [isSuperAdmin, agencyName, driverToEdit]);
 
   useEffect(() => {
     if (driverToEdit) {
@@ -84,23 +114,33 @@ export default function AddDriverDialog({
         "status",
         driverToEdit.status as "On leave" | "On Shift" | "Off shift"
       );
+      setValue("agencyName", driverToEdit.agencyName || agencyName);
 
       if (driverToEdit.lastShift) {
         setLastShiftDate(new Date(driverToEdit.lastShift));
       }
+    } else {
+      // For new drivers, always set the agency to the current user's agency
+      setValue("agencyName", agencyName);
     }
-  }, [driverToEdit, setValue]);
+  }, [driverToEdit, setValue, agencyName]);
 
   const onSubmit = async (data: DriverFormData) => {
     try {
       setIsSubmitting(true);
+
+      // Check for agency permission
+      if (!isSuperAdmin && data.agencyName !== agencyName) {
+        toast.error("You do not have permission to change the agency");
+        setIsSubmitting(false);
+        return;
+      }
 
       const driverData = {
         ...data,
         lastShift: lastShiftDate
           ? lastShiftDate.toISOString()
           : new Date().toISOString(),
-        agencyName: agencyName,
       };
 
       if (isEditing && driverToEdit) {
@@ -197,6 +237,40 @@ export default function AddDriverDialog({
           </div>
 
           <div>
+            <Label htmlFor="agency-name">Agency Name</Label>
+            {isSuperAdmin ? (
+              <Select
+                defaultValue={currentAgency}
+                onValueChange={(value) => setValue("agencyName", value)}
+              >
+                <SelectTrigger id="agency-name">
+                  <SelectValue placeholder="Select agency" />
+                </SelectTrigger>
+                <SelectContent>
+                  {agencies.map((agency) => (
+                    <SelectItem key={agency} value={agency}>
+                      {agency}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                id="agency-name"
+                value={agencyName}
+                disabled
+                className="bg-gray-100"
+                {...register("agencyName")}
+              />
+            )}
+            {errors.agencyName && (
+              <p className="text-red-500 text-sm">
+                {errors.agencyName.message}
+              </p>
+            )}
+          </div>
+
+          <div>
             <Label htmlFor="status">Status</Label>
             <Select
               onValueChange={(value) =>
@@ -207,7 +281,7 @@ export default function AddDriverDialog({
               }
               defaultValue={driverToEdit?.status || "Off shift"}
             >
-              <SelectTrigger>
+              <SelectTrigger id="status">
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>

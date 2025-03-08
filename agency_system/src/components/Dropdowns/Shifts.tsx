@@ -10,34 +10,83 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { setFilter } from "@/redux/slices/shiftsSlice";
+import { setFilter, fetchShifts } from "@/redux/slices/shiftsSlice";
 
 export default function ShiftsDropdowns() {
   const dispatch = useDispatch<AppDispatch>();
   const { shifts, filters } = useSelector((state: RootState) => state.shifts);
+  const userRole = useSelector(
+    (state: RootState) => state.auth.user?.role || ""
+  );
+  const isSuperAdmin = userRole === "superadmin";
 
+  // Get unique destination values
   const destinations = useMemo(() => {
     return Array.from(new Set(shifts.map((shift) => shift.destination))).sort();
   }, [shifts]);
 
+  // Get unique dates values (sorted newest to oldest)
   const dates = useMemo(() => {
     return Array.from(new Set(shifts.map((shift) => shift.Date))).sort(
       (a, b) => new Date(b).getTime() - new Date(a).getTime()
     );
   }, [shifts]);
 
+  // Get unique agency values (for superadmin)
+  const agencies = useMemo(() => {
+    if (!isSuperAdmin) return [];
+    return Array.from(new Set(shifts.map((shift) => shift.agencyName || "")))
+      .filter((agency) => agency !== "") // Filter out empty strings
+      .sort();
+  }, [shifts, isSuperAdmin]);
+
   const handleDestinationChange = (value: string | null) => {
     dispatch(
       setFilter({ key: "destination", value: value === "all" ? null : value })
     );
+    // Refresh shifts with new filter
+    dispatch(fetchShifts());
   };
 
   const handleDateChange = (value: string | null) => {
     dispatch(setFilter({ key: "date", value: value === "all" ? null : value }));
+    // Refresh shifts with new filter
+    dispatch(fetchShifts());
+  };
+
+  const handleAgencyChange = (value: string | null) => {
+    dispatch(
+      setFilter({ key: "agencyName", value: value === "all" ? null : value })
+    );
+    // Refresh shifts with new filter
+    dispatch(fetchShifts());
   };
 
   return (
     <div className="flex gap-6">
+      {/* Agency dropdown (superadmin only) */}
+      {isSuperAdmin && (
+        <div className="w-48">
+          <Select
+            value={filters.agencyName || ""}
+            onValueChange={(value) => handleAgencyChange(value || null)}
+          >
+            <SelectTrigger className="flex items-center justify-between">
+              <span>{filters.agencyName || "All Agencies"}</span>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Agencies</SelectItem>
+              {agencies.map((agency) => (
+                <SelectItem key={agency} value={agency}>
+                  {agency}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {/* Destination dropdown */}
       <div className="w-40">
         <Select
           value={filters.destination || ""}
@@ -57,7 +106,7 @@ export default function ShiftsDropdowns() {
         </Select>
       </div>
 
-
+      {/* Date dropdown */}
       <div className="w-40">
         <Select
           value={filters.date || ""}

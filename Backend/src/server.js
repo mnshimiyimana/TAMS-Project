@@ -19,6 +19,8 @@ import superadminRoutes from "./routes/superAdminRoutes.js";
 import feedbackRoutes from "./routes/feedbackRoutes.js";
 import packageRoutes from "./routes/packageRoutes.js";
 import { auditLogin } from "./middlewares/auditLogger.js";
+import { protect } from "./middlewares/authMiddleware.js";
+import { enforceAgencyIsolation } from "./middlewares/agencyIsolationMiddleware.js";
 // import auditLogRoutes from "./routes/auditLogRoutes.js";
 
 // environment variables
@@ -36,19 +38,32 @@ app.use(cors());
 app.use(helmet());
 app.use(morgan("dev"));
 
-// routes
+// Authentication routes (no agency isolation)
 app.use("/api/auth", authRoutes);
-app.use("/api/agencies", agencyRoutes);
-app.use("/api/drivers", driverRoutes);
-app.use("/api/buses", busRoutes);
-app.use("/api/fuel-management", fuelManagementRoutes);
-app.use("/api/notifications", notificationRoutes);
-app.use("/api/shifts", shiftRoutes);
-app.use("/api/insights", insightRoutes);
-app.use("/api/superadmin", superadminRoutes);
-app.use("/api/dashboard", dashboardRoutes);
-app.use("/api/feedback", feedbackRoutes);
-app.use("/api/packages", packageRoutes);
+
+// All other routes should apply protect middleware and agency isolation
+// Protected routes
+app.use("/api/agencies", protect, enforceAgencyIsolation, agencyRoutes);
+app.use("/api/drivers", protect, enforceAgencyIsolation, driverRoutes);
+app.use("/api/buses", protect, enforceAgencyIsolation, busRoutes);
+app.use(
+  "/api/fuel-management",
+  protect,
+  enforceAgencyIsolation,
+  fuelManagementRoutes
+);
+app.use(
+  "/api/notifications",
+  protect,
+  enforceAgencyIsolation,
+  notificationRoutes
+);
+app.use("/api/shifts", protect, enforceAgencyIsolation, shiftRoutes);
+app.use("/api/insights", protect, enforceAgencyIsolation, insightRoutes);
+app.use("/api/superadmin", protect, superadminRoutes); // Superadmin bypasses isolation by default
+app.use("/api/dashboard", protect, enforceAgencyIsolation, dashboardRoutes);
+app.use("/api/feedback", protect, enforceAgencyIsolation, feedbackRoutes);
+app.use("/api/packages", protect, enforceAgencyIsolation, packageRoutes);
 // app.use("/api/audit-logs", auditLogRoutes);
 
 // Test route

@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import React, { Suspense, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { AppSidebar } from "@/components/dashboard/Sidebar";
 import { BellIcon, UserRound } from "lucide-react";
 import { useSelectedComponent } from "@/hooks/useSelectedComponent";
@@ -14,14 +14,13 @@ import { toast } from "sonner";
 import Protected from "@/components/Protected";
 import { hasPermission } from "@/utils/permissions";
 
+// The main dashboard page component
 export default function DashboardPage() {
-  const { selectedComponent, setSelectedComponent, ComponentToRender } =
-    useSelectedComponent();
   const { isLoading, isAuthenticated } = useAuthProtection("/auth/sign-in");
   const router = useRouter();
-  const searchParams = useSearchParams();
   const dispatch = useDispatch<AppDispatch>();
   const user = useSelector((state: RootState) => state.auth.user);
+  const { selectedComponent, setSelectedComponent, ComponentToRender } = useSelectedComponent();
 
   useEffect(() => {
     if (user?.role === "superadmin") {
@@ -29,44 +28,6 @@ export default function DashboardPage() {
       return;
     }
   }, [user, router]);
-
-  useEffect(() => {
-    const featureParam = searchParams.get("feature");
-
-    if (featureParam && user?.role) {
-      const validFeatures = [
-        "drivers",
-        "vehicles",
-        "shifts",
-        "packages",
-        "fuels",
-        "profile",
-      ];
-
-      if (
-        validFeatures.includes(featureParam) &&
-        hasPermission(user.role as any, featureParam)
-      ) {
-        setSelectedComponent(featureParam);
-      }
-    }
-  }, [searchParams, user, setSelectedComponent]);
-
-  useEffect(() => {
-    if (user?.role && !hasPermission(user.role as any, selectedComponent)) {
-      const firstPermitted = [
-        "drivers",
-        "vehicles",
-        "shifts",
-        "fuels",
-        "profile",
-      ].find((feature) => hasPermission(user.role as any, feature));
-
-      if (firstPermitted) {
-        setSelectedComponent(firstPermitted);
-      }
-    }
-  }, [user, selectedComponent, setSelectedComponent]);
 
   const handleLogout = () => {
     dispatch(signOut());
@@ -109,7 +70,7 @@ export default function DashboardPage() {
                   2
                 </span>
               </div>
-              <div className="flex items-center gap-2 cursor-pointer">
+              <div className="flex items-center gap-2 cursor-pointer" onClick={handleLogout}>
                 <UserRound className="text-gray-600" />
                 <div className="hidden md:block">
                   <p className="text-sm font-medium">{user?.username}</p>
@@ -120,12 +81,89 @@ export default function DashboardPage() {
           </div>
 
           <div className="p-6">
-            <Protected requiredFeature={selectedComponent}>
-              <ComponentToRender />
-            </Protected>
+            <Suspense fallback={<div className="p-4 flex justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500"></div>
+            </div>}>
+              {/* This client component handles the URL parameters */}
+              <ClientFeatureWrapper 
+                user={user} 
+                selectedComponent={selectedComponent}
+                setSelectedComponent={setSelectedComponent}
+                ComponentToRender={ComponentToRender}
+              />
+            </Suspense>
           </div>
         </div>
       </div>
     </SidebarProvider>
+  );
+}
+
+// This internal component handles the useSearchParams
+import { useSearchParams } from "next/navigation";
+
+function ClientFeatureWrapper({ 
+  user, 
+  selectedComponent, 
+  setSelectedComponent, 
+  ComponentToRender 
+}: { 
+  user: any;
+  selectedComponent: string;
+  setSelectedComponent: (component: string) => void;
+  ComponentToRender: React.FC;
+}) {
+  const searchParams = useSearchParams();
+  
+  // Handle URL parameters
+  useEffect(() => {
+    if (!user?.role) return;
+
+    const featureParam = searchParams.get("feature");
+    if (featureParam) {
+      const validFeatures = [
+        "drivers",
+        "vehicles",
+        "shifts",
+        "packages",
+        "fuels",
+        "profile",
+        "insights",
+      ];
+
+      if (
+        validFeatures.includes(featureParam) &&
+        hasPermission(user.role as any, featureParam)
+      ) {
+        setSelectedComponent(featureParam);
+      }
+    }
+  }, [searchParams, user, setSelectedComponent]);
+
+  // Handle permissions check for selected component
+  useEffect(() => {
+    if (!user?.role) return;
+
+    if (!hasPermission(user.role as any, selectedComponent)) {
+      const firstPermitted = [
+        "drivers",
+        "vehicles",
+        "shifts",
+        "fuels",
+        "profile",
+        "packages",
+        "insights",
+      ].find((feature) => hasPermission(user.role as any, feature));
+
+      if (firstPermitted) {
+        setSelectedComponent(firstPermitted);
+      }
+    }
+  }, [user, selectedComponent, setSelectedComponent]);
+
+  return (
+    <Protected requiredFeature={selectedComponent}>
+      <ComponentToRender />
+    </Protected>
   );
 }

@@ -54,8 +54,8 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 The deployment will be done as follows:
 
-- Frontend on [vercel]().
-- Backend on [Render]().
+- Frontend on [vercel](http://tams-project.vercel.app/).
+- Backend on [Render](https://tams-project.onrender.com/).
 
 
 ## Video Demo

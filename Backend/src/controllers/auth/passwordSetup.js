@@ -10,6 +10,7 @@ dotenv.config();
 export const verifySetupToken = async (req, res) => {
   try {
     const { token } = req.params;
+    console.log("Received token for verification:", token);
 
     // Hash the provided token to match it with what's stored in the database
     const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
@@ -250,14 +251,22 @@ export const resendSetupEmail = async (req, res) => {
 
     await user.save();
 
-    // Send the email
-    const resetURL = `${req.protocol}://${req.get(
-      "host"
-    )}/auth/setup-password/${resetToken}`;
+    // Use environment variables for frontend URL or fallback to a default
+    const frontendUrl =
+      process.env.FRONTEND_URL || "https://tams-project.vercel.app";
+
+    // Ensure the URL doesn't have trailing slashes before concatenation
+    const baseUrl = frontendUrl.endsWith("/")
+      ? frontendUrl.slice(0, -1)
+      : frontendUrl;
+
+    // Create the complete URL with correct path structure to match Next.js App Router
+    const resetURL = `${baseUrl}/auth/setup-password/${resetToken}`;
+
     const message = `
       Hello ${user.username},
       
-      This is a reminder to set up your password for the Transport Agency Management System.
+      Your admin account has been created for the Transport Agency Management System.
       
       Please use the following link to set up your password: ${resetURL}
       
@@ -269,10 +278,10 @@ export const resendSetupEmail = async (req, res) => {
       Transport Agency Management Team
     `;
 
-    await sendEmail(user.email, "TAMS - Password Setup Reminder", message);
+    await sendEmail(user.email, "TAMS - Password Setup", message);
 
     res.status(200).json({
-      message: "Password setup email has been resent",
+      message: "Password setup email has been sent",
     });
   } catch (error) {
     console.error("Error resending setup email:", error);

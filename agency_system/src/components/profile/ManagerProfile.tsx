@@ -1,10 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
-import axios from "axios";
-import { toast } from "sonner";
+import { useManagerProfile } from "@/hooks/useDashboardData";
 import UserProfile from "./UserProfile";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -40,7 +38,6 @@ import {
   CheckCircle,
   X,
   ClipboardCheck,
-  Filter,
   Package,
   Truck,
   CheckSquare,
@@ -49,446 +46,38 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-interface ActivitySummary {
-  totalShifts: number;
-  upcomingShifts: number;
-  activeDrivers: number;
-  availableVehicles: number;
-}
-
-interface Package {
-  _id: string;
-  packageId: string;
-  status: string;
-  description: string;
-  weight: number;
-  senderName: string;
-  senderPhone: string;
-  receiverName: string;
-  receiverPhone: string;
-  receiverId?: string;
-  pickupLocation: string;
-  deliveryLocation: string;
-  driverName?: string;
-  plateNumber?: string;
-  notes?: string;
-  createdAt?: string;
-  deliveredAt?: string;
-}
-
-interface PackageStatusCounts {
-  pending: number;
-  inTransit: number;
-  delivered: number;
-  cancelled: number;
-  returned: number;
-  total: number;
-}
-
-interface RecentShift {
-  _id: string;
-  plateNumber: string;
-  driverName: string;
-  startTime: string;
-  endTime?: string;
-  actualEndTime?: string;
-  destination: string;
-  origin: string;
-  Date: string;
-}
-
 export default function ManagerProfile() {
   const router = useRouter();
-  const [activitySummary, setActivitySummary] = useState<ActivitySummary>({
-    totalShifts: 0,
-    upcomingShifts: 0,
-    activeDrivers: 0,
-    availableVehicles: 0,
-  });
-  const [packageCounts, setPackageCounts] = useState<PackageStatusCounts>({
-    pending: 0,
-    inTransit: 0,
-    delivered: 0,
-    cancelled: 0,
-    returned: 0,
-    total: 0,
-  });
-  const [allShifts, setAllShifts] = useState<RecentShift[]>([]);
-  const [displayedShifts, setDisplayedShifts] = useState<RecentShift[]>([]);
-  const [topDrivers, setTopDrivers] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isCompletingShift, setIsCompletingShift] = useState<string | null>(
-    null
-  );
-  const [editingShift, setEditingShift] = useState<RecentShift | null>(null);
-  const [actualEndTime, setActualEndTime] = useState<string>("");
-  const [isUpdatingEndTime, setIsUpdatingEndTime] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [refreshCounter, setRefreshCounter] = useState(0);
-
   const user = useSelector((state: RootState) => state.auth.user);
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      setRefreshCounter((prev) => prev + 1);
-    }, 30000);
-
-    return () => clearInterval(intervalId);
-  }, []);
-
-  useEffect(() => {
-    fetchManagerData();
-  }, [refreshCounter]);
-
-  const fetchManagerData = async () => {
-    try {
-      setIsLoading(true);
-
-      const shiftsResponse = await axios.get(
-        "http://localhost:5000/api/shifts",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      let shifts: RecentShift[] = [];
-
-      if (Array.isArray(shiftsResponse.data)) {
-        shifts = shiftsResponse.data;
-        shifts.sort(
-          (a, b) =>
-            new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
-        );
-        setAllShifts(shifts);
-        filterShifts(shifts, statusFilter);
-      } else {
-        console.error("Shifts response is not an array:", shiftsResponse.data);
-        toast.error("Invalid shifts data format");
-      }
-
-      const driversResponse = await axios.get(
-        "http://localhost:5000/api/drivers",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      const drivers = driversResponse.data.drivers || [];
-
-      const vehiclesResponse = await axios.get(
-        "http://localhost:5000/api/buses",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      const vehicles = Array.isArray(vehiclesResponse.data)
-        ? vehiclesResponse.data
-        : [];
-
-      const packagesResponse = await axios.get(
-        "http://localhost:5000/api/packages",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      let packages: Package[] = [];
-      if (Array.isArray(packagesResponse.data)) {
-        packages = packagesResponse.data;
-      } else if (
-        packagesResponse.data &&
-        Array.isArray(packagesResponse.data.packages)
-      ) {
-        packages = packagesResponse.data.packages;
-      } else {
-        console.error(
-          "Packages response invalid format:",
-          packagesResponse.data
-        );
-        packages = [];
-      }
-
-      const packageStatusCounts = {
-        pending: packages.filter((pkg: Package) => pkg.status === "Pending")
-          .length,
-        inTransit: packages.filter(
-          (pkg: Package) => pkg.status === "In Transit"
-        ).length,
-        delivered: packages.filter((pkg: Package) => pkg.status === "Delivered")
-          .length,
-        cancelled: packages.filter((pkg: Package) => pkg.status === "Cancelled")
-          .length,
-        returned: packages.filter((pkg: Package) => pkg.status === "Returned")
-          .length,
-        total: packages.length,
-      };
-
-      setPackageCounts(packageStatusCounts);
-
-      const today = new Date();
-
-      const summary = {
-        totalShifts: shifts.length,
-        upcomingShifts: shifts.filter((s) => new Date(s.startTime) > today)
-          .length,
-        activeDrivers: drivers.filter(
-          (d: { status: string }) => d.status === "On Shift"
-        ).length,
-        availableVehicles: vehicles.filter((v) => v.status === "Available")
-          .length,
-      };
-
-      setActivitySummary(summary);
-
-      const driverShiftCount = shifts.reduce((acc: any, shift: any) => {
-        acc[shift.driverName] = (acc[shift.driverName] || 0) + 1;
-        return acc;
-      }, {});
-
-      const topDriversList = Object.entries(driverShiftCount)
-        .map(([name, count]) => ({ name, count }))
-        .sort((a: any, b: any) => b.count - a.count)
-        .slice(0, 5);
-
-      setTopDrivers(topDriversList);
-    } catch (error) {
-      console.error("Error fetching manager data:", error);
-      toast.error("Failed to load manager dashboard data");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  function getShiftStatus(shift: RecentShift) {
-    try {
-      const now = new Date();
-      const start = new Date(shift.startTime);
-
-      if (isNaN(start.getTime())) {
-        console.error("Invalid start time for shift:", shift);
-        return "Unknown";
-      }
-
-      if (start > now) {
-        return "Scheduled";
-      }
-
-      if (shift.endTime && !isNaN(new Date(shift.endTime).getTime())) {
-        const end = new Date(shift.endTime);
-        if (now >= end) {
-          return "Completed";
-        }
-      }
-
-      return "In Progress";
-    } catch (error) {
-      console.error("Error determining shift status:", error, shift);
-      return "Unknown";
-    }
-  }
-
-  function filterShifts(shifts: RecentShift[], status: string) {
-    if (status === "all") {
-      setDisplayedShifts(shifts);
-      return;
-    }
-
-    const filtered = shifts.filter((shift) => getShiftStatus(shift) === status);
-    setDisplayedShifts(filtered);
-  }
-
-  function getBadgeClasses(status: string) {
-    switch (status) {
-      case "Completed":
-        return "bg-green-100 text-green-800";
-      case "Scheduled":
-        return "bg-blue-100 text-blue-800";
-      case "In Progress":
-        return "bg-yellow-100 text-yellow-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  }
-
-  const completeShift = async (shiftId: string) => {
-    try {
-      setIsCompletingShift(shiftId);
-
-      const endTime = new Date().toISOString();
-
-      await axios.patch(
-        `http://localhost:5000/api/shifts/${shiftId}`,
-        { endTime },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      toast.success("Shift completed successfully");
-
-      setAllShifts((prevShifts) =>
-        prevShifts.map((shift) =>
-          shift._id === shiftId ? { ...shift, endTime } : shift
-        )
-      );
-
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent("shift_updated"));
-      }
-
-      fetchManagerData();
-    } catch (error) {
-      console.error("Error completing shift:", error);
-      toast.error("Failed to complete shift. Please try again.");
-    } finally {
-      setIsCompletingShift(null);
-    }
-  };
-
-  const updateActualEndTime = async () => {
-    if (!editingShift) return;
-    try {
-      setIsUpdatingEndTime(true);
-
-      const actualEndTimeValue = new Date(actualEndTime).toISOString();
-
-      await axios.patch(
-        `http://localhost:5000/api/shifts/${editingShift._id}`,
-        { actualEndTime: actualEndTimeValue },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      toast.success("Actual end time recorded successfully");
-
-      setAllShifts((prevShifts) =>
-        prevShifts.map((shift) =>
-          shift._id === editingShift._id
-            ? { ...shift, actualEndTime: actualEndTimeValue }
-            : shift
-        )
-      );
-
-      setEditingShift(null);
-      setActualEndTime("");
-
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent("shift_updated"));
-      }
-
-      fetchManagerData();
-    } catch (error) {
-      console.error("Error recording actual end time:", error);
-      toast.error("Failed to record actual end time. Please try again.");
-    } finally {
-      setIsUpdatingEndTime(false);
-    }
-  };
-
-  useEffect(() => {
-    if (editingShift) {
-      let timeToUse = editingShift.actualEndTime || editingShift.endTime;
-      if (timeToUse) {
-        const endDate = new Date(timeToUse);
-        const formattedDate = endDate.toISOString().slice(0, 16);
-        setActualEndTime(formattedDate);
-      } else {
-        const now = new Date();
-        const formattedNow = now.toISOString().slice(0, 16);
-        setActualEndTime(formattedNow);
-      }
-    }
-  }, [editingShift]);
-
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "N/A";
-    return new Date(dateString).toLocaleDateString();
-  };
-
-  const formatTime = (dateString: string) => {
-    if (!dateString) return "N/A";
-    return new Date(dateString).toLocaleTimeString();
-  };
-
-  const getInitials = (name: string) =>
-    name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase();
-
-  const getColorForDriver = (index: number) => {
-    const colors = [
-      "bg-blue-100 text-blue-800",
-      "bg-green-100 text-green-800",
-      "bg-purple-100 text-purple-800",
-      "bg-yellow-100 text-yellow-800",
-      "bg-red-100 text-red-800",
-    ];
-    return colors[index % colors.length];
-  };
+  const {
+    activitySummary,
+    packageCounts,
+    allShifts,
+    displayedShifts,
+    topDrivers,
+    isLoading,
+    isCompletingShift,
+    editingShift,
+    actualEndTime,
+    isUpdatingEndTime,
+    statusFilter,
+    setEditingShift,
+    setActualEndTime,
+    completeShift,
+    updateActualEndTime,
+    getShiftStatus,
+    getBadgeClasses,
+    formatDate,
+    formatTime,
+    getInitials,
+    getColorForDriver,
+    handleFilterChange,
+    handleRefresh,
+  } = useManagerProfile();
 
   const navigateToDashboard = () => {
     router.push("/dashboard?feature=shifts");
-  };
-
-  const handleFilterChange = (status: string) => {
-    setStatusFilter(status);
-    filterShifts(allShifts, status);
-  };
-
-  const handleRefresh = () => {
-    setRefreshCounter((prev) => prev + 1);
-  };
-
-  const getPackageStatusIcon = (status: string) => {
-    switch (status) {
-      case "pending":
-        return <Clock className="h-5 w-5 text-blue-600" />;
-      case "inTransit":
-        return <Truck className="h-5 w-5 text-yellow-600" />;
-      case "delivered":
-        return <CheckSquare className="h-5 w-5 text-green-600" />;
-      case "cancelled":
-        return <XCircle className="h-5 w-5 text-red-600" />;
-      case "returned":
-        return <RotateCcw className="h-5 w-5 text-purple-600" />;
-      default:
-        return <Package className="h-5 w-5 text-gray-600" />;
-    }
-  };
-
-  const getPackageStatusColor = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "bg-blue-50 text-blue-800";
-      case "inTransit":
-        return "bg-yellow-50 text-yellow-800";
-      case "delivered":
-        return "bg-green-50 text-green-800";
-      case "cancelled":
-        return "bg-red-50 text-red-800";
-      case "returned":
-        return "bg-purple-50 text-purple-800";
-      default:
-        return "bg-gray-50 text-gray-800";
-    }
   };
 
   return (
@@ -510,16 +99,15 @@ export default function ManagerProfile() {
             </div>
           ) : (
             <div className="space-y-16">
-              {/* Activity summary cards - First row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
-                <Card className="bg-blue-50">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-16">
+                <Card className="bg-blue-50 shadow-sm">
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="text-sm font-medium text-blue-800">
                           Total Shifts
                         </p>
-                        <p className="text-3xl font-bold text-blue-900">
+                        <p className="text-3xl font-bold text-blue-900 mt-1">
                           {activitySummary.totalShifts}
                         </p>
                       </div>
@@ -528,14 +116,14 @@ export default function ManagerProfile() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-green-50">
+                <Card className="bg-green-50 shadow-sm">
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="text-sm font-medium text-green-800">
                           Upcoming Shifts
                         </p>
-                        <p className="text-3xl font-bold text-green-900">
+                        <p className="text-3xl font-bold text-green-900 mt-1">
                           {activitySummary.upcomingShifts}
                         </p>
                       </div>
@@ -544,14 +132,14 @@ export default function ManagerProfile() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-purple-50">
+                <Card className="bg-purple-50 shadow-sm">
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="text-sm font-medium text-purple-800">
                           Active Drivers
                         </p>
-                        <p className="text-3xl font-bold text-purple-900">
+                        <p className="text-3xl font-bold text-purple-900 mt-1">
                           {activitySummary.activeDrivers}
                         </p>
                       </div>
@@ -560,14 +148,14 @@ export default function ManagerProfile() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-amber-50">
+                <Card className="bg-amber-50 shadow-sm">
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start gap-10">
                       <div>
                         <p className="text-sm font-medium text-amber-800">
                           Available Vehicles
                         </p>
-                        <p className="text-3xl font-bold text-amber-900">
+                        <p className="text-3xl font-bold text-amber-900 mt-1">
                           {activitySummary.availableVehicles}
                         </p>
                       </div>
@@ -577,8 +165,6 @@ export default function ManagerProfile() {
                 </Card>
               </div>
 
-              {/* Package Status Cards */}
-              {/* Package Status Summary - Minimal, Elegant Design */}
               <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
                 <div className="p-6 border-b border-gray-100">
                   <div className="flex items-center justify-between">
@@ -594,7 +180,6 @@ export default function ManagerProfile() {
                   </div>
                 </div>
 
-                {/* Package Totals */}
                 <div className="p-6 pb-2">
                   <div className="flex items-end gap-2">
                     <span className="text-3xl font-semibold text-gray-800">
@@ -606,10 +191,8 @@ export default function ManagerProfile() {
                   </div>
                 </div>
 
-                {/* Status List - Minimal Design */}
                 <div className="px-6 pb-4">
                   <div className="space-y-5">
-                    {/* Pending Packages */}
                     <div>
                       <div className="flex justify-between mb-1.5">
                         <div className="flex items-center">
@@ -639,7 +222,6 @@ export default function ManagerProfile() {
                       </div>
                     </div>
 
-                    {/* In Transit Packages */}
                     <div>
                       <div className="flex justify-between mb-1.5">
                         <div className="flex items-center">
@@ -669,7 +251,6 @@ export default function ManagerProfile() {
                       </div>
                     </div>
 
-                    {/* Delivered Packages */}
                     <div>
                       <div className="flex justify-between mb-1.5">
                         <div className="flex items-center">
@@ -699,7 +280,6 @@ export default function ManagerProfile() {
                       </div>
                     </div>
 
-                    {/* Other Statuses (Combined) */}
                     <div>
                       <div className="flex justify-between mb-1.5">
                         <div className="flex items-center">
@@ -732,7 +312,6 @@ export default function ManagerProfile() {
                   </div>
                 </div>
 
-                {/* Package Details Table */}
                 <div className="px-6 py-4 border-t border-gray-100">
                   <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-2.5">
@@ -804,7 +383,6 @@ export default function ManagerProfile() {
                     )}
                   </div>
                   <div className="h-2 flex rounded-full overflow-hidden bg-gray-100">
-                    {/* Pending segment */}
                     {packageCounts.pending > 0 && (
                       <div
                         className="h-full bg-gray-400"
@@ -821,7 +399,6 @@ export default function ManagerProfile() {
                       ></div>
                     )}
 
-                    {/* In Transit segment */}
                     {packageCounts.inTransit > 0 && (
                       <div
                         className="h-full bg-gray-600"
@@ -838,7 +415,6 @@ export default function ManagerProfile() {
                       ></div>
                     )}
 
-                    {/* Delivered segment */}
                     {packageCounts.delivered > 0 && (
                       <div
                         className="h-full bg-gray-800"
@@ -855,7 +431,6 @@ export default function ManagerProfile() {
                       ></div>
                     )}
 
-                    {/* Other segment */}
                     {packageCounts.cancelled + packageCounts.returned > 0 && (
                       <div
                         className="h-full bg-gray-300"
@@ -875,7 +450,6 @@ export default function ManagerProfile() {
                   </div>
                 </div>
 
-                {/* Footer */}
                 <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
                   <span className="text-xs text-gray-500">
                     Updated {new Date().toLocaleTimeString()}
@@ -892,8 +466,7 @@ export default function ManagerProfile() {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Recent Shifts */}
-                <Card>
+                <Card className="shadow-sm">
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <div>
@@ -902,14 +475,18 @@ export default function ManagerProfile() {
                           View and manage your shifts
                         </CardDescription>
                       </div>
-                      <Button variant="ghost" size="sm" onClick={handleRefresh}>
-                        <RefreshCw className="h-4 w-4 mr-2" />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleRefresh}
+                        className="gap-1"
+                      >
+                        <RefreshCw className="h-4 w-4 mr-1" />
                         Refresh
                       </Button>
                     </div>
                   </CardHeader>
 
-                  {/* Filters Row */}
                   <div className="px-6 pb-2 flex flex-wrap gap-2">
                     <Badge
                       variant={statusFilter === "all" ? "default" : "outline"}
@@ -1008,10 +585,8 @@ export default function ManagerProfile() {
                                 </div>
                               </div>
 
-
                               <div className="mt-3 pt-2 border-t border-gray-200">
                                 {status === "Scheduled" && (
-
                                   <p className="text-sm text-gray-500 italic">
                                     Shift not started yet.
                                   </p>
@@ -1067,7 +642,7 @@ export default function ManagerProfile() {
                   </CardFooter>
                 </Card>
 
-                <Card>
+                <Card className="shadow-sm">
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <div>
@@ -1132,7 +707,6 @@ export default function ManagerProfile() {
         </TabsContent>
       </Tabs>
 
-      {/* Dialog for editing the actual end time */}
       <Dialog
         open={editingShift !== null}
         onOpenChange={(open) => !open && setEditingShift(null)}

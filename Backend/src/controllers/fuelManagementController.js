@@ -3,12 +3,10 @@ import Bus from "../models/busModel.js";
 
 export const createFuelTransaction = async (req, res) => {
   try {
-    // Apply agency isolation - add agency from authenticated user if not provided
     if (!req.body.agencyName && req.userAgency) {
       req.body.agencyName = req.userAgency;
     }
 
-    // Verify that the bus belongs to the user's agency
     const { plateNumber } = req.body;
 
     if (plateNumber) {
@@ -36,17 +34,14 @@ export const createFuelTransaction = async (req, res) => {
 
 export const getFuelTransactions = async (req, res) => {
   try {
-    // Build query with agency isolation
     const query = {};
 
-    // Apply agency isolation
     if (req.userRole !== "superadmin") {
       query.agencyName = req.userAgency;
     } else if (req.query.agencyName) {
       query.agencyName = req.query.agencyName;
     }
 
-    // Add date range filter if provided
     if (req.query.startDate || req.query.endDate) {
       query.fuelDate = {};
 
@@ -61,25 +56,20 @@ export const getFuelTransactions = async (req, res) => {
       }
     }
 
-    // Filter by plate number if provided
     if (req.query.plateNumber) {
       query.plateNumber = { $regex: req.query.plateNumber, $options: "i" };
     }
 
-    // Filter by driver if provided
     if (req.query.driverName) {
       query.driverName = { $regex: req.query.driverName, $options: "i" };
     }
 
-    // Pagination
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
 
-    // Get total count
     const totalTransactions = await FuelManagement.countDocuments(query);
 
-    // Get fuel transactions with pagination
     const fuelTransactions = await FuelManagement.find(query)
       .sort({ fuelDate: -1 })
       .skip(skip)
@@ -104,7 +94,6 @@ export const getFuelTransactionById = async (req, res) => {
       return res.status(404).json({ message: "Fuel transaction not found" });
     }
 
-    // Apply agency isolation
     if (
       req.userRole !== "superadmin" &&
       fuelTransaction.agencyName !== req.userAgency
@@ -129,7 +118,6 @@ export const updateFuelTransaction = async (req, res) => {
       return res.status(404).json({ message: "Fuel transaction not found" });
     }
 
-    // Apply agency isolation
     if (
       req.userRole !== "superadmin" &&
       fuelTransaction.agencyName !== req.userAgency
@@ -140,7 +128,6 @@ export const updateFuelTransaction = async (req, res) => {
       });
     }
 
-    // Prevent changing agency for non-superadmins
     if (
       req.userRole !== "superadmin" &&
       req.body.agencyName &&
@@ -151,7 +138,6 @@ export const updateFuelTransaction = async (req, res) => {
       });
     }
 
-    // If changing plate number, verify bus agency
     if (
       req.body.plateNumber &&
       req.body.plateNumber !== fuelTransaction.plateNumber
@@ -190,7 +176,6 @@ export const deleteFuelTransaction = async (req, res) => {
       return res.status(404).json({ message: "Fuel transaction not found" });
     }
 
-    // Apply agency isolation
     if (
       req.userRole !== "superadmin" &&
       fuelTransaction.agencyName !== req.userAgency
@@ -208,21 +193,17 @@ export const deleteFuelTransaction = async (req, res) => {
   }
 };
 
-// Additional utility endpoints for fuel management
 
 export const getFuelStatsByBus = async (req, res) => {
   try {
-    // Build query with agency isolation
     const query = {};
 
-    // Apply agency isolation
     if (req.userRole !== "superadmin") {
       query.agencyName = req.userAgency;
     } else if (req.query.agencyName) {
       query.agencyName = req.query.agencyName;
     }
 
-    // Add date range filter if provided
     if (req.query.startDate || req.query.endDate) {
       query.fuelDate = {};
 
@@ -237,7 +218,6 @@ export const getFuelStatsByBus = async (req, res) => {
       }
     }
 
-    // Aggregate fuel stats by bus
     const fuelStats = await FuelManagement.aggregate([
       { $match: query },
       {
@@ -271,17 +251,14 @@ export const getFuelStatsByBus = async (req, res) => {
 
 export const getFuelConsumptionTrends = async (req, res) => {
   try {
-    // Build query with agency isolation
     const query = {};
 
-    // Apply agency isolation
     if (req.userRole !== "superadmin") {
       query.agencyName = req.userAgency;
     } else if (req.query.agencyName) {
       query.agencyName = req.query.agencyName;
     }
 
-    // Add date range filter if provided
     if (req.query.startDate || req.query.endDate) {
       query.fuelDate = {};
 
@@ -296,12 +273,10 @@ export const getFuelConsumptionTrends = async (req, res) => {
       }
     }
 
-    // Filter by plate number if provided
     if (req.query.plateNumber) {
       query.plateNumber = req.query.plateNumber;
     }
 
-    // Aggregate monthly fuel consumption trends
     const monthlyTrends = await FuelManagement.aggregate([
       { $match: query },
       {

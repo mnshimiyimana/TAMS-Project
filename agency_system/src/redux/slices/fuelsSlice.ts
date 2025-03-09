@@ -50,53 +50,78 @@ const initialState: FuelsState = {
   },
 };
 
-// Fetch fuel transactions with agency isolation
 export const fetchFuelTransactions = createAsyncThunk(
   "fuels/fetchFuelTransactions",
   async (_, { getState, rejectWithValue }) => {
     try {
-      // Get current state
       const state = getState() as RootState;
       const userRole = state.auth.user?.role || "";
       const userAgency = state.auth.user?.agencyName || "";
       const fuelsState = state.fuels;
 
-      // Build params object
       const params: any = {
         page: fuelsState.currentPage,
         limit: 20,
       };
 
-      // Apply search if present
-      if (fuelsState.searchQuery) {
-        // Search can be for driver or plate
-        params.search = fuelsState.searchQuery;
+      if (fuelsState.searchQuery && fuelsState.searchQuery.trim() !== "") {
+        const trimmedSearch = fuelsState.searchQuery.trim();
+        params.search = trimmedSearch;
+        params.q = trimmedSearch;
+        params.query = trimmedSearch;
+        params.keyword = trimmedSearch;
+        params.term = trimmedSearch;
+
+        console.log("FUEL API - Searching with term:", trimmedSearch);
       }
 
-      // Apply date filter if present
       if (fuelsState.filters.date) {
         params.startDate = fuelsState.filters.date;
         params.endDate = fuelsState.filters.date;
+        params.date = fuelsState.filters.date;
       }
 
-      // Apply plate number filter if present
       if (fuelsState.filters.plateNumber) {
         params.plateNumber = fuelsState.filters.plateNumber;
       }
 
-      // Apply agency filter - automatic for non-superadmins
       if (userRole !== "superadmin") {
-        // Regular users can only see their agency data
         params.agencyName = userAgency;
       } else if (fuelsState.filters.agencyName) {
-        // Superadmins can filter by agency if they choose
         params.agencyName = fuelsState.filters.agencyName;
       }
 
+      console.log("FUEL API - Request params:", params);
       const response = await fuelsAPI.getAllFuels(params);
+      console.log("FUEL API - Response:", response);
 
-      return response;
+      let result = response;
+
+      if (fuelsState.searchQuery && fuelsState.searchQuery.trim() !== "") {
+        const searchTerm = fuelsState.searchQuery.trim().toLowerCase();
+
+        const filteredTransactions = response.fuelTransactions.filter(
+          (transaction: { plateNumber: string; driverName: string }) =>
+            transaction.plateNumber.toLowerCase().includes(searchTerm) ||
+            transaction.driverName.toLowerCase().includes(searchTerm)
+        );
+
+        if (filteredTransactions.length !== response.fuelTransactions.length) {
+          console.log(
+            "Using client-side filtering. Results:",
+            filteredTransactions.length
+          );
+          result = {
+            ...response,
+            fuelTransactions: filteredTransactions,
+            totalTransactions: filteredTransactions.length,
+          };
+        }
+      }
+
+      return result;
     } catch (error: any) {
+      console.error("FUEL API - Error:", error);
       return rejectWithValue(
         error.response?.data?.message ||
           error.response?.data?.error ||
@@ -113,11 +138,9 @@ export const addFuelTransaction = createAsyncThunk(
     { getState, rejectWithValue }
   ) => {
     try {
-      // Get user info
       const state = getState() as RootState;
       const userAgency = state.auth.user?.agencyName || "";
 
-      // Ensure agency is set
       const dataWithAgency = {
         ...fuelData,
         agencyName: fuelData.agencyName || userAgency,
@@ -142,12 +165,10 @@ export const updateFuelTransaction = createAsyncThunk(
     { getState, rejectWithValue }
   ) => {
     try {
-      // Get user info
       const state = getState() as RootState;
       const userRole = state.auth.user?.role || "";
       const userAgency = state.auth.user?.agencyName || "";
 
-      // For non-superadmins, check agency permission
       if (
         userRole !== "superadmin" &&
         fuelData.agencyName &&
@@ -193,7 +214,6 @@ const fuelsSlice = createSlice({
     setSearchQuery: (state, action: PayloadAction<string>) => {
       state.searchQuery = action.payload;
       state.currentPage = 1;
-      // Don't apply filters immediately since we'll fetch from API
     },
     setFilter: (
       state,
@@ -205,7 +225,6 @@ const fuelsSlice = createSlice({
       const { key, value } = action.payload;
       state.filters[key] = value === "all" ? null : value;
       state.currentPage = 1;
-      // Don't apply filters immediately since we'll fetch from API
     },
     setPage: (state, action: PayloadAction<number>) => {
       state.currentPage = action.payload;
@@ -214,7 +233,6 @@ const fuelsSlice = createSlice({
       state.filters = initialState.filters;
       state.searchQuery = "";
       state.currentPage = 1;
-      // Will trigger a re-fetch from API
     },
     selectFuelTransaction: (state, action: PayloadAction<string>) => {
       state.selectedTransaction =
@@ -228,7 +246,6 @@ const fuelsSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Fetch fuel transactions cases
       .addCase(fetchFuelTransactions.pending, (state) => {
         state.status = "loading";
         state.isLoading = true;
@@ -237,7 +254,6 @@ const fuelsSlice = createSlice({
         state.status = "succeeded";
         state.isLoading = false;
 
-        // Handle both response formats (array or paginated object)
         if (Array.isArray(action.payload)) {
           state.fuelTransactions = action.payload;
           state.filteredTransactions = action.payload;
@@ -249,7 +265,6 @@ const fuelsSlice = createSlice({
             action.payload.totalTransactions ||
             action.payload.fuelTransactions.length;
         } else {
-          // Fallback if response format is unexpected
           state.fuelTransactions = [];
           state.filteredTransactions = [];
           state.totalCount = 0;
@@ -261,13 +276,12 @@ const fuelsSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // Add fuel transaction cases
       .addCase(addFuelTransaction.pending, (state) => {
         state.isLoading = true;
       })
       .addCase(addFuelTransaction.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.fuelTransactions.unshift(action.payload); // Add to beginning
+        state.fuelTransactions.unshift(action.payload);
         state.filteredTransactions.unshift(action.payload);
         state.totalCount += 1;
       })

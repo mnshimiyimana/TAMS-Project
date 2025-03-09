@@ -5,7 +5,6 @@ import Bus from "../models/busModel.js";
 
 export const createShift = async (req, res) => {
   try {
-    // Apply agency isolation - add agency from authenticated user if not provided
     if (!req.body.agencyName && req.userAgency) {
       req.body.agencyName = req.userAgency;
     }
@@ -15,7 +14,6 @@ export const createShift = async (req, res) => {
 
     const driver = await Driver.findOne({
       $or: [{ driverId: shift.driverName }, { names: shift.driverName }],
-      // Apply agency isolation to driver lookup
       agencyName:
         req.userRole === "superadmin" && req.body.agencyName
           ? req.body.agencyName
@@ -45,47 +43,38 @@ export const createShift = async (req, res) => {
 
 export const getShifts = async (req, res) => {
   try {
-    // Build query with agency isolation
     const query = {};
 
-    // Apply agency isolation
     if (req.userRole !== "superadmin") {
       query.agencyName = req.userAgency;
     } else if (req.query.agencyName) {
       query.agencyName = req.query.agencyName;
     }
 
-    // Add date filter if provided
     if (req.query.date) {
       query.Date = req.query.date;
     }
 
-    // Filter by driver if provided
     if (req.query.driverName) {
       query.driverName = { $regex: req.query.driverName, $options: "i" };
     }
 
-    // Filter by plate number if provided
     if (req.query.plateNumber) {
       query.plateNumber = { $regex: req.query.plateNumber, $options: "i" };
     }
 
-    // Filter active/completed shifts
     if (req.query.status === "active") {
       query.endTime = { $exists: false };
     } else if (req.query.status === "completed") {
       query.endTime = { $exists: true };
     }
 
-    // Pagination
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
     const skip = (page - 1) * limit;
 
-    // Get total count
     const totalShifts = await Shift.countDocuments(query);
 
-    // Get shifts with pagination
     let shifts = await Shift.find(query)
       .sort({ startTime: -1 })
       .skip(skip)
@@ -120,7 +109,6 @@ export const getShiftById = async (req, res) => {
       return res.status(404).json({ message: "Shift not found" });
     }
 
-    // Apply agency isolation
     if (req.userRole !== "superadmin" && shift.agencyName !== req.userAgency) {
       return res
         .status(403)
@@ -143,7 +131,6 @@ export const updateShift = async (req, res) => {
       return res.status(404).json({ message: "Shift not found" });
     }
 
-    // Apply agency isolation
     if (req.userRole !== "superadmin" && shift.agencyName !== req.userAgency) {
       return res
         .status(403)
@@ -152,7 +139,6 @@ export const updateShift = async (req, res) => {
         });
     }
 
-    // Prevent changing agency for non-superadmins
     if (
       req.userRole !== "superadmin" &&
       req.body.agencyName &&
@@ -188,7 +174,6 @@ export const updateShift = async (req, res) => {
           { driverId: updatedShift.driverName },
           { names: updatedShift.driverName },
         ],
-        // Apply agency isolation to driver lookup
         agencyName: updatedShift.agencyName,
       });
 
@@ -212,7 +197,6 @@ export const deleteShift = async (req, res) => {
       return res.status(404).json({ message: "Shift not found" });
     }
 
-    // Apply agency isolation
     if (req.userRole !== "superadmin" && shift.agencyName !== req.userAgency) {
       return res
         .status(403)

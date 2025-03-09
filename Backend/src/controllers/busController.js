@@ -2,7 +2,6 @@ import Bus from "../models/busModel.js";
 
 export const createBus = async (req, res) => {
   try {
-    // Apply agency isolation - add agency from authenticated user if not provided
     if (!req.body.agencyName && req.userAgency) {
       req.body.agencyName = req.userAgency;
     }
@@ -17,27 +16,22 @@ export const createBus = async (req, res) => {
 
 export const getBuses = async (req, res) => {
   try {
-    // Build query with agency isolation
     const query = {};
 
-    // Apply agency isolation
     if (req.userRole !== "superadmin") {
       query.agencyName = req.userAgency;
     } else if (req.query.agencyName) {
       query.agencyName = req.query.agencyName;
     }
 
-    // Add status filter if provided
     if (req.query.status) {
       query.status = req.query.status;
     }
 
-    // Add type filter if provided
     if (req.query.type) {
       query.type = req.query.type;
     }
 
-    // Add search capability
     if (req.query.search) {
       const search = req.query.search;
       query.$or = [
@@ -46,15 +40,12 @@ export const getBuses = async (req, res) => {
       ];
     }
 
-    // Pagination
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
     const skip = (page - 1) * limit;
 
-    // Get total count
     const totalBuses = await Bus.countDocuments(query);
 
-    // Get buses with pagination
     const buses = await Bus.find(query)
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -79,7 +70,6 @@ export const getBusById = async (req, res) => {
       return res.status(404).json({ message: "Bus not found" });
     }
 
-    // Apply agency isolation
     if (req.userRole !== "superadmin" && bus.agencyName !== req.userAgency) {
       return res
         .status(403)
@@ -102,7 +92,6 @@ export const updateBus = async (req, res) => {
       return res.status(404).json({ message: "Bus not found" });
     }
 
-    // Apply agency isolation
     if (req.userRole !== "superadmin" && bus.agencyName !== req.userAgency) {
       return res
         .status(403)
@@ -111,7 +100,6 @@ export const updateBus = async (req, res) => {
         });
     }
 
-    // Prevent changing agency for non-superadmins
     if (
       req.userRole !== "superadmin" &&
       req.body.agencyName &&
@@ -140,7 +128,6 @@ export const deleteBus = async (req, res) => {
       return res.status(404).json({ message: "Bus not found" });
     }
 
-    // Apply agency isolation
     if (req.userRole !== "superadmin" && bus.agencyName !== req.userAgency) {
       return res
         .status(403)

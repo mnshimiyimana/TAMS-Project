@@ -2,7 +2,6 @@ import Driver from "../models/driverModel.js";
 
 export const createDriver = async (req, res) => {
   try {
-    // Apply agency isolation - add agency from authenticated user if not provided
     if (!req.body.agencyName && req.userAgency) {
       req.body.agencyName = req.userAgency;
     }
@@ -17,26 +16,21 @@ export const createDriver = async (req, res) => {
 
 export const getDrivers = async (req, res) => {
   try {
-    // Get pagination parameters from query
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
     const skip = (page - 1) * limit;
 
-    // Get search and status filters from query
     const search = req.query.search || "";
     const status = req.query.status || "";
 
-    // Build query object
     let query = {};
 
-    // Apply agency isolation
     if (req.userRole !== "superadmin") {
       query.agencyName = req.userAgency;
     } else if (req.query.agencyName) {
       query.agencyName = req.query.agencyName;
     }
 
-    // Add search filter if provided
     if (search) {
       query.$or = [
         { driverId: { $regex: search, $options: "i" } },
@@ -45,24 +39,19 @@ export const getDrivers = async (req, res) => {
       ];
     }
 
-    // Add status filter if provided
     if (status) {
       query.status = status;
     }
 
-    // Get total count of drivers matching the query
     const totalDrivers = await Driver.countDocuments(query);
 
-    // Calculate total pages
     const totalPages = Math.ceil(totalDrivers / limit);
 
-    // Get drivers with pagination
     const drivers = await Driver.find(query)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
-    // Send response with pagination metadata
     res.status(200).json({
       drivers,
       totalDrivers,
@@ -82,7 +71,6 @@ export const getDriverById = async (req, res) => {
       return res.status(404).json({ message: "Driver not found" });
     }
 
-    // Apply agency isolation
     if (req.userRole !== "superadmin" && driver.agencyName !== req.userAgency) {
       return res
         .status(403)
@@ -105,7 +93,6 @@ export const updateDriver = async (req, res) => {
       return res.status(404).json({ message: "Driver not found" });
     }
 
-    // Apply agency isolation
     if (req.userRole !== "superadmin" && driver.agencyName !== req.userAgency) {
       return res
         .status(403)
@@ -114,7 +101,6 @@ export const updateDriver = async (req, res) => {
         });
     }
 
-    // Prevent changing agency for non-superadmins
     if (
       req.userRole !== "superadmin" &&
       req.body.agencyName &&
@@ -147,7 +133,6 @@ export const deleteDriver = async (req, res) => {
       return res.status(404).json({ message: "Driver not found" });
     }
 
-    // Apply agency isolation
     if (req.userRole !== "superadmin" && driver.agencyName !== req.userAgency) {
       return res
         .status(403)

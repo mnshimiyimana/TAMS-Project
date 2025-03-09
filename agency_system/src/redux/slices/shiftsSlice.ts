@@ -51,52 +51,78 @@ const initialState: ShiftsState = {
   },
 };
 
-// Fetch shifts with agency isolation
 export const fetchShifts = createAsyncThunk(
   "shifts/fetchShifts",
   async (_, { getState, rejectWithValue }) => {
     try {
-      // Get current state
       const state = getState() as RootState;
       const userRole = state.auth.user?.role || "";
       const userAgency = state.auth.user?.agencyName || "";
       const shiftsState = state.shifts;
 
-      // Build params object
       const params: any = {
         page: shiftsState.currentPage,
         limit: 50,
       };
 
-      // Apply search if present
-      if (shiftsState.searchQuery) {
-        // Search can be for driver, plate, or destination
-        params.search = shiftsState.searchQuery;
+      if (shiftsState.searchQuery && shiftsState.searchQuery.trim() !== "") {
+        const trimmedSearch = shiftsState.searchQuery.trim();
+        params.search = trimmedSearch;
+        params.q = trimmedSearch;
+        params.query = trimmedSearch;
+        params.keyword = trimmedSearch;
+        params.term = trimmedSearch;
+        
+        console.log("SHIFTS API - Searching with term:", trimmedSearch);
       }
 
-      // Apply date filter if present
       if (shiftsState.filters.date) {
         params.date = shiftsState.filters.date;
+        params.startDate = shiftsState.filters.date;
+        params.endDate = shiftsState.filters.date;
       }
 
-      // Apply destination filter if present
       if (shiftsState.filters.destination) {
         params.destination = shiftsState.filters.destination;
       }
 
-      // Apply agency filter - automatic for non-superadmins
       if (userRole !== "superadmin") {
-        // Regular users can only see their agency data
         params.agencyName = userAgency;
       } else if (shiftsState.filters.agencyName) {
-        // Superadmins can filter by agency if they choose
         params.agencyName = shiftsState.filters.agencyName;
       }
 
+      console.log("SHIFTS API - Request params:", params);
       const response = await shiftsAPI.getAllShifts(params);
+      console.log("SHIFTS API - Response:", response);
 
-      return response;
+      let result = response;
+      
+      if (shiftsState.searchQuery && shiftsState.searchQuery.trim() !== "") {
+        const searchTerm = shiftsState.searchQuery.trim().toLowerCase();
+        
+        if (response.shifts && Array.isArray(response.shifts)) {
+          const filteredShifts = response.shifts.filter((shift: { plateNumber: string; driverName: string; destination: string; origin: string; }) =>
+            shift.plateNumber.toLowerCase().includes(searchTerm) ||
+            shift.driverName.toLowerCase().includes(searchTerm) ||
+            shift.destination.toLowerCase().includes(searchTerm) ||
+            shift.origin.toLowerCase().includes(searchTerm)
+          );
+          
+          if (filteredShifts.length !== response.shifts.length) {
+            console.log("Using client-side filtering. Results:", filteredShifts.length);
+            result = {
+              ...response,
+              shifts: filteredShifts,
+              totalShifts: filteredShifts.length
+            };
+          }
+        }
+      }
+      
+      return result;
     } catch (error: any) {
+      console.error("SHIFTS API - Error:", error);
       return rejectWithValue(
         error.response?.data?.message ||
           error.response?.data?.error ||
@@ -110,11 +136,9 @@ export const addShift = createAsyncThunk(
   "shifts/addShift",
   async (shiftData: Omit<Shift, "_id">, { getState, rejectWithValue }) => {
     try {
-      // Get user info
       const state = getState() as RootState;
       const userAgency = state.auth.user?.agencyName || "";
 
-      // Ensure agency is set
       const dataWithAgency = {
         ...shiftData,
         agencyName: shiftData.agencyName || userAgency,
@@ -139,12 +163,10 @@ export const updateShift = createAsyncThunk(
     { getState, rejectWithValue }
   ) => {
     try {
-      // Get user info
       const state = getState() as RootState;
       const userRole = state.auth.user?.role || "";
       const userAgency = state.auth.user?.agencyName || "";
 
-      // For non-superadmins, check agency permission
       if (
         userRole !== "superadmin" &&
         shiftData.agencyName &&
@@ -190,7 +212,6 @@ const shiftsSlice = createSlice({
     setSearchQuery: (state, action: PayloadAction<string>) => {
       state.searchQuery = action.payload;
       state.currentPage = 1;
-      // Don't apply filters immediately since we'll fetch from API
     },
     setFilter: (
       state,
@@ -202,7 +223,6 @@ const shiftsSlice = createSlice({
       const { key, value } = action.payload;
       state.filters[key] = value === "all" ? null : value;
       state.currentPage = 1;
-      // Don't apply filters immediately since we'll fetch from API
     },
     setPage: (state, action: PayloadAction<number>) => {
       state.currentPage = action.payload;
@@ -211,7 +231,6 @@ const shiftsSlice = createSlice({
       state.filters = initialState.filters;
       state.searchQuery = "";
       state.currentPage = 1;
-      // Will trigger a re-fetch from API
     },
     selectShift: (state, action: PayloadAction<string>) => {
       state.selectedShift =
@@ -231,7 +250,6 @@ const shiftsSlice = createSlice({
         state.status = "succeeded";
         state.isLoading = false;
 
-        // Handle both response formats (array or paginated object)
         if (Array.isArray(action.payload)) {
           state.shifts = action.payload;
           state.filteredShifts = action.payload;
@@ -242,7 +260,6 @@ const shiftsSlice = createSlice({
           state.totalCount =
             action.payload.totalShifts || action.payload.shifts.length;
         } else {
-          // Fallback if response format is unexpected
           state.shifts = [];
           state.filteredShifts = [];
           state.totalCount = 0;

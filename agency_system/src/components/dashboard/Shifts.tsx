@@ -28,6 +28,9 @@ export default function Shifts() {
   const [isExporting, setIsExporting] = useState(false);
   const [shiftToEdit, setShiftToEdit] = useState<any>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(
+    null
+  );
 
   const dispatch = useDispatch<AppDispatch>();
   const { searchQuery, filteredShifts, status, filters } = useSelector(
@@ -43,10 +46,19 @@ export default function Shifts() {
   const filtersActive =
     !!filters.destination || !!filters.date || !!filters.agencyName;
 
-  // Load shifts data on component mount and when filters/search/page change
+  // Load shifts data on component mount and when refresh trigger changes
   useEffect(() => {
     dispatch(fetchShifts());
   }, [dispatch, refreshTrigger]);
+
+  // Clear timeout when component unmounts
+  useEffect(() => {
+    return () => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+    };
+  }, [searchTimeout]);
 
   // Listen for shift update events
   useEffect(() => {
@@ -67,16 +79,26 @@ export default function Shifts() {
   }, [dispatch]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    dispatch(setSearchQuery(e.target.value));
-    // Trigger search with a slight delay to avoid too many API calls
-    const timer = setTimeout(() => {
+    const value = e.target.value;
+    dispatch(setSearchQuery(value));
+
+    // Clear any existing timeout
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+
+    // Set new timeout
+    const newTimeout = setTimeout(() => {
+      console.log("Executing search for shifts with:", value);
       dispatch(fetchShifts());
     }, 500);
-    return () => clearTimeout(timer);
+
+    setSearchTimeout(newTimeout);
   };
 
   const handleClearSearch = () => {
     dispatch(setSearchQuery(""));
+    // Immediately trigger search with empty query
     dispatch(fetchShifts());
   };
 

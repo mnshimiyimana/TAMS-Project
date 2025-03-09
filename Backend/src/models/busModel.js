@@ -8,7 +8,7 @@ const busSchema = new mongoose.Schema(
     agencyName: {
       type: String,
       required: true,
-      index: true, // Add index for better query performance
+      index: true,
     },
     status: {
       type: String,
@@ -21,7 +21,7 @@ const busSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Add compound indexes for agency isolation queries
+
 busSchema.index({ agencyName: 1, busId: 1 });
 busSchema.index({ agencyName: 1, plateNumber: 1 });
 busSchema.index({ agencyName: 1, status: 1 });

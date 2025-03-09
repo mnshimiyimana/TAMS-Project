@@ -13,13 +13,13 @@ const shiftSchema = new mongoose.Schema(
     agencyName: { 
       type: String, 
       required: true,
-      index: true // Add index for better query performance
+      index: true 
     }
   },
   { timestamps: true }
 );
 
-// Add compound indexes for agency isolation queries
+
 shiftSchema.index({ agencyName: 1, plateNumber: 1 });
 shiftSchema.index({ agencyName: 1, driverName: 1 });
 shiftSchema.index({ agencyName: 1, Date: 1 });

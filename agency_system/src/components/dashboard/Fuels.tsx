@@ -21,6 +21,9 @@ export default function Fuels() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [transactionToEdit, setTransactionToEdit] = useState<any>(null);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(
+    null
+  );
 
   const dispatch = useDispatch<AppDispatch>();
   const { searchQuery, filteredTransactions, status, filters } = useSelector(
@@ -35,21 +38,41 @@ export default function Fuels() {
   const filtersActive =
     !!filters.plateNumber || !!filters.date || !!filters.agencyName;
 
+  // Initial data load
   useEffect(() => {
     dispatch(fetchFuelTransactions());
   }, [dispatch]);
 
+  // Clear timeout when component unmounts
+  useEffect(() => {
+    return () => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+    };
+  }, [searchTimeout]);
+
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    dispatch(setSearchQuery(e.target.value));
-    // Trigger search with slight delay to avoid excessive API calls
-    const timer = setTimeout(() => {
+    const value = e.target.value;
+    dispatch(setSearchQuery(value));
+
+    // Clear any existing timeout
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+
+    // Set new timeout
+    const newTimeout = setTimeout(() => {
+      console.log("Executing search for:", value);
       dispatch(fetchFuelTransactions());
     }, 500);
-    return () => clearTimeout(timer);
+
+    setSearchTimeout(newTimeout);
   };
 
   const handleClearSearch = () => {
     dispatch(setSearchQuery(""));
+    // Immediately trigger search with empty query
     dispatch(fetchFuelTransactions());
   };
 

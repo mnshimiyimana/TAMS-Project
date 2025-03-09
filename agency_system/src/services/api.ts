@@ -15,18 +15,40 @@ apiClient.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    console.log(
+      `API REQUEST [${config.method?.toUpperCase()}] ${config.url}`,
+      config.params || {}
+    );
     return config;
   },
   (error) => {
+    console.error("API REQUEST ERROR:", error);
     return Promise.reject(error);
   }
 );
 
 apiClient.interceptors.response.use(
   (response) => {
+    console.log(
+      `API RESPONSE [${response.config.method?.toUpperCase()}] ${
+        response.config.url
+      }:`,
+      response.data
+        ? typeof response.data === "object"
+          ? `${Object.keys(response.data).length} items`
+          : "Success"
+        : "No data"
+    );
     return response;
   },
   (error) => {
+    console.error(
+      `API ERROR [${error.config?.method?.toUpperCase()}] ${
+        error.config?.url
+      }:`,
+      error.response?.data || error.message
+    );
+
     if (error.response && error.response.status === 401) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");

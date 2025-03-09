@@ -35,7 +35,6 @@ export const createPackage = async (req, res) => {
 
     console.log("Shift's agency name:", shift.agencyName);
 
-    // Enforce agency isolation - only superadmin can cross agency boundaries
     if (user.role !== "superadmin" && shift.agencyName !== user.agencyName) {
       console.log("Mismatch: user vs shift agency =>", {
         userAgency: user.agencyName,
@@ -47,7 +46,6 @@ export const createPackage = async (req, res) => {
       });
     }
 
-    // Determine agency name based on user's role
     const agencyName =
       user.role === "superadmin" && req.body.agencyName
         ? req.body.agencyName
@@ -115,10 +113,8 @@ export const getPackages = async (req, res) => {
       agencyName,
     } = req.query;
 
-    // Build query object with agency isolation
     let query = {};
 
-    // Apply agency isolation
     if (user.role !== "superadmin") {
       query.agencyName = user.agencyName;
     } else if (agencyName) {
@@ -210,7 +206,6 @@ export const getPackageById = async (req, res) => {
       return res.status(404).json({ message: "Package not found" });
     }
 
-    // Apply agency isolation
     if (
       user.role !== "superadmin" &&
       packageItem.agencyName !== user.agencyName
@@ -251,7 +246,6 @@ export const updatePackage = async (req, res) => {
       return res.status(404).json({ message: "Package not found" });
     }
 
-    // Apply agency isolation
     if (
       user.role !== "superadmin" &&
       packageItem.agencyName !== user.agencyName
@@ -270,7 +264,6 @@ export const updatePackage = async (req, res) => {
         return res.status(404).json({ message: "New shift not found" });
       }
 
-      // Apply agency isolation for shift assignment
       if (
         user.role !== "superadmin" &&
         newShift.agencyName !== user.agencyName
@@ -372,7 +365,6 @@ export const updatePackageStatus = async (req, res) => {
       return res.status(404).json({ message: "Package not found" });
     }
 
-    // Apply agency isolation
     if (
       user.role !== "superadmin" &&
       packageItem.agencyName !== user.agencyName
@@ -392,7 +384,6 @@ export const updatePackageStatus = async (req, res) => {
 
     await packageItem.save();
 
-    // Create audit log
     await new AuditLog({
       userId,
       username: user.username,
@@ -443,7 +434,6 @@ export const deletePackage = async (req, res) => {
       return res.status(404).json({ message: "Package not found" });
     }
 
-    // Apply agency isolation
     if (
       user.role !== "superadmin" &&
       packageItem.agencyName !== user.agencyName
@@ -489,7 +479,6 @@ export const getPackageStats = async (req, res) => {
 
     let matchQuery = {};
 
-    // Apply agency isolation
     if (user.role !== "superadmin") {
       matchQuery.agencyName = user.agencyName;
     } else if (req.query.agencyName) {
@@ -510,18 +499,15 @@ export const getPackageStats = async (req, res) => {
       }
     }
 
-    // Aggregation pipeline
     const stats = await Package.aggregate([
       { $match: matchQuery },
       {
         $facet: {
-          // Count by status
           statusStats: [
             { $group: { _id: "$status", count: { $sum: 1 } } },
             { $project: { status: "$_id", count: 1, _id: 0 } },
           ],
 
-          // Monthly trend
           monthlyTrend: [
             {
               $group: {
@@ -575,7 +561,6 @@ export const getPackageStats = async (req, res) => {
             { $sort: { date: 1 } },
           ],
 
-          // Top performers (drivers)
           topDrivers: [
             { $match: { status: "Delivered" } },
             { $group: { _id: "$driverName", count: { $sum: 1 } } },
@@ -584,7 +569,6 @@ export const getPackageStats = async (req, res) => {
             { $limit: 5 },
           ],
 
-          // Total counts
           totalStats: [
             {
               $group: {

@@ -14,14 +14,14 @@ const driverSchema = new mongoose.Schema(
     agencyName: {
       type: String,
       required: true,
-      index: true, // Add index for better query performance
+      index: true, 
     },
     lastShift: { type: Date },
   },
   { timestamps: true }
 );
 
-// Add compound index for agency isolation queries
+
 driverSchema.index({ agencyName: 1, driverId: 1 });
 driverSchema.index({ agencyName: 1, names: 1 });
 

@@ -51,6 +51,27 @@ import {
   GaugeIcon,
 } from "lucide-react";
 
+// Create API client with authentication
+const createApiClient = (token: string) => {
+  const instance = axios.create({
+    baseURL: "http://localhost:5000/api",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  instance.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      console.error("API Error:", error.response?.data || error.message);
+      return Promise.reject(error);
+    }
+  );
+
+  return instance;
+};
+
 export default function Insights() {
   const [timeFrame, setTimeFrame] = useState("30");
   const [isLoading, setIsLoading] = useState(true);
@@ -72,43 +93,67 @@ export default function Insights() {
   const token = localStorage.getItem("token");
 
   useEffect(() => {
-    fetchData();
-  }, [timeFrame]);
+    if (token) {
+      fetchData();
+    }
+  }, [timeFrame, token]);
 
   const fetchData = async () => {
     try {
       setIsLoading(true);
       setError(null);
 
-      // Get data from various endpoints
-      const [vehiclesRes, driversRes, shiftsRes, fuelsRes] = await Promise.all([
-        axios.get("http://localhost:5000/api/buses", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        axios.get("http://localhost:5000/api/drivers", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        axios.get("http://localhost:5000/api/shifts", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        axios.get("http://localhost:5000/api/fuel-management", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-      ]);
+      if (!token) {
+        setError("Authentication token not found. Please log in again.");
+        return;
+      }
 
-      // Filter data by date range if needed
+      const apiClient = createApiClient(token);
       const days = parseInt(timeFrame);
       const cutoffDate = subDays(new Date(), days);
 
-      const vehicles = vehiclesRes.data || [];
-      const drivers = driversRes.data.drivers || [];
+      const queryParams: any = {};
 
-      const shifts = (shiftsRes.data || []).filter((shift: any) => {
+      if (user?.role === "superadmin" && user?.agencyName) {
+        queryParams.agencyName = user.agencyName;
+      }
+
+      const [vehiclesRes, driversRes, shiftsRes, fuelsRes] = await Promise.all([
+        apiClient.get("/buses", { params: queryParams }),
+        apiClient.get("/drivers", { params: queryParams }),
+        apiClient.get("/shifts", { params: queryParams }),
+        apiClient.get("/fuel-management", { params: queryParams }),
+      ]);
+
+      console.log("API Responses:", {
+        vehicles: vehiclesRes.data,
+        drivers: driversRes.data,
+        shifts: shiftsRes.data,
+        fuels: fuelsRes.data,
+      });
+
+      const vehicles = Array.isArray(vehiclesRes.data)
+        ? vehiclesRes.data
+        : vehiclesRes.data.buses || [];
+
+      const drivers = Array.isArray(driversRes.data)
+        ? driversRes.data
+        : driversRes.data.drivers || [];
+
+      const shifts = Array.isArray(shiftsRes.data)
+        ? shiftsRes.data
+        : shiftsRes.data.shifts || [];
+
+      const fuels = Array.isArray(fuelsRes.data)
+        ? fuelsRes.data
+        : fuelsRes.data.fuelTransactions || [];
+
+      const filteredShifts = shifts.filter((shift: any) => {
         const shiftDate = new Date(shift.startTime);
         return shiftDate >= cutoffDate;
       });
 
-      const fuels = (fuelsRes.data || []).filter((fuel: any) => {
+      const filteredFuels = fuels.filter((fuel: any) => {
         const fuelDate = new Date(fuel.fuelDate);
         return fuelDate >= cutoffDate;
       });
@@ -116,20 +161,22 @@ export default function Insights() {
       setInsightsData({
         vehicles,
         drivers,
-        shifts,
-        fuels,
+        shifts: filteredShifts,
+        fuels: filteredFuels,
       });
 
-      // Calculate metrics
       calculateMetrics({
         vehicles,
         drivers,
-        shifts,
-        fuels,
+        shifts: filteredShifts,
+        fuels: filteredFuels,
       });
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error fetching insights data:", err);
-      setError("Failed to load insights data. Please try again.");
+      setError(
+        `Failed to load insights data: ${err.message || "Unknown error"}`
+      );
+      toast.error("Failed to load insights data. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -184,7 +231,6 @@ export default function Insights() {
         shifts: shiftsByDay[date],
       }));
 
-    // Fuel Metrics
     const fuelByDay: any = {};
     const fuelCostByDay: any = {};
 
@@ -211,7 +257,6 @@ export default function Insights() {
         cost: fuelCostByDay[date].toFixed(2),
       }));
 
-    // Vehicle utilization from shifts
     const vehicleUtilization = shifts.reduce((acc: any, shift: any) => {
       acc[shift.plateNumber] = (acc[shift.plateNumber] || 0) + 1;
       return acc;
@@ -225,7 +270,6 @@ export default function Insights() {
       .sort((a, b) => b.trips - a.trips)
       .slice(0, 5);
 
-    // Driver activity from shifts
     const driverActivity = shifts.reduce((acc: any, shift: any) => {
       acc[shift.driverName] = (acc[shift.driverName] || 0) + 1;
       return acc;
@@ -262,7 +306,8 @@ export default function Insights() {
         total: shifts.length,
         daily: shiftTrend,
         averagePerDay:
-          shifts.length / Math.min(parseInt(timeFrame), shifts.length || 1),
+          shifts.length /
+          Math.max(1, Math.min(parseInt(timeFrame), shifts.length || 1)),
       },
       fuelMetrics: {
         totalVolume: fuels.reduce(
@@ -482,7 +527,6 @@ export default function Insights() {
         </Card>
       </div>
 
-      {/* Charts Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
@@ -565,7 +609,6 @@ export default function Insights() {
         </Card>
       </div>
 
-      {/* Charts Row 2 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
@@ -626,7 +669,6 @@ export default function Insights() {
         </Card>
       </div>
 
-      {/* Charts Row 3 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>

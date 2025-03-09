@@ -104,7 +104,7 @@ export const useManagerProfile = () => {
 
   useEffect(() => {
     if (editingShift) {
-      let timeToUse = editingShift.actualEndTime || editingShift.endTime;
+      const timeToUse = editingShift.actualEndTime || editingShift.endTime;
       if (timeToUse) {
         const endDate = new Date(timeToUse);
         const formattedDate = endDate.toISOString().slice(0, 16);

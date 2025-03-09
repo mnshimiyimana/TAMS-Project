@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -48,21 +48,18 @@ interface UserInfo {
   agencyName: string;
 }
 
-export default function SetupPassword({
-  params,
-}: {
-  params: { token: string };
-}) {
-  // Extract token directly - this still works in current Next.js versions
-  // Next.js is warning it may change in the future, but for now it's supported
-  const token = params.token;
+function useSetupToken() {
+  const params = useParams();
+  return params?.token as string;
+}
 
+export default function SetupPassword() {
+  const token = useSetupToken();
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
-  const router = useRouter();
 
   const {
     register,
@@ -86,31 +83,34 @@ export default function SetupPassword({
         const userData = response.data.user;
         setUserInfo(userData);
 
-        // Pre-fill form values
         setValue("username", userData.username);
         setValue("email", userData.email);
         setValue("phone", userData.phone || "");
         setValue("location", userData.location || "");
 
         setError(null);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Token verification error:", err);
-        setError(
-          err.response?.data?.message ||
-            "This setup link is invalid or has expired."
-        );
+        let errorMessage = "This setup link is invalid or has expired.";
+
+        if (axios.isAxiosError(err)) {
+          errorMessage = err.response?.data?.message || errorMessage;
+        }
+
+        setError(errorMessage);
       } finally {
         setIsLoading(false);
       }
     }
 
-    verifyToken();
+    if (token) {
+      verifyToken();
+    }
   }, [token, setValue]);
 
   const onSubmit = async (data: UserSetupFormData) => {
     try {
       setIsSubmitting(true);
-      // Use the new endpoint that updates user details along with password
       await axios.post(
         `${
           process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
@@ -126,12 +126,15 @@ export default function SetupPassword({
 
       setIsComplete(true);
       toast.success("Account set up successfully!");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Setup error:", err);
-      toast.error(
-        err.response?.data?.message ||
-          "Failed to set up account. Please try again."
-      );
+      let errorMessage = "Failed to set up account. Please try again.";
+
+      if (axios.isAxiosError(err)) {
+        errorMessage = err.response?.data?.message || errorMessage;
+      }
+
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -293,7 +296,7 @@ export default function SetupPassword({
 
               <div className="bg-gray-50 p-3 rounded-md border border-gray-200">
                 <p className="text-sm text-gray-700">
-                  You're setting up your account for{" "}
+                  You&apos;re setting up your account for{" "}
                   <span className="font-semibold">{userInfo?.agencyName}</span>{" "}
                   as a{" "}
                   <span className="font-semibold">

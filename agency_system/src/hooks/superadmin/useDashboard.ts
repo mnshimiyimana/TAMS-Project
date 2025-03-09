@@ -14,7 +14,7 @@ export function useDashboard() {
       
       const token = localStorage.getItem("token");
       const response = await axios.get(
-        "http://localhost:5000/api/superadmin/enhanced-summary",
+        "https://tams-project.onrender.com/api/superadmin/enhanced-summary",
         {
           headers: {
             Authorization: `Bearer ${token}`,

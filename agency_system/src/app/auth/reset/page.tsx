@@ -16,7 +16,7 @@ export default function ResetPass() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const API_URL = "http://localhost:5000/api/auth";
+  const API_URL = "https://tams-project.onrender.com/api/auth";
 
   const handleSubmitEmail = async () => {
     setLoading(true);

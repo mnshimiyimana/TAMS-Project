@@ -1,8 +1,8 @@
-// File: agency_system/src/redux/slices/feedbackSlice.ts
+
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
 
-// Define feedback types
+
 export type FeedbackType = "feedback" | "issue" | "suggestion";
 
 export interface FeedbackItem {
@@ -52,7 +52,7 @@ export const submitFeedback = createAsyncThunk(
       }
 
       const response = await axios.post(
-        "http://localhost:5000/api/feedback",
+        "https://tams-project.onrender.com/api/feedback",
         feedback,
         {
           headers: {
@@ -82,7 +82,7 @@ export const fetchUserFeedback = createAsyncThunk(
       }
 
       const response = await axios.get(
-        "http://localhost:5000/api/feedback/my-feedback",
+        "https://tams-project.onrender.com/api/feedback/my-feedback",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -110,7 +110,7 @@ export const fetchAllFeedback = createAsyncThunk(
         return rejectWithValue("Authentication required. Please log in.");
       }
 
-      const response = await axios.get("http://localhost:5000/api/feedback", {
+      const response = await axios.get("https://tams-project.onrender.com/api/feedback", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -149,7 +149,7 @@ export const updateFeedbackStatus = createAsyncThunk(
       }
 
       const response = await axios.patch(
-        `http://localhost:5000/api/feedback/${id}`,
+        `https://tams-project.onrender.com/api/feedback/${id}`,
         {
           status,
           response: responseText,

@@ -76,7 +76,7 @@ export default function SetupPassword() {
         setIsLoading(true);
         const response = await axios.get(
           `${
-            process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
+            process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com" || "http://localhost:5000"
           }/api/auth/verify-setup-token/${token}`
         );
 
@@ -113,7 +113,7 @@ export default function SetupPassword() {
       setIsSubmitting(true);
       await axios.post(
         `${
-          process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
+          process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com"
         }/api/auth/update-user-with-password/${token}`,
         {
           username: data.username,

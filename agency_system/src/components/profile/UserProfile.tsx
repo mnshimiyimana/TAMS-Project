@@ -98,7 +98,7 @@ export default function UserProfile() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/api/users/profile", {
+        const response = await axios.get("https://tams-project.onrender.com/api/users/profile", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -140,7 +140,7 @@ export default function UserProfile() {
     try {
       setIsSubmitting(true);
       const response = await axios.put(
-        "http://localhost:5000/api/users/profile",
+        "https://tams-project.onrender.com/api/users/profile",
         data,
         {
           headers: {

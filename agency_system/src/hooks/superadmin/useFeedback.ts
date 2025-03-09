@@ -56,7 +56,7 @@ export function useFeedback() {
       setError(null);
 
       const token = localStorage.getItem("token");
-      const response = await axios.get("http://localhost:5000/api/feedback", {
+      const response = await axios.get("https://tams-project.onrender.com/api/feedback", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -87,7 +87,7 @@ export function useFeedback() {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.get(
-        "http://localhost:5000/api/feedback/stats",
+        "https://tams-project.onrender.com/api/feedback/stats",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -141,7 +141,7 @@ export function useFeedback() {
 
         const token = localStorage.getItem("token");
         await axios.patch(
-          `http://localhost:5000/api/feedback/${feedbackId}`,
+          `https://tams-project.onrender.com/api/feedback/${feedbackId}`,
           {
             response,
             status,

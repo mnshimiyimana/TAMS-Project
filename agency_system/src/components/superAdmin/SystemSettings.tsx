@@ -67,7 +67,7 @@ import {
                     <Label htmlFor="apiUrl">API Base URL</Label>
                     <Input
                       id="apiUrl"
-                      value="http://localhost:5000/api"
+                      value="https://tams-project.onrender.com/api"
                       readOnly
                       className="bg-gray-50"
                     />

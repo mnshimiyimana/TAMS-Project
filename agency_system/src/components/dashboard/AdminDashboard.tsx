@@ -41,7 +41,7 @@ export default function AdminDashboard() {
         const token = localStorage.getItem("token");
 
         const response = await axios.get(
-          "http://localhost:5000/api/dashboard",
+          "https://tams-project.onrender.com/api/dashboard",
           {
             headers: {
               Authorization: `Bearer ${token}`,

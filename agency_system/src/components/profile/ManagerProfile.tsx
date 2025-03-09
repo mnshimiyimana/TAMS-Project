@@ -107,7 +107,7 @@ export default function ManagerProfile() {
         displayedShifts.map(async (shift) => {
           try {
             const response = await axios.get(
-              `http://localhost:5000/api/packages?shiftId=${shift._id}`,
+              `https://tams-project.onrender.com/api/packages?shiftId=${shift._id}`,
               {
                 headers: {
                   Authorization: `Bearer ${token}`,
@@ -177,7 +177,7 @@ export default function ManagerProfile() {
       }
 
       await axios.patch(
-        `http://localhost:5000/api/shifts/${editingShift._id}`,
+        `https://tams-project.onrender.com/api/shifts/${editingShift._id}`,
         updatePayload,
         {
           headers: {

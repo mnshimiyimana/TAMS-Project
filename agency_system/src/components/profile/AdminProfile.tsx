@@ -122,7 +122,7 @@ export default function AdminProfile() {
     try {
       setIsLoading(true);
       const response = await axios.get(
-        "http://localhost:5000/api/auth/agency-users",
+        "https://tams-project.onrender.com/api/auth/agency-users",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -149,7 +149,7 @@ export default function AdminProfile() {
 
   const fetchAgencyInfo = async () => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/agencies`, {
+      const response = await axios.get(`https://tams-project.onrender.com/api/agencies`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -167,7 +167,7 @@ export default function AdminProfile() {
     try {
       setIsAddingUser(true);
       const response = await axios.post(
-        "http://localhost:5000/api/auth/create-user",
+        "https://tams-project.onrender.com/api/auth/create-user",
         data,
         {
           headers: {
@@ -192,7 +192,7 @@ export default function AdminProfile() {
   const toggleUserStatus = async (userId: string, isActive: boolean) => {
     try {
       await axios.patch(
-        "http://localhost:5000/api/auth/user-status",
+        "https://tams-project.onrender.com/api/auth/user-status",
         { userId, isActive },
         {
           headers: {
@@ -217,7 +217,7 @@ export default function AdminProfile() {
   const resendSetupEmail = async (userId: string) => {
     try {
       const response = await axios.post(
-        "http://localhost:5000/api/auth/resend-setup-email",
+        "${API_BASE_URL}/auth/resend-setup-email",
         { userId },
         {
           headers: {

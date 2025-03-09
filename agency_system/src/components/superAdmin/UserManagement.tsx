@@ -148,7 +148,7 @@ export default function UserManagement() {
       const token = localStorage.getItem("token");
 
       await axios.patch(
-        "http://localhost:5000/api/superadmin/user/status",
+        "https://tams-project.onrender.com/api/superadmin/user/status",
         {
           userId: user._id,
           isActive: user.isActive !== false ? false : true,

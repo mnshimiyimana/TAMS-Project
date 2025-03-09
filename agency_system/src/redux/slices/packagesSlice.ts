@@ -96,7 +96,7 @@ const initialState: PackagesState = {
   stats: null,
 };
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com";
 
 export const fetchPackages = createAsyncThunk(
   "packages/fetchPackages",
@@ -281,7 +281,7 @@ export const createPackage = createAsyncThunk(
       });
 
       const API_URL =
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+        process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com";
       console.log("API URL:", `${API_URL}/api/packages`);
 
       const response = await axios.post(

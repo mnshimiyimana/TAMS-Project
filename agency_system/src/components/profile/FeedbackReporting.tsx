@@ -44,7 +44,7 @@ export default function FeedbackReporting() {
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       await axios.post(
-        "http://localhost:5000/api/feedback",
+        "https://tams-project.onrender.com/api/feedback",
         {
           type: feedbackType,
           message: feedbackText,

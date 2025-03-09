@@ -42,7 +42,7 @@ export function useAgencies() {
 
       const token = localStorage.getItem("token");
       const response = await axios.get(
-        "http://localhost:5000/api/superadmin/agencies-dashboard",
+        "https://tams-project.onrender.com/api/superadmin/agencies-dashboard",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -79,7 +79,7 @@ export function useAgencies() {
         const token = localStorage.getItem("token");
 
         await axios.post(
-          "http://localhost:5000/api/auth/create-admin",
+          "https://tams-project.onrender.com/api/auth/create-admin",
           formData,
           {
             headers: {
@@ -115,7 +115,7 @@ export function useAgencies() {
       setIsLoading(true);
       const token = localStorage.getItem("token");
 
-      await axios.delete("http://localhost:5000/api/superadmin/agency", {
+      await axios.delete("https://tams-project.onrender.com/api/superadmin/agency", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -142,7 +142,7 @@ export function useAgencies() {
         const token = localStorage.getItem("token");
 
         await axios.patch(
-          "http://localhost:5000/api/superadmin/agency-status",
+          "https://tams-project.onrender.com/api/superadmin/agency-status",
           {
             agencyName,
             isActive: !isActive,

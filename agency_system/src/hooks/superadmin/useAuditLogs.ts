@@ -14,7 +14,7 @@ export function useAuditLogs() {
 
       const token = localStorage.getItem("token");
       const response = await axios.get(
-        "http://localhost:5000/api/superadmin/audit-logs",
+        "https://tams-project.onrender.com/api/superadmin/audit-logs",
         {
           headers: {
             Authorization: `Bearer ${token}`,

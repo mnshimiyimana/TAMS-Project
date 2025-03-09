@@ -127,7 +127,7 @@ export default function FuelProfile() {
     try {
       setIsLoading(true);
       const response = await axios.get(
-        "http://localhost:5000/api/fuel-management",
+        "https://tams-project.onrender.com/api/fuel-management",
         {
           headers: {
             Authorization: `Bearer ${token}`,

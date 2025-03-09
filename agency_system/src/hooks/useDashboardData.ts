@@ -122,7 +122,7 @@ export const useManagerProfile = () => {
       setIsLoading(true);
 
       const shiftsResponse = await axios.get(
-        "http://localhost:5000/api/shifts",
+        "https://tams-project.onrender.com/api/shifts",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -158,7 +158,7 @@ export const useManagerProfile = () => {
       }
 
       const driversResponse = await axios.get(
-        "http://localhost:5000/api/drivers",
+        "https://tams-project.onrender.com/api/drivers",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -171,7 +171,7 @@ export const useManagerProfile = () => {
           : [];
 
       const vehiclesResponse = await axios.get(
-        "http://localhost:5000/api/buses",
+        "https://tams-project.onrender.com/api/buses",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -185,7 +185,7 @@ export const useManagerProfile = () => {
         : [];
 
       const packagesResponse = await axios.get(
-        "http://localhost:5000/api/packages",
+        "https://tams-project.onrender.com/api/packages",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -306,7 +306,7 @@ export const useManagerProfile = () => {
       const endTime = new Date().toISOString();
 
       await axios.patch(
-        `http://localhost:5000/api/shifts/${shiftId}`,
+        `https://tams-project.onrender.com/api/shifts/${shiftId}`,
         { endTime },
         {
           headers: {
@@ -346,7 +346,7 @@ export const useManagerProfile = () => {
       const actualEndTimeValue = new Date(actualEndTime).toISOString();
 
       await axios.patch(
-        `http://localhost:5000/api/shifts/${editingShift._id}`,
+        `https://tams-project.onrender.com/api/shifts/${editingShift._id}`,
         { actualEndTime: actualEndTimeValue },
         {
           headers: {

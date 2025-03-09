@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import { useManagerProfile } from "@/hooks/useDashboardData";
@@ -27,6 +28,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Calendar,
   Clock,
@@ -43,8 +46,13 @@ import {
   CheckSquare,
   XCircle,
   RotateCcw,
+  AlertTriangle,
+  DollarSign,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import axios from "axios";
+import { toast } from "sonner";
+import { RecentShift } from "@/hooks/useDashboardData";
 
 export default function ManagerProfile() {
   const router = useRouter();
@@ -74,7 +82,131 @@ export default function ManagerProfile() {
     getColorForDriver,
     handleFilterChange,
     handleRefresh,
+    fetchManagerData,
   } = useManagerProfile();
+
+  const [shiftPackages, setShiftPackages] = useState<{ [key: string]: number }>(
+    {}
+  );
+  const [isFined, setIsFined] = useState(false);
+  const [fineAmount, setFineAmount] = useState("");
+  const [fineReason, setFineReason] = useState("");
+  const [isLoadingPackages, setIsLoadingPackages] = useState(false);
+
+  const fetchShiftPackages = async () => {
+    if (displayedShifts.length === 0) return;
+
+    try {
+      setIsLoadingPackages(true);
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("Authentication required");
+
+      const shiftPackageCounts: { [key: string]: number } = {};
+
+      await Promise.all(
+        displayedShifts.map(async (shift) => {
+          try {
+            const response = await axios.get(
+              `http://localhost:5000/api/packages?shiftId=${shift._id}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            );
+
+            let packages = [];
+            if (Array.isArray(response.data)) {
+              packages = response.data;
+            } else if (response.data && Array.isArray(response.data.packages)) {
+              packages = response.data.packages;
+            }
+
+            shiftPackageCounts[shift._id] = packages.length;
+          } catch (error) {
+            console.error(
+              `Error fetching packages for shift ${shift._id}:`,
+              error
+            );
+            shiftPackageCounts[shift._id] = 0;
+          }
+        })
+      );
+
+      setShiftPackages(shiftPackageCounts);
+    } catch (error) {
+      console.error("Error fetching shift packages:", error);
+    } finally {
+      setIsLoadingPackages(false);
+    }
+  };
+
+  useEffect(() => {
+    if (editingShift) {
+      setIsFined(editingShift.fined || false);
+      setFineAmount(
+        editingShift.fineAmount ? String(editingShift.fineAmount) : ""
+      );
+      setFineReason(editingShift.fineReason || "");
+    }
+  }, [editingShift]);
+
+  useEffect(() => {
+    if (displayedShifts.length > 0 && !isLoading) {
+      fetchShiftPackages();
+    }
+  }, [displayedShifts, isLoading]);
+
+  const updateShiftWithEndTimeAndFine = async () => {
+    if (!editingShift) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("Authentication required");
+
+      const actualEndTimeValue = new Date(actualEndTime).toISOString();
+
+      const updatePayload: any = {
+        actualEndTime: actualEndTimeValue,
+      };
+
+      if (isFined) {
+        updatePayload.fined = true;
+        updatePayload.fineAmount = parseFloat(fineAmount) || 0;
+        updatePayload.fineReason = fineReason;
+      }
+
+      await axios.patch(
+        `http://localhost:5000/api/shifts/${editingShift._id}`,
+        updatePayload,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      toast.success("Shift end time and details recorded successfully");
+
+      setEditingShift(null);
+      setActualEndTime("");
+      setIsFined(false);
+      setFineAmount("");
+      setFineReason("");
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("shift_updated"));
+      }
+
+      fetchManagerData();
+    } catch (error: any) {
+      console.error("Error recording actual end time:", error);
+      toast.error(
+        error.message || "Failed to record shift details. Please try again."
+      );
+    }
+  };
 
   const navigateToDashboard = () => {
     router.push("/dashboard?feature=shifts");
@@ -99,6 +231,7 @@ export default function ManagerProfile() {
             </div>
           ) : (
             <div className="space-y-16">
+              {/* Activity Summary Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-16">
                 <Card className="bg-blue-50 shadow-sm">
                   <CardContent className="p-6">
@@ -165,6 +298,7 @@ export default function ManagerProfile() {
                 </Card>
               </div>
 
+              {/* Package Status Summary */}
               <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
                 <div className="p-6 border-b border-gray-100">
                   <div className="flex items-center justify-between">
@@ -191,6 +325,8 @@ export default function ManagerProfile() {
                   </div>
                 </div>
 
+                {/* Package summary content */}
+                {/* Remaining package summary content here */}
                 <div className="px-6 pb-4">
                   <div className="space-y-5">
                     <div>
@@ -465,6 +601,7 @@ export default function ManagerProfile() {
                 </div>
               </div>
 
+              {/* Shifts and Drivers Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Card className="shadow-sm">
                   <CardHeader>
@@ -533,6 +670,7 @@ export default function ManagerProfile() {
                       <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
                         {displayedShifts.map((shift, idx) => {
                           const status = getShiftStatus(shift);
+                          const packageCount = shiftPackages[shift._id] || 0;
                           return (
                             <div
                               key={shift._id}
@@ -583,6 +721,31 @@ export default function ManagerProfile() {
                                   <Car className="h-4 w-4" />
                                   <span>{shift.plateNumber}</span>
                                 </div>
+                                {/* New: Display packages for this shift */}
+                                <div className="flex items-center gap-2">
+                                  <Package className="h-4 w-4" />
+                                  <span>
+                                    {isLoadingPackages ? (
+                                      "Loading packages..."
+                                    ) : packageCount > 0 ? (
+                                      <span className="text-green-700 font-medium">
+                                        {packageCount} package
+                                        {packageCount !== 1 && "s"}
+                                      </span>
+                                    ) : (
+                                      "No packages"
+                                    )}
+                                  </span>
+                                </div>
+                                {shift.fined && (
+                                  <div className="flex items-center gap-2 mt-2 text-red-600">
+                                    <AlertTriangle className="h-4 w-4" />
+                                    <span>
+                                      Fined: ${shift.fineAmount} -{" "}
+                                      {shift.fineReason}
+                                    </span>
+                                  </div>
+                                )}
                               </div>
 
                               <div className="mt-3 pt-2 border-t border-gray-200">
@@ -707,6 +870,7 @@ export default function ManagerProfile() {
         </TabsContent>
       </Tabs>
 
+      {/* Enhanced Dialog for recording end time with fine information */}
       <Dialog
         open={editingShift !== null}
         onOpenChange={(open) => !open && setEditingShift(null)}
@@ -714,10 +878,10 @@ export default function ManagerProfile() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold text-green-700">
-              Record Actual End Time
+              Record Shift Completion Details
             </DialogTitle>
             <DialogDescription>
-              Enter the actual time when the shift ended
+              Enter the actual end time and record any fines if applicable
             </DialogDescription>
           </DialogHeader>
 
@@ -735,6 +899,31 @@ export default function ManagerProfile() {
                   <p className="text-sm font-medium text-gray-600">Route:</p>
                   <p className="col-span-2">
                     {editingShift.origin} → {editingShift.destination}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4 items-center bg-gray-50 p-3 rounded-md">
+                  <p className="text-sm font-medium text-gray-600">Vehicle:</p>
+                  <p className="col-span-2">{editingShift.plateNumber}</p>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4 items-center bg-gray-50 p-3 rounded-md">
+                  <p className="text-sm font-medium text-gray-600">Packages:</p>
+                  <p className="col-span-2">
+                    {isLoadingPackages ? (
+                      <span className="text-gray-500">Loading...</span>
+                    ) : (
+                      <span
+                        className={
+                          shiftPackages[editingShift._id] > 0
+                            ? "text-green-700 font-medium"
+                            : "text-gray-700"
+                        }
+                      >
+                        {shiftPackages[editingShift._id] || 0} package
+                        {(shiftPackages[editingShift._id] || 0) !== 1 && "s"}
+                      </span>
+                    )}
                   </p>
                 </div>
 
@@ -775,6 +964,65 @@ export default function ManagerProfile() {
                     className="border-green-200 focus:border-green-300 focus:ring focus:ring-green-200 focus:ring-opacity-50"
                   />
                 </div>
+
+                {/* New fine information section */}
+                <div className="p-4 border border-gray-200 rounded-md space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label
+                      htmlFor="fined"
+                      className="text-sm font-medium flex items-center"
+                    >
+                      <AlertTriangle className="h-4 w-4 mr-2 text-amber-500" />
+                      Was the driver/vehicle fined?
+                    </Label>
+                    <Switch
+                      id="fined"
+                      checked={isFined}
+                      onCheckedChange={setIsFined}
+                    />
+                  </div>
+
+                  {isFined && (
+                    <div className="space-y-3 pt-2">
+                      <div>
+                        <Label
+                          htmlFor="fineAmount"
+                          className="text-sm font-medium"
+                        >
+                          Fine Amount ($)
+                        </Label>
+                        <div className="relative">
+                          <DollarSign className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+                          <Input
+                            id="fineAmount"
+                            type="number"
+                            placeholder="0.00"
+                            value={fineAmount}
+                            onChange={(e) => setFineAmount(e.target.value)}
+                            className="pl-8 border-red-200 focus:border-red-300 focus:ring focus:ring-red-200 focus:ring-opacity-50"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label
+                          htmlFor="fineReason"
+                          className="text-sm font-medium"
+                        >
+                          Reason for Fine
+                        </Label>
+                        <Textarea
+                          id="fineReason"
+                          placeholder="Describe why the fine was issued..."
+                          value={fineReason}
+                          onChange={(e) => setFineReason(e.target.value)}
+                          className="border-red-200 focus:border-red-300 focus:ring focus:ring-red-200 focus:ring-opacity-50"
+                          rows={3}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -790,8 +1038,12 @@ export default function ManagerProfile() {
               Cancel
             </Button>
             <Button
-              onClick={updateActualEndTime}
-              disabled={!actualEndTime || isUpdatingEndTime}
+              onClick={updateShiftWithEndTimeAndFine}
+              disabled={
+                !actualEndTime ||
+                isUpdatingEndTime ||
+                (isFined && (!fineAmount || !fineReason))
+              }
               className="bg-green-600 hover:bg-green-700 text-white"
             >
               {isUpdatingEndTime ? (
@@ -802,7 +1054,7 @@ export default function ManagerProfile() {
               ) : (
                 <>
                   <ClipboardCheck className="h-4 w-4 mr-2" />
-                  Save Actual End Time
+                  Save Shift Details
                 </>
               )}
             </Button>

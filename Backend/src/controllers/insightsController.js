@@ -1,4 +1,6 @@
 import Insights from "../models/insightsModel.js";
+import Package from "../models/packageModel.js";
+import Shift from "../models/shiftModel.js";
 
 export const createInsight = async (req, res) => {
   try {
@@ -53,6 +55,199 @@ export const deleteInsight = async (req, res) => {
     }
     res.status(200).json({ message: "Insight deleted" });
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// New methods for packages and fines insights
+
+export const generatePackageInsights = async (req, res) => {
+  try {
+    const { agencyId, startDate, endDate } = req.query;
+
+    if (!agencyId) {
+      return res.status(400).json({ message: "Agency ID is required" });
+    }
+
+    const query = { agencyName: req.userAgency };
+
+    if (startDate && endDate) {
+      query.createdAt = { $gte: new Date(startDate), $lte: new Date(endDate) };
+    }
+
+    // Get all packages for this agency in the date range
+    const packages = await Package.find(query);
+
+    // Calculate package analytics
+    const totalPackages = packages.length;
+    const deliveredPackages = packages.filter(
+      (pkg) => pkg.status === "Delivered"
+    ).length;
+    const successRate =
+      totalPackages > 0 ? (deliveredPackages / totalPackages) * 100 : 0;
+
+    // Calculate hot routes
+    const routeCounts = {};
+    packages.forEach((pkg) => {
+      const route = `${pkg.pickupLocation}-${pkg.deliveryLocation}`;
+      routeCounts[route] = (routeCounts[route] || 0) + 1;
+    });
+
+    const hotRoutes = Object.entries(routeCounts)
+      .map(([route, count]) => {
+        const [origin, destination] = route.split("-");
+        return { origin, destination, count };
+      })
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    // Calculate transit times for delivered packages
+    let totalTransitTime = 0;
+    let packagesWithTransitTime = 0;
+
+    packages.forEach((pkg) => {
+      if (pkg.status === "Delivered" && pkg.deliveredAt && pkg.createdAt) {
+        const deliveredAt = new Date(pkg.deliveredAt);
+        const createdAt = new Date(pkg.createdAt);
+        const transitTime = (deliveredAt - createdAt) / (1000 * 60 * 60); // in hours
+        totalTransitTime += transitTime;
+        packagesWithTransitTime++;
+      }
+    });
+
+    const averageTransitTime =
+      packagesWithTransitTime > 0
+        ? totalTransitTime / packagesWithTransitTime
+        : 0;
+
+    // Create the package analytics object
+    const packageAnalytics = {
+      deliveryEfficiency: successRate,
+      packageVolume: totalPackages,
+      successRate: successRate,
+      averageTransitTime: averageTransitTime,
+      hotRoutes: hotRoutes,
+      packageTrends: [], // This would be populated with historical data
+    };
+
+    // Check if there's an existing insight for today
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let insight = await Insights.findOne({
+      agencyId,
+      reportDate: { $gte: today },
+    });
+
+    if (insight) {
+      // Update existing insight
+      insight.packageAnalytics = packageAnalytics;
+      await insight.save();
+    } else {
+      // Create new insight
+      insight = new Insights({
+        agencyId,
+        reportDate: new Date(),
+        reportDetails: "Package insights",
+        packageAnalytics,
+      });
+      await insight.save();
+    }
+
+    res.status(200).json({ packageAnalytics });
+  } catch (error) {
+    console.error("Error generating package insights:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const generateFineInsights = async (req, res) => {
+  try {
+    const { agencyId } = req.query;
+
+    if (!agencyId) {
+      return res.status(400).json({ message: "Agency ID is required" });
+    }
+
+    // Sample fine data (in production, this would come from a fines collection)
+    const sampleFineData = {
+      totalAmount: 245000,
+      unpaidAmount: 78500,
+      finesByCategory: [
+        { category: "Speed", count: 23, amount: 115000 },
+        { category: "Parking", count: 12, amount: 48000 },
+        { category: "Documentation", count: 9, amount: 36000 },
+        { category: "Vehicle Condition", count: 7, amount: 28000 },
+        { category: "Route Violation", count: 6, amount: 18000 },
+      ],
+      finesByDriver: [
+        { driverName: "John Doe", count: 5, amount: 25000, status: "Unpaid" },
+        { driverName: "Jane Smith", count: 4, amount: 20000, status: "Paid" },
+        {
+          driverName: "Bob Johnson",
+          count: 3,
+          amount: 15000,
+          status: "Disputed",
+        },
+      ],
+      recentFines: [
+        {
+          date: new Date("2025-02-15"),
+          driverName: "John Doe",
+          vehiclePlate: "ABC123",
+          amount: 5000,
+          reason: "Speeding - 75 in 60 zone",
+          location: "Main Highway, KM 45",
+          status: "Unpaid",
+        },
+        {
+          date: new Date("2025-02-10"),
+          driverName: "Jane Smith",
+          vehiclePlate: "XYZ789",
+          amount: 3000,
+          reason: "Improper parking",
+          location: "Downtown Bus Terminal",
+          status: "Paid",
+        },
+        {
+          date: new Date("2025-02-05"),
+          driverName: "Bob Johnson",
+          vehiclePlate: "DEF456",
+          amount: 8000,
+          reason: "Missing documentation",
+          location: "Border checkpoint",
+          status: "Disputed",
+        },
+      ],
+    };
+
+    // Check if there's an existing insight for today
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let insight = await Insights.findOne({
+      agencyId,
+      reportDate: { $gte: today },
+    });
+
+    if (insight) {
+      // Update existing insight
+      insight.finesAnalytics = sampleFineData;
+      await insight.save();
+    } else {
+      // Create new insight
+      insight = new Insights({
+        agencyId,
+        reportDate: new Date(),
+        reportDetails: "Fines insights",
+        finesAnalytics: sampleFineData,
+      });
+      await insight.save();
+    }
+
+    res.status(200).json({ finesAnalytics: sampleFineData });
+  } catch (error) {
+    console.error("Error generating fine insights:", error);
     res.status(500).json({ error: error.message });
   }
 };

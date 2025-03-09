@@ -69,6 +69,13 @@ export const getShifts = async (req, res) => {
       query.endTime = { $exists: true };
     }
 
+    // Filter by fine status (new)
+    if (req.query.fined === "true") {
+      query.fined = true;
+    } else if (req.query.fined === "false") {
+      query.fined = false;
+    }
+
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
     const skip = (page - 1) * limit;
@@ -110,11 +117,9 @@ export const getShiftById = async (req, res) => {
     }
 
     if (req.userRole !== "superadmin" && shift.agencyName !== req.userAgency) {
-      return res
-        .status(403)
-        .json({
-          message: "Not authorized to access shifts from other agencies",
-        });
+      return res.status(403).json({
+        message: "Not authorized to access shifts from other agencies",
+      });
     }
 
     res.status(200).json(shift);
@@ -132,11 +137,9 @@ export const updateShift = async (req, res) => {
     }
 
     if (req.userRole !== "superadmin" && shift.agencyName !== req.userAgency) {
-      return res
-        .status(403)
-        .json({
-          message: "Not authorized to update shifts from other agencies",
-        });
+      return res.status(403).json({
+        message: "Not authorized to update shifts from other agencies",
+      });
     }
 
     if (
@@ -147,6 +150,25 @@ export const updateShift = async (req, res) => {
       return res
         .status(403)
         .json({ message: "Not authorized to change shift's agency" });
+    }
+
+    // Handle fine information
+    if (req.body.hasOwnProperty("fined")) {
+      // If fined is set to false, clear fine information
+      if (req.body.fined === false) {
+        req.body.fineAmount = 0;
+        req.body.fineReason = "";
+      }
+      // If fined is true but no fine data is provided, reject
+      else if (
+        req.body.fined === true &&
+        (!req.body.fineAmount || !req.body.fineReason)
+      ) {
+        return res.status(400).json({
+          message:
+            "Fine amount and reason are required when marking a shift as fined",
+        });
+      }
     }
 
     const updatedShift = await Shift.findByIdAndUpdate(
@@ -183,6 +205,23 @@ export const updateShift = async (req, res) => {
       }
     }
 
+    // Send fine notification to driver if shift was fined
+    if (req.body.fined === true && !shift.fined) {
+      const driver = await Driver.findOne({
+        $or: [
+          { driverId: updatedShift.driverName },
+          { names: updatedShift.driverName },
+        ],
+        agencyName: updatedShift.agencyName,
+      });
+
+      if (driver && driver.email) {
+        // You can add a separate notification for fines here
+        // For example: await sendFineNotification(driver, updatedShift);
+        console.log(`Fine notification should be sent to ${driver.email}`);
+      }
+    }
+
     res.status(200).json(updatedShift);
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -198,11 +237,9 @@ export const deleteShift = async (req, res) => {
     }
 
     if (req.userRole !== "superadmin" && shift.agencyName !== req.userAgency) {
-      return res
-        .status(403)
-        .json({
-          message: "Not authorized to delete shifts from other agencies",
-        });
+      return res.status(403).json({
+        message: "Not authorized to delete shifts from other agencies",
+      });
     }
 
     await Shift.findByIdAndDelete(req.params.id);

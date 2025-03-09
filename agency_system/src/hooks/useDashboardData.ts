@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 
-// ========= Types =========
+// ========= Enhanced Types =========
 export interface ActivitySummary {
   totalShifts: number;
   upcomingShifts: number;
@@ -51,6 +51,9 @@ export interface RecentShift {
   destination: string;
   origin: string;
   Date: string;
+  fined?: boolean;
+  fineAmount?: number;
+  fineReason?: string;
 }
 
 export const useManagerProfile = () => {
@@ -334,6 +337,7 @@ export const useManagerProfile = () => {
     }
   };
 
+  // Modified to include fine information
   const updateActualEndTime = async () => {
     if (!editingShift) return;
     try {

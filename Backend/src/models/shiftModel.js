@@ -10,15 +10,17 @@ const shiftSchema = new mongoose.Schema(
     destination: { type: String, required: true },
     origin: { type: String, required: true },
     Date: { type: String, required: true },
-    agencyName: { 
-      type: String, 
+    agencyName: {
+      type: String,
       required: true,
-      index: true 
-    }
+      index: true,
+    },
+    fined: { type: Boolean, default: false },
+    fineAmount: { type: Number, default: 0 },
+    fineReason: { type: String },
   },
   { timestamps: true }
 );
-
 
 shiftSchema.index({ agencyName: 1, plateNumber: 1 });
 shiftSchema.index({ agencyName: 1, driverName: 1 });

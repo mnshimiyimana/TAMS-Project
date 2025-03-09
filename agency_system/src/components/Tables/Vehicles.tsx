@@ -238,7 +238,7 @@ export default function VehiclesTable({
                   <TableCell className="px-5 py-4">
                     {vehicle.agencyName}
                   </TableCell>
-                  <TableCell className="px-8 py-4">
+                  <TableCell className="px-5 py-4">
                     <span
                       className={`px-3 py-1 text-sm font-medium rounded-lg ${
                         statusStyles[vehicle.status as Status]

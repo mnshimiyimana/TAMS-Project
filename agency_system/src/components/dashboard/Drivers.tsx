@@ -25,7 +25,6 @@ export default function Drivers() {
   const [isExporting, setIsExporting] = useState(false);
   const [driverToEdit, setDriverToEdit] = useState<Driver | null>(null);
 
-  // Get user from redux store
   const user = useSelector((state: RootState) => state.auth.user);
   const agencyName = user?.agencyName || "";
   const userRole = user?.role || "";
@@ -98,11 +97,9 @@ export default function Drivers() {
         limit: 1000,
       };
 
-      // Apply filters to export
       if (searchQuery) params.search = searchQuery;
       if (statusFilter) params.status = statusFilter;
 
-      // Apply agency isolation
       if (!isSuperAdmin) {
         params.agencyName = agencyName;
       } else if (agencyFilter) {
@@ -126,7 +123,6 @@ export default function Drivers() {
         { header: "Agency", key: "agencyName", width: 20 },
       ];
 
-      // Process data for export
       const processedData = response.drivers.map((driver) => ({
         ...driver,
         lastShift: driver.lastShift
@@ -134,7 +130,6 @@ export default function Drivers() {
           : "N/A",
       }));
 
-      // Build filename with filters
       let filename = `Drivers_Export_${new Date().toISOString().split("T")[0]}`;
 
       if (agencyFilter) {
@@ -160,7 +155,6 @@ export default function Drivers() {
     }
   };
 
-  // Check if any filters are active
   const filtersActive =
     searchQuery || statusFilter || shiftFilter || agencyFilter;
 

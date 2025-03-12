@@ -88,6 +88,8 @@ export default function ManagerProfile() {
   const [shiftPackages, setShiftPackages] = useState<{ [key: string]: number }>(
     {}
   );
+  const API_BASE_URL =
+    process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com";
   const [isFined, setIsFined] = useState(false);
   const [fineAmount, setFineAmount] = useState("");
   const [fineReason, setFineReason] = useState("");
@@ -107,7 +109,7 @@ export default function ManagerProfile() {
         displayedShifts.map(async (shift) => {
           try {
             const response = await axios.get(
-              `https://tams-project.onrender.com/api/packages?shiftId=${shift._id}`,
+              `${API_BASE_URL}/api/packages?shiftId=${shift._id}`,
               {
                 headers: {
                   Authorization: `Bearer ${token}`,
@@ -160,6 +162,17 @@ export default function ManagerProfile() {
   const updateShiftWithEndTimeAndFine = async () => {
     if (!editingShift) return;
 
+    // Validate all required fields before proceeding
+    if (!actualEndTime) {
+      toast.error("Please select an actual end time");
+      return;
+    }
+
+    if (isFined && (!fineAmount || !fineReason)) {
+      toast.error("Please complete all fine information");
+      return;
+    }
+
     try {
       const token = localStorage.getItem("token");
       if (!token) throw new Error("Authentication required");
@@ -177,7 +190,7 @@ export default function ManagerProfile() {
       }
 
       await axios.patch(
-        `https://tams-project.onrender.com/api/shifts/${editingShift._id}`,
+        `${API_BASE_URL}/api/shifts/${editingShift._id}`,
         updatePayload,
         {
           headers: {
@@ -326,7 +339,6 @@ export default function ManagerProfile() {
                 </div>
 
                 {/* Package summary content */}
-                {/* Remaining package summary content here */}
                 <div className="px-6 pb-4">
                   <div className="space-y-5">
                     <div>
@@ -721,7 +733,7 @@ export default function ManagerProfile() {
                                   <Car className="h-4 w-4" />
                                   <span>{shift.plateNumber}</span>
                                 </div>
-                                {/* New: Display packages for this shift */}
+                                {/* Display packages for this shift */}
                                 <div className="flex items-center gap-2">
                                   <Package className="h-4 w-4" />
                                   <span>
@@ -875,7 +887,7 @@ export default function ManagerProfile() {
         open={editingShift !== null}
         onOpenChange={(open) => !open && setEditingShift(null)}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md overflow-y-auto max-h-[90vh]">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold text-green-700">
               Record Shift Completion Details
@@ -884,6 +896,19 @@ export default function ManagerProfile() {
               Enter the actual end time and record any fines if applicable
             </DialogDescription>
           </DialogHeader>
+
+          {/* Validation alert for fine information */}
+          {isFined && (!fineAmount || !fineReason) && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4 text-sm">
+              <div className="flex">
+                <AlertTriangle className="h-5 w-5 mr-2" />
+                <span>
+                  <strong>Required information missing:</strong> Please complete
+                  all fine information to save.
+                </span>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-4 py-4">
             {editingShift && (
@@ -954,7 +979,7 @@ export default function ManagerProfile() {
                     htmlFor="actualEndTime"
                     className="text-sm font-medium"
                   >
-                    Actual End Time
+                    Actual End Time <span className="text-red-500">*</span>
                   </Label>
                   <Input
                     id="actualEndTime"
@@ -963,9 +988,14 @@ export default function ManagerProfile() {
                     onChange={(e) => setActualEndTime(e.target.value)}
                     className="border-green-200 focus:border-green-300 focus:ring focus:ring-green-200 focus:ring-opacity-50"
                   />
+                  {!actualEndTime && (
+                    <p className="text-xs text-red-500 mt-1">
+                      Please select an actual end time
+                    </p>
+                  )}
                 </div>
 
-                {/* New fine information section */}
+                {/* Fine information section with improved validation */}
                 <div className="p-4 border border-gray-200 rounded-md space-y-3">
                   <div className="flex items-center justify-between">
                     <Label
@@ -989,7 +1019,8 @@ export default function ManagerProfile() {
                           htmlFor="fineAmount"
                           className="text-sm font-medium"
                         >
-                          Fine Amount ($)
+                          Fine Amount ($){" "}
+                          <span className="text-red-500">*</span>
                         </Label>
                         <div className="relative">
                           <DollarSign className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
@@ -999,8 +1030,15 @@ export default function ManagerProfile() {
                             placeholder="0.00"
                             value={fineAmount}
                             onChange={(e) => setFineAmount(e.target.value)}
-                            className="pl-8 border-red-200 focus:border-red-300 focus:ring focus:ring-red-200 focus:ring-opacity-50"
+                            className={`pl-8 border-${
+                              !fineAmount && isFined ? "red-500" : "red-200"
+                            } focus:border-red-300 focus:ring focus:ring-red-200 focus:ring-opacity-50`}
                           />
+                          {!fineAmount && isFined && (
+                            <p className="text-xs text-red-500 mt-1">
+                              Please enter the fine amount
+                            </p>
+                          )}
                         </div>
                       </div>
 
@@ -1009,16 +1047,24 @@ export default function ManagerProfile() {
                           htmlFor="fineReason"
                           className="text-sm font-medium"
                         >
-                          Reason for Fine
+                          Reason for Fine{" "}
+                          <span className="text-red-500">*</span>
                         </Label>
                         <Textarea
                           id="fineReason"
                           placeholder="Describe why the fine was issued..."
                           value={fineReason}
                           onChange={(e) => setFineReason(e.target.value)}
-                          className="border-red-200 focus:border-red-300 focus:ring focus:ring-red-200 focus:ring-opacity-50"
+                          className={`border-${
+                            !fineReason && isFined ? "red-500" : "red-200"
+                          } focus:border-red-300 focus:ring focus:ring-red-200 focus:ring-opacity-50`}
                           rows={3}
                         />
+                        {!fineReason && isFined && (
+                          <p className="text-xs text-red-500 mt-1">
+                            Please provide a reason for the fine
+                          </p>
+                        )}
                       </div>
                     </div>
                   )}
@@ -1027,37 +1073,40 @@ export default function ManagerProfile() {
             )}
           </div>
 
-          <DialogFooter className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              onClick={() => setEditingShift(null)}
-              disabled={isUpdatingEndTime}
-              className="border-gray-300"
-            >
-              <X className="h-4 w-4 mr-2" />
-              Cancel
-            </Button>
-            <Button
-              onClick={updateShiftWithEndTimeAndFine}
-              disabled={
-                !actualEndTime ||
-                isUpdatingEndTime ||
-                (isFined && (!fineAmount || !fineReason))
-              }
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              {isUpdatingEndTime ? (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                <>
-                  <ClipboardCheck className="h-4 w-4 mr-2" />
-                  Save Shift Details
-                </>
-              )}
-            </Button>
+          {/* Sticky footer with improved styling */}
+          <DialogFooter className="sticky bottom-0 bg-white pt-4 pb-2 border-t border-gray-100">
+            <div className="w-full flex flex-col sm:flex-row-reverse sm:justify-between sm:space-x-2">
+              <Button
+                onClick={updateShiftWithEndTimeAndFine}
+                disabled={
+                  !actualEndTime ||
+                  isUpdatingEndTime ||
+                  (isFined && (!fineAmount || !fineReason))
+                }
+                className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto mb-2 sm:mb-0"
+              >
+                {isUpdatingEndTime ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <ClipboardCheck className="h-4 w-4 mr-2" />
+                    Save Shift Details
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setEditingShift(null)}
+                disabled={isUpdatingEndTime}
+                className="border-gray-300 w-full sm:w-auto"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

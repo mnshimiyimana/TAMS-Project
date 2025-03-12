@@ -107,9 +107,11 @@ interface FinedShift {
   updatedAt: string;
 }
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com"
+
 const createApiClient = (token: string) => {
   const instance = axios.create({
-    baseURL: "https://tams-project.onrender.com/api",
+    baseURL: `${API_BASE_URL}/api`,
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
@@ -645,7 +647,7 @@ export default function Insights() {
 
   const [finedShifts, setFinedShifts] = useState<FinedShift[]>([]);
   const [fineFilters, setFineFilters] = useState({
-    status: "all", 
+    status: "all",
     dateFrom: "",
     dateTo: "",
   });
@@ -735,7 +737,6 @@ export default function Insights() {
         shifts: filteredShifts,
         fuels: filteredFuels,
       });
-
 
       calculateMetrics({
         vehicles,

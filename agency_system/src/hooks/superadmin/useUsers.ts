@@ -50,6 +50,8 @@ export function useUserManagement() {
     open: false,
     user: null,
   });
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com"
+
 
   const fetchUsers = useCallback(
     async (page = 1) => {
@@ -59,7 +61,7 @@ export function useUserManagement() {
 
         const token = localStorage.getItem("token");
         const response = await axios.get(
-          `https://tams-project.onrender.com/api/superadmin/audit-logs?page=${page}&limit=${pagination.limit}`,
+          `${API_BASE_URL}/api/superadmin/audit-logs?page=${page}&limit=${pagination.limit}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -93,7 +95,7 @@ export function useUserManagement() {
 
         const token = localStorage.getItem("token");
         const response = await axios.get(
-          `https://tams-project.onrender.com/api/superadmin/users/${agencyName}?page=${page}&limit=${pagination.limit}`,
+          `${API_BASE_URL}/api/superadmin/users/${agencyName}?page=${page}&limit=${pagination.limit}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -131,7 +133,7 @@ export function useUserManagement() {
 
         const token = localStorage.getItem("token");
         const response = await axios.get(
-          `https://tams-project.onrender.com/api/superadmin/users/search?query=${encodeURIComponent(
+          `${API_BASE_URL}/api/superadmin/users/search?query=${encodeURIComponent(
             query
           )}&page=${page}&limit=${pagination.limit}`,
           {
@@ -166,7 +168,7 @@ export function useUserManagement() {
 
       const token = localStorage.getItem("token");
       const response = await axios.get(
-        `https://tams-project.onrender.com/api/superadmin/user/${userId}`,
+        `${API_BASE_URL}/api/superadmin/user/${userId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -194,7 +196,7 @@ export function useUserManagement() {
 
         const token = localStorage.getItem("token");
         const response = await axios.patch(
-          "https://tams-project.onrender.com/api/superadmin/user/role",
+          `${API_BASE_URL}/api/superadmin/user/role`,
           {
             userId,
             newRole,
@@ -244,7 +246,7 @@ export function useUserManagement() {
 
         const token = localStorage.getItem("token");
         const response = await axios.delete(
-          "https://tams-project.onrender.com/api/superadmin/user",
+          `${API_BASE_URL}/api/superadmin/user`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -285,7 +287,7 @@ export function useUserManagement() {
 
       const token = localStorage.getItem("token");
       const response = await axios.post(
-        "https://tams-project.onrender.com/api/superadmin/user/reset-password",
+        `${API_BASE_URL}/api/superadmin/user/reset-password`,
         {
           userId,
         },

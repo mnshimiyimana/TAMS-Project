@@ -26,6 +26,8 @@ export function useAgencies() {
     agencyId: null,
     agencyName: null,
   });
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com"
+
   const [createAdminDialog, setCreateAdminDialog] = useState<boolean>(false);
   const [formData, setFormData] = useState<AgencyFormData>({
     agencyName: "",
@@ -42,7 +44,7 @@ export function useAgencies() {
 
       const token = localStorage.getItem("token");
       const response = await axios.get(
-        "https://tams-project.onrender.com/api/superadmin/agencies-dashboard",
+        `${API_BASE_URL}/api/superadmin/agencies-dashboard`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -79,7 +81,7 @@ export function useAgencies() {
         const token = localStorage.getItem("token");
 
         await axios.post(
-          "https://tams-project.onrender.com/api/auth/create-admin",
+          `${API_BASE_URL}/api/auth/create-admin`,
           formData,
           {
             headers: {
@@ -115,7 +117,7 @@ export function useAgencies() {
       setIsLoading(true);
       const token = localStorage.getItem("token");
 
-      await axios.delete("https://tams-project.onrender.com/api/superadmin/agency", {
+      await axios.delete(`${API_BASE_URL}/api/superadmin/agency`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -142,7 +144,7 @@ export function useAgencies() {
         const token = localStorage.getItem("token");
 
         await axios.patch(
-          "https://tams-project.onrender.com/api/superadmin/agency-status",
+          `${API_BASE_URL}/api/superadmin/agency-status`,
           {
             agencyName,
             isActive: !isActive,

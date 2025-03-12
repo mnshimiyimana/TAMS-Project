@@ -38,6 +38,8 @@ const initialState: FeedbackState = {
   submissionError: null,
 };
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com"
+
 export const submitFeedback = createAsyncThunk(
   "feedback/submit",
   async (
@@ -52,7 +54,7 @@ export const submitFeedback = createAsyncThunk(
       }
 
       const response = await axios.post(
-        "https://tams-project.onrender.com/api/feedback",
+        `${API_BASE_URL}/api/feedback`,
         feedback,
         {
           headers: {
@@ -82,7 +84,7 @@ export const fetchUserFeedback = createAsyncThunk(
       }
 
       const response = await axios.get(
-        "https://tams-project.onrender.com/api/feedback/my-feedback",
+        `${API_BASE_URL}/api/feedback/my-feedback`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -110,7 +112,7 @@ export const fetchAllFeedback = createAsyncThunk(
         return rejectWithValue("Authentication required. Please log in.");
       }
 
-      const response = await axios.get("https://tams-project.onrender.com/api/feedback", {
+      const response = await axios.get(`${API_BASE_URL}/api/feedback`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -149,7 +151,7 @@ export const updateFeedbackStatus = createAsyncThunk(
       }
 
       const response = await axios.patch(
-        `https://tams-project.onrender.com/api/feedback/${id}`,
+        `${API_BASE_URL}/api/feedback/${id}`,
         {
           status,
           response: responseText,

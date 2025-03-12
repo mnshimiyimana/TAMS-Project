@@ -11,6 +11,7 @@ import {
   import { RefreshCw, FileText } from "lucide-react";
   
   export default function SystemSettings() {
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com"
     return (
       <div className="space-y-6">
         <Card>
@@ -67,7 +68,7 @@ import {
                     <Label htmlFor="apiUrl">API Base URL</Label>
                     <Input
                       id="apiUrl"
-                      value="https://tams-project.onrender.com/api"
+                      value={API_BASE_URL}
                       readOnly
                       className="bg-gray-50"
                     />

@@ -125,6 +125,9 @@ export default function UserManagement() {
     });
   };
 
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com"
+
+
   const confirmDeleteUser = async () => {
     if (!userDeleteDialog.user) return;
     await deleteUser(userDeleteDialog.user._id);
@@ -148,7 +151,7 @@ export default function UserManagement() {
       const token = localStorage.getItem("token");
 
       await axios.patch(
-        "https://tams-project.onrender.com/api/superadmin/user/status",
+        `${API_BASE_URL}/api/superadmin/user/status`,
         {
           userId: user._id,
           isActive: user.isActive !== false ? false : true,

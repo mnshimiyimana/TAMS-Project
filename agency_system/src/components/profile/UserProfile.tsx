@@ -79,6 +79,8 @@ export default function UserProfile() {
     status: feedbackStatus
   } = useSelector((state: RootState) => state.feedback);
 
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com"
+
   const {
     register,
     handleSubmit,
@@ -98,7 +100,7 @@ export default function UserProfile() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const response = await axios.get("https://tams-project.onrender.com/api/users/profile", {
+        const response = await axios.get(`${API_BASE_URL}/api/users/profile`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -140,7 +142,7 @@ export default function UserProfile() {
     try {
       setIsSubmitting(true);
       const response = await axios.put(
-        "https://tams-project.onrender.com/api/users/profile",
+        `${API_BASE_URL}/api/users/profile`,
         data,
         {
           headers: {

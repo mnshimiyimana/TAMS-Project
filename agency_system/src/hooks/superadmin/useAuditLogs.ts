@@ -6,6 +6,8 @@ export function useAuditLogs() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [logs, setLogs] = useState<any[]>([]);
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com"
+
 
   const fetchLogs = useCallback(async () => {
     try {
@@ -14,7 +16,7 @@ export function useAuditLogs() {
 
       const token = localStorage.getItem("token");
       const response = await axios.get(
-        "https://tams-project.onrender.com/api/superadmin/audit-logs",
+        `${API_BASE_URL}/api/superadmin/audit-logs`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

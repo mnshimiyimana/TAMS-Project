@@ -6,6 +6,8 @@ export function useDashboard() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<any>({});
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com"
+
 
   const fetchSystemSummary = useCallback(async () => {
     try {
@@ -14,7 +16,7 @@ export function useDashboard() {
       
       const token = localStorage.getItem("token");
       const response = await axios.get(
-        "https://tams-project.onrender.com/api/superadmin/enhanced-summary",
+        `${API_BASE_URL}/api/superadmin/enhanced-summary`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

@@ -41,7 +41,7 @@ export default function SignIn() {
     // Clear any previous errors when mounting the component
     dispatch(clearError());
 
-    // If user is already logged in, redirect to dashboard
+   
     const token = localStorage.getItem("token");
     if (token) {
       router.push("/dashboard");

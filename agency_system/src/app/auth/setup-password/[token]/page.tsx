@@ -70,14 +70,14 @@ export default function SetupPassword() {
     resolver: zodResolver(userSetupSchema),
   });
 
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com"
+
   useEffect(() => {
     async function verifyToken() {
       try {
         setIsLoading(true);
         const response = await axios.get(
-          `${
-            process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com" || "http://localhost:5000"
-          }/api/auth/verify-setup-token/${token}`
+          `${API_BASE_URL}/api/auth/verify-setup-token/${token}`
         );
 
         const userData = response.data.user;
@@ -112,9 +112,7 @@ export default function SetupPassword() {
     try {
       setIsSubmitting(true);
       await axios.post(
-        `${
-          process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com"
-        }/api/auth/update-user-with-password/${token}`,
+        `${API_BASE_URL}/api/auth/update-user-with-password/${token}`,
         {
           username: data.username,
           email: data.email,

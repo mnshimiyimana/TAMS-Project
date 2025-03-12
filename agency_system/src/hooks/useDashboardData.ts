@@ -117,12 +117,15 @@ export const useManagerProfile = () => {
     }
   }, [editingShift]);
 
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com"
+
+
   const fetchManagerData = async () => {
     try {
       setIsLoading(true);
 
       const shiftsResponse = await axios.get(
-        "https://tams-project.onrender.com/api/shifts",
+        `${API_BASE_URL}/api/shifts`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -158,7 +161,7 @@ export const useManagerProfile = () => {
       }
 
       const driversResponse = await axios.get(
-        "https://tams-project.onrender.com/api/drivers",
+        `${API_BASE_URL}/api/drivers`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -171,7 +174,7 @@ export const useManagerProfile = () => {
           : [];
 
       const vehiclesResponse = await axios.get(
-        "https://tams-project.onrender.com/api/buses",
+        `${API_BASE_URL}/api/buses`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -185,7 +188,7 @@ export const useManagerProfile = () => {
         : [];
 
       const packagesResponse = await axios.get(
-        "https://tams-project.onrender.com/api/packages",
+        `${API_BASE_URL}/api/packages`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -306,7 +309,7 @@ export const useManagerProfile = () => {
       const endTime = new Date().toISOString();
 
       await axios.patch(
-        `https://tams-project.onrender.com/api/shifts/${shiftId}`,
+        `${API_BASE_URL}/api/shifts/${shiftId}`,
         { endTime },
         {
           headers: {
@@ -346,7 +349,7 @@ export const useManagerProfile = () => {
       const actualEndTimeValue = new Date(actualEndTime).toISOString();
 
       await axios.patch(
-        `https://tams-project.onrender.com/api/shifts/${editingShift._id}`,
+        `${API_BASE_URL}/api/shifts/${editingShift._id}`,
         { actualEndTime: actualEndTimeValue },
         {
           headers: {

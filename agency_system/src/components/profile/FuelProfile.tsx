@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/redux/store";
+import { fetchFuelTransactions } from "@/redux/slices/fuelsSlice";
 import axios from "axios";
 import { toast } from "sonner";
 import UserProfile from "./UserProfile";
@@ -35,6 +36,7 @@ import {
   Car,
   DollarSign,
   X,
+  AlertTriangle,
 } from "lucide-react";
 import {
   AreaChart as RechartsAreaChart,
@@ -92,6 +94,7 @@ interface ChartData {
 
 export default function FuelProfile() {
   const router = useRouter();
+  const dispatch = useDispatch();
 
   const [allTransactions, setAllTransactions] = useState<FuelTransaction[]>([]);
 
@@ -105,18 +108,57 @@ export default function FuelProfile() {
     averagePrice: 0,
     transactionsCount: 0,
   });
+  // Set a default value for API_BASE_URL if the environment variable is not defined
+  const API_BASE_URL =
+    process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com";
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   const [selectedDriver, setSelectedDriver] = useState<string>("");
   const [selectedBus, setSelectedBus] = useState<string>("");
 
   const user = useSelector((state: RootState) => state.auth.user);
+  const fuelTransactionsState = useSelector(
+    (state: RootState) => state.fuels.fuelTransactions
+  );
   const token =
     typeof window !== "undefined" ? localStorage.getItem("token") : "";
 
+  // First try loading data from Redux
   useEffect(() => {
-    fetchFuelData();
+    const loadFromRedux = async () => {
+      try {
+        setIsLoading(true);
+
+        // Dispatch the action to fetch fuel transactions
+        // @ts-ignore - TypeScript might complain about the dispatch type
+        await dispatch(fetchFuelTransactions());
+
+        // If we have data in Redux state, use it
+        if (fuelTransactionsState && fuelTransactionsState.length > 0) {
+          console.log(
+            "Loaded from Redux store:",
+            fuelTransactionsState.length,
+            "transactions"
+          );
+          setAllTransactions(fuelTransactionsState);
+          setApiError(null);
+        } else {
+          // Otherwise fetch directly
+          console.log("No data in Redux store, fetching directly");
+          await fetchFuelData();
+        }
+      } catch (err) {
+        console.error("Error loading from Redux:", err);
+        // Fall back to direct API call
+        await fetchFuelData();
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadFromRedux();
   }, []);
 
   useEffect(() => {
@@ -126,20 +168,100 @@ export default function FuelProfile() {
   const fetchFuelData = async () => {
     try {
       setIsLoading(true);
-      const response = await axios.get(
-        "https://tams-project.onrender.com/api/fuel-management",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      setApiError(null);
 
-      const fuelData = Array.isArray(response.data) ? response.data : [];
-      setAllTransactions(fuelData);
+      // Check if token exists
+      if (!token) {
+        console.error("No authentication token found");
+        setApiError("Authentication required. Please log in again.");
+        toast.error("Please log in again");
+        return;
+      }
+
+      console.log("Fetching from:", `${API_BASE_URL}/api/fuel-management`);
+      console.log("Token present:", !!token);
+
+      const response = await axios.get(`${API_BASE_URL}/api/fuel-management`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      console.log("Response status:", response.status);
+      console.log("Response type:", typeof response.data);
+
+      // Check if response data is in an expected format
+      if (
+        response.data &&
+        response.data.data &&
+        Array.isArray(response.data.data)
+      ) {
+        // If data is nested under a 'data' property
+        console.log(
+          "Data found in response.data.data, length:",
+          response.data.data.length
+        );
+        setAllTransactions(response.data.data);
+      } else if (
+        response.data &&
+        response.data.fuelTransactions &&
+        Array.isArray(response.data.fuelTransactions)
+      ) {
+        // If data is under fuelTransactions property
+        console.log(
+          "Data found in response.data.fuelTransactions, length:",
+          response.data.fuelTransactions.length
+        );
+        setAllTransactions(response.data.fuelTransactions);
+      } else if (Array.isArray(response.data)) {
+        // If data is directly in response.data
+        console.log(
+          "Data found directly in response.data, length:",
+          response.data.length
+        );
+        setAllTransactions(response.data);
+      } else {
+        // Fallback for unexpected format
+        console.warn("Unexpected data format:", response.data);
+        setAllTransactions([]);
+        setApiError("Received data in an unexpected format");
+        toast.warning("Received data in an unexpected format");
+      }
     } catch (error) {
       console.error("Error fetching fuel data:", error);
-      toast.error("Failed to load fuel management data");
+
+      if (axios.isAxiosError(error)) {
+        // More detailed error logging for Axios errors
+        if (error.response) {
+          console.error("Response error data:", error.response.data);
+          console.error("Response error status:", error.response.status);
+
+          if (error.response.status === 401) {
+            setApiError("Authentication error. Please log in again.");
+            toast.error("Authentication error. Please log in again.");
+          } else if (error.response.status === 403) {
+            setApiError("You don't have permission to access this data.");
+            toast.error("You don't have permission to access this data.");
+          } else {
+            const errorMessage =
+              error.response.data.message ||
+              error.response.data.error ||
+              "Failed to load data";
+            setApiError(`Error: ${errorMessage}`);
+            toast.error(`Error: ${errorMessage}`);
+          }
+        } else if (error.request) {
+          console.error("No response received:", error.request);
+          setApiError("No response from server. Please check your connection.");
+          toast.error("No response from server. Please check your connection.");
+        } else {
+          setApiError(`Error: ${error.message}`);
+          toast.error(`Error: ${error.message}`);
+        }
+      } else {
+        setApiError("Failed to load fuel management data");
+        toast.error("Failed to load fuel management data");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -277,6 +399,11 @@ export default function FuelProfile() {
     setSelectedBus("");
   };
 
+  const handleRefresh = () => {
+    fetchFuelData();
+    toast.info("Refreshing fuel data...");
+  };
+
   return (
     <div>
       <Tabs defaultValue="profile" className="w-full">
@@ -313,7 +440,6 @@ export default function FuelProfile() {
                         <SelectValue placeholder="All Drivers" />
                       </SelectTrigger>
                       <SelectContent>
-                        {/* Notice 'all' instead of '' */}
                         <SelectItem value="all">All Drivers</SelectItem>
                         {uniqueDrivers.map((driver) => (
                           <SelectItem key={driver} value={driver}>
@@ -349,8 +475,8 @@ export default function FuelProfile() {
                   </div>
                 </div>
 
-                {isFiltering && (
-                  <div>
+                <div className="flex gap-2">
+                  {isFiltering && (
                     <Button
                       variant="outline"
                       className="flex items-center gap-2 text-gray-800 border-gray-200 hover:text-black"
@@ -359,9 +485,37 @@ export default function FuelProfile() {
                       <X className="h-4 w-4" />
                       Clear Filters
                     </Button>
-                  </div>
-                )}
+                  )}
+
+                  <Button
+                    variant="outline"
+                    className="flex items-center gap-2 text-green-700 border-green-200 hover:bg-green-50"
+                    onClick={handleRefresh}
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Refresh
+                  </Button>
+                </div>
               </div>
+
+              {apiError && (
+                <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
+                  <p className="text-red-800 flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5" />
+                    {apiError}
+                  </p>
+                </div>
+              )}
+
+              {allTransactions.length === 0 && !apiError && (
+                <div className="bg-amber-50 border border-amber-200 rounded-md p-4 mb-6">
+                  <p className="text-amber-800 flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5" />
+                    No fuel data found. This could be because no data exists or
+                    because of an API connection issue.
+                  </p>
+                </div>
+              )}
 
               {/* Fuel stats cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">

@@ -29,6 +29,7 @@ export default function FeedbackReporting() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const user = useSelector((state: RootState) => state.auth.user);
   const token = localStorage.getItem("token");
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com" 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,7 +45,7 @@ export default function FeedbackReporting() {
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       await axios.post(
-        "https://tams-project.onrender.com/api/feedback",
+        `${API_BASE_URL}/api/feedback`,
         {
           type: feedbackType,
           message: feedbackText,

@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import React from "react";
 import Navbar from "@/components/sections/Navbar";
@@ -19,8 +19,8 @@ export default function page() {
         <About />
       </section>
       <Testimonial />
-      <Subscribe />
       <section id="contact">
+        <Subscribe />
         <Footer />
       </section>
     </div>

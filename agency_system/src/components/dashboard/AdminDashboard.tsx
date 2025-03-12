@@ -33,6 +33,8 @@ export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const user = useSelector((state: RootState) => state.auth.user);
+  
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com"
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -41,7 +43,7 @@ export default function AdminDashboard() {
         const token = localStorage.getItem("token");
 
         const response = await axios.get(
-          "https://tams-project.onrender.com/api/dashboard",
+          `${API_BASE_URL}/api/dashboard`,
           {
             headers: {
               Authorization: `Bearer ${token}`,

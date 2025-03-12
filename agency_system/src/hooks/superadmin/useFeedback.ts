@@ -45,6 +45,8 @@ export function useFeedback() {
     status: null,
     agency: null,
   });
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com"
+
   const [selectedFeedback, setSelectedFeedback] = useState<FeedbackItem | null>(
     null
   );
@@ -56,7 +58,7 @@ export function useFeedback() {
       setError(null);
 
       const token = localStorage.getItem("token");
-      const response = await axios.get("https://tams-project.onrender.com/api/feedback", {
+      const response = await axios.get(`${API_BASE_URL}/api/feedback`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -87,7 +89,7 @@ export function useFeedback() {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.get(
-        "https://tams-project.onrender.com/api/feedback/stats",
+        `${API_BASE_URL}/api/feedback/stats`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -141,7 +143,7 @@ export function useFeedback() {
 
         const token = localStorage.getItem("token");
         await axios.patch(
-          `https://tams-project.onrender.com/api/feedback/${feedbackId}`,
+          `${API_BASE_URL}/api/feedback/${feedbackId}`,
           {
             response,
             status,

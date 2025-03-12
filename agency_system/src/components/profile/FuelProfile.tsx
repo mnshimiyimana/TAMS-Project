@@ -132,7 +132,7 @@ export default function FuelProfile() {
         setIsLoading(true);
 
         // Dispatch the action to fetch fuel transactions
-        // @ts-ignore - TypeScript might complain about the dispatch type
+        // @ts-expect-error - TypeScript might complain about the dispatch type
         await dispatch(fetchFuelTransactions());
 
         // If we have data in Redux state, use it

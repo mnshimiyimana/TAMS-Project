@@ -4,9 +4,6 @@ import { User } from "../models/userModel.js";
 import Agency from "../models/agencyModel.js";
 import sendEmail from "../config/emailService.js";
 
-// Create a new admin (by superadmin)
-// Update the createAdmin function in your adminController.js file
-
 export const createAdmin = async (req, res) => {
   try {
     const superAdminId = req.userId;
@@ -80,9 +77,7 @@ export const createAdmin = async (req, res) => {
     await newAdmin.save();
     console.log("Admin created with ID:", newAdmin._id);
 
-    const frontendBaseUrl =
-      process.env.FRONTEND_URL || `${req.protocol}://${req.get("host")}`;
-    const resetURL = `${frontendBaseUrl}/setup-password/${resetToken}`;
+    const resetURL = `https://tams-project.vercel.app/setup-password/${resetToken}`;
 
     console.log("Password setup URL:", resetURL);
 
@@ -189,9 +184,7 @@ export const createUser = async (req, res) => {
 
     await newUser.save();
 
-    const resetURL = `${req.protocol}://${req.get(
-      "host"
-    )}/auth/setup-password/${resetToken}`;
+    const resetURL = `https://tams-project.vercel.app/auth/setup-password/${resetToken}`;
     const message = `
       Hello ${username},
       

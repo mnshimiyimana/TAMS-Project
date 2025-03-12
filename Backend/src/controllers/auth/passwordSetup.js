@@ -6,16 +6,13 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-// Verify a password setup token and show user information
 export const verifySetupToken = async (req, res) => {
   try {
     const { token } = req.params;
     console.log("Received token for verification:", token);
 
-    // Hash the provided token to match it with what's stored in the database
     const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
-    // Find user with matching token that hasn't expired
     const user = await User.findOne({
       passwordResetToken: hashedToken,
       passwordResetExpires: { $gt: Date.now() },
@@ -27,7 +24,6 @@ export const verifySetupToken = async (req, res) => {
       });
     }
 
-    // Return more user info (excluding sensitive data)
     res.status(200).json({
       message: "Token is valid",
       user: {
@@ -46,23 +42,19 @@ export const verifySetupToken = async (req, res) => {
   }
 };
 
-// Complete password setup
 export const completePasswordSetup = async (req, res) => {
   try {
     const { token } = req.params;
     const { password } = req.body;
 
-    // Validate password
     if (!password || password.length < 8) {
       return res.status(400).json({
         message: "Password must be at least 8 characters long",
       });
     }
 
-    // Hash the provided token to match it with what's stored in the database
     const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
-    // Find user with matching token that hasn't expired
     const user = await User.findOne({
       passwordResetToken: hashedToken,
       passwordResetExpires: { $gt: Date.now() },
@@ -74,7 +66,6 @@ export const completePasswordSetup = async (req, res) => {
       });
     }
 
-    // Update user with new password and clear reset token
     user.password = await bcrypt.hash(password, 10);
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;
@@ -82,7 +73,6 @@ export const completePasswordSetup = async (req, res) => {
 
     await user.save();
 
-    // Send confirmation email
     const message = `
       Hello ${user.username},
       
@@ -107,23 +97,19 @@ export const completePasswordSetup = async (req, res) => {
   }
 };
 
-// Update user details during password setup
 export const updateUserDetailsWithPassword = async (req, res) => {
   try {
     const { token } = req.params;
     const { password, username, email, phone, location } = req.body;
 
-    // Validate password
     if (!password || password.length < 8) {
       return res.status(400).json({
         message: "Password must be at least 8 characters long",
       });
     }
 
-    // Hash the provided token to match it with what's stored in the database
     const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
-    // Find user with matching token that hasn't expired
     const user = await User.findOne({
       passwordResetToken: hashedToken,
       passwordResetExpires: { $gt: Date.now() },
@@ -135,7 +121,6 @@ export const updateUserDetailsWithPassword = async (req, res) => {
       });
     }
 
-    // Check for email uniqueness if changed
     if (email && email !== user.email) {
       const existingUser = await User.findOne({
         email,
@@ -146,7 +131,6 @@ export const updateUserDetailsWithPassword = async (req, res) => {
       }
     }
 
-    // Check for username uniqueness if changed
     if (username && username !== user.username) {
       const existingUser = await User.findOne({
         username,
@@ -157,7 +141,6 @@ export const updateUserDetailsWithPassword = async (req, res) => {
       }
     }
 
-    // Check for phone uniqueness if changed
     if (phone && phone !== user.phone) {
       const existingUser = await User.findOne({
         phone,
@@ -170,13 +153,11 @@ export const updateUserDetailsWithPassword = async (req, res) => {
       }
     }
 
-    // Update user details
     if (username) user.username = username;
     if (email) user.email = email;
     if (phone) user.phone = phone;
     if (location) user.location = location;
 
-    // Update password and clear reset token
     user.password = await bcrypt.hash(password, 10);
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;
@@ -184,7 +165,6 @@ export const updateUserDetailsWithPassword = async (req, res) => {
 
     await user.save();
 
-    // Send confirmation email
     const message = `
       Hello ${user.username},
       
@@ -209,59 +189,43 @@ export const updateUserDetailsWithPassword = async (req, res) => {
   }
 };
 
-// Allow admins to resend setup email for users who haven't set their password
 export const resendSetupEmail = async (req, res) => {
   try {
     const { userId } = req.body;
     const adminId = req.userId;
 
-    // Verify requester is admin or superadmin
     const admin = await User.findById(adminId);
     if (!admin || (admin.role !== "admin" && admin.role !== "superadmin")) {
       return res.status(403).json({ message: "Not authorized" });
     }
 
-    // Find the user
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Check if the user is part of admin's agency (for admin role)
     if (admin.role === "admin" && user.agencyName !== admin.agencyName) {
       return res
         .status(403)
         .json({ message: "Not authorized to manage this user" });
     }
 
-    // Check if the user has already set up their password
     if (user.passwordSet) {
       return res
         .status(400)
         .json({ message: "User has already set up their password" });
     }
 
-    // Generate a new token
     const resetToken = crypto.randomBytes(32).toString("hex");
     user.passwordResetToken = crypto
       .createHash("sha256")
       .update(resetToken)
       .digest("hex");
-    user.passwordResetExpires = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+    user.passwordResetExpires = Date.now() + 24 * 60 * 60 * 1000;
 
     await user.save();
 
-    // Use environment variables for frontend URL or fallback to a default
-    const frontendUrl =
-      process.env.FRONTEND_URL || "https://tams-project.vercel.app";
-
-    // Ensure the URL doesn't have trailing slashes before concatenation
-    const baseUrl = frontendUrl.endsWith("/")
-      ? frontendUrl.slice(0, -1)
-      : frontendUrl;
-
-    // Create the complete URL with correct path structure to match Next.js App Router
-    const resetURL = `${baseUrl}/auth/setup-password/${resetToken}`;
+    const resetURL = `https://tams-project.vercel.app/auth/setup-password/${resetToken}`;
 
     const message = `
       Hello ${user.username},

@@ -51,7 +51,7 @@ const sendEmail = async (to, subject, text) => {
     const html = text.replace(/\n/g, "<br>");
 
     const emailData = {
-      from: process.env.EMAIL_FROM || "TAMS <onboarding@resend.dev>",
+      from: "TAMS <contact@tamsrw.site>",
       to,
       subject,
       text,

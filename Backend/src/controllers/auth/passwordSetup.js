@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { User } from "../../models/userModel.js";
-import sendEmail, { FRONTEND_URL } from "../../config/emailService.js";
+import sendEmail from "../../config/emailService.js";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -225,8 +225,7 @@ export const resendSetupEmail = async (req, res) => {
 
     await user.save();
 
-    // Use environment variable for the frontend URL
-    const resetURL = `${FRONTEND_URL}/auth/setup-password/${resetToken}`;
+    const resetURL = `https://www.tamsrw.site/auth/setup-password/${resetToken}`;
 
     const message = `
       Hello ${user.username},

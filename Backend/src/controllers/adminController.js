@@ -77,7 +77,7 @@ export const createAdmin = async (req, res) => {
     await newAdmin.save();
     console.log("Admin created with ID:", newAdmin._id);
 
-    const resetURL = `https://tams-project.vercel.app/setup-password/${resetToken}`;
+    const resetURL = `https://www.tamsrw.site/setup-password/${resetToken}`;
 
     console.log("Password setup URL:", resetURL);
 
@@ -184,7 +184,7 @@ export const createUser = async (req, res) => {
 
     await newUser.save();
 
-    const resetURL = `https://tams-project.vercel.app/auth/setup-password/${resetToken}`;
+    const resetURL = `https://www.tamsrw.site/auth/setup-password/${resetToken}`;
     const message = `
       Hello ${username},
       

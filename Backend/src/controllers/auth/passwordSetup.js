@@ -225,7 +225,7 @@ export const resendSetupEmail = async (req, res) => {
 
     await user.save();
 
-    const resetURL = `https://tams-project.vercel.app/auth/setup-password/${resetToken}`;
+    const resetURL = `https://www.tamsrw.site/auth/setup-password/${resetToken}`;
 
     const message = `
       Hello ${user.username},

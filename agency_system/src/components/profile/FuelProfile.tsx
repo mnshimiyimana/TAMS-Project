@@ -131,11 +131,9 @@ export default function FuelProfile() {
       try {
         setIsLoading(true);
 
-        // Dispatch the action to fetch fuel transactions
         // @ts-expect-error - TypeScript might complain about the dispatch type
         await dispatch(fetchFuelTransactions());
 
-        // If we have data in Redux state, use it
         if (fuelTransactionsState && fuelTransactionsState.length > 0) {
           console.log(
             "Loaded from Redux store:",
@@ -145,13 +143,11 @@ export default function FuelProfile() {
           setAllTransactions(fuelTransactionsState);
           setApiError(null);
         } else {
-          // Otherwise fetch directly
           console.log("No data in Redux store, fetching directly");
           await fetchFuelData();
         }
       } catch (err) {
         console.error("Error loading from Redux:", err);
-        // Fall back to direct API call
         await fetchFuelData();
       } finally {
         setIsLoading(false);
@@ -170,7 +166,6 @@ export default function FuelProfile() {
       setIsLoading(true);
       setApiError(null);
 
-      // Check if token exists
       if (!token) {
         console.error("No authentication token found");
         setApiError("Authentication required. Please log in again.");
@@ -190,13 +185,11 @@ export default function FuelProfile() {
       console.log("Response status:", response.status);
       console.log("Response type:", typeof response.data);
 
-      // Check if response data is in an expected format
       if (
         response.data &&
         response.data.data &&
         Array.isArray(response.data.data)
       ) {
-        // If data is nested under a 'data' property
         console.log(
           "Data found in response.data.data, length:",
           response.data.data.length
@@ -207,21 +200,18 @@ export default function FuelProfile() {
         response.data.fuelTransactions &&
         Array.isArray(response.data.fuelTransactions)
       ) {
-        // If data is under fuelTransactions property
         console.log(
           "Data found in response.data.fuelTransactions, length:",
           response.data.fuelTransactions.length
         );
         setAllTransactions(response.data.fuelTransactions);
       } else if (Array.isArray(response.data)) {
-        // If data is directly in response.data
         console.log(
           "Data found directly in response.data, length:",
           response.data.length
         );
         setAllTransactions(response.data);
       } else {
-        // Fallback for unexpected format
         console.warn("Unexpected data format:", response.data);
         setAllTransactions([]);
         setApiError("Received data in an unexpected format");
@@ -231,7 +221,6 @@ export default function FuelProfile() {
       console.error("Error fetching fuel data:", error);
 
       if (axios.isAxiosError(error)) {
-        // More detailed error logging for Axios errors
         if (error.response) {
           console.error("Response error data:", error.response.data);
           console.error("Response error status:", error.response.status);
@@ -423,7 +412,6 @@ export default function FuelProfile() {
             </div>
           ) : (
             <div className="space-y-8">
-              {/* Filter section using shadcn/ui Select */}
               <div className="bg-white p-4 rounded-md shadow mb-4 flex flex-col md:flex-row gap-4 items-center justify-between">
                 <div className="flex flex-col md:flex-row gap-4 items-center">
                   <div className="flex flex-col">

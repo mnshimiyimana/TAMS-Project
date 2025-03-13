@@ -10,6 +10,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const logFile = path.join(__dirname, "../../email-logs.txt");
 
+const FRONTEND_URL = process.env.FRONTEND_URL || "https://www.tamsrw.site";
+
 const appendToLog = (message) => {
   const timestamp = new Date().toISOString();
   const logMessage = `[${timestamp}] ${message}\n`;
@@ -138,4 +140,4 @@ const sendShiftNotification = async (driver, shift) => {
   }
 };
 
-export { sendEmail, sendShiftNotification };
+export { sendEmail, sendShiftNotification, FRONTEND_URL };

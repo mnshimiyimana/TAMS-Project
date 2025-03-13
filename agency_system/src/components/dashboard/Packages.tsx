@@ -185,7 +185,7 @@ export default function Packages() {
         { header: "Sender Phone", key: "senderPhone", width: 15 },
         { header: "Receiver", key: "receiverName", width: 20 },
         { header: "Receiver Phone", key: "receiverPhone", width: 15 },
-        { header: "Receiver ID", key: "receiverId", width: 20 }, // Added Receiver ID column
+        { header: "Receiver ID", key: "receiverId", width: 20 },
         { header: "Status", key: "status", width: 15 },
         { header: "Driver", key: "driverName", width: 20 },
         { header: "Vehicle", key: "plateNumber", width: 15 },
@@ -224,7 +224,6 @@ export default function Packages() {
     (val) => val !== null && (typeof val === "string" || val.from || val.to)
   ).length;
 
-  // Debug filters and search for troubleshooting
   console.log("Current filters:", {
     search: searchQuery,
     status: filters.status,
@@ -307,7 +306,6 @@ export default function Packages() {
             </div>
 
             <div className="flex items-center gap-3 flex-wrap">
-              {/* Status Filter */}
               <Select
                 value={filters.status || "all"}
                 onValueChange={(value) =>
@@ -332,7 +330,6 @@ export default function Packages() {
                 </SelectContent>
               </Select>
 
-              {/* Driver Filter */}
               <Select
                 value={filters.driverName || "all"}
                 onValueChange={(value) =>

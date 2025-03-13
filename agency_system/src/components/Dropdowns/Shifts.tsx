@@ -20,23 +20,20 @@ export default function ShiftsDropdowns() {
   );
   const isSuperAdmin = userRole === "superadmin";
 
-  // Get unique destination values
   const destinations = useMemo(() => {
     return Array.from(new Set(shifts.map((shift) => shift.destination))).sort();
   }, [shifts]);
 
-  // Get unique dates values (sorted newest to oldest)
   const dates = useMemo(() => {
     return Array.from(new Set(shifts.map((shift) => shift.Date))).sort(
       (a, b) => new Date(b).getTime() - new Date(a).getTime()
     );
   }, [shifts]);
 
-  // Get unique agency values (for superadmin)
   const agencies = useMemo(() => {
     if (!isSuperAdmin) return [];
     return Array.from(new Set(shifts.map((shift) => shift.agencyName || "")))
-      .filter((agency) => agency !== "") // Filter out empty strings
+      .filter((agency) => agency !== "") 
       .sort();
   }, [shifts, isSuperAdmin]);
 
@@ -44,13 +41,11 @@ export default function ShiftsDropdowns() {
     dispatch(
       setFilter({ key: "destination", value: value === "all" ? null : value })
     );
-    // Refresh shifts with new filter
     dispatch(fetchShifts());
   };
 
   const handleDateChange = (value: string | null) => {
     dispatch(setFilter({ key: "date", value: value === "all" ? null : value }));
-    // Refresh shifts with new filter
     dispatch(fetchShifts());
   };
 
@@ -58,7 +53,6 @@ export default function ShiftsDropdowns() {
     dispatch(
       setFilter({ key: "agencyName", value: value === "all" ? null : value })
     );
-    // Refresh shifts with new filter
     dispatch(fetchShifts());
   };
 

@@ -92,7 +92,6 @@ export default function AdminDashboard() {
         </p>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">

@@ -54,7 +54,6 @@ export function AppSidebar({
     | "fuel"
     | undefined;
 
-  // Redirect superadmin to superadmin portal
   useEffect(() => {
     if (userRole === "superadmin") {
       toast.info("Redirecting to SuperAdmin Portal...");
@@ -62,7 +61,6 @@ export function AppSidebar({
     }
   }, [userRole, router]);
 
-  // If superadmin, don't render any items
   if (userRole === "superadmin") {
     return null;
   }

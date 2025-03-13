@@ -78,11 +78,13 @@ const newUserSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
   email: z.string().email("Please enter a valid email address"),
   phone: z.string().min(10, "Phone number must be at least 10 characters"),
+  location: z.string().min(3, "Location must be at least 3 characters"),
   role: z.enum(["manager", "fuel"], {
     required_error: "Please select a role",
   }),
 });
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com"
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com";
 
 type NewUserFormData = z.infer<typeof newUserSchema>;
 
@@ -181,7 +183,7 @@ export default function AdminProfile() {
       toast.success(response.data.message || "User created successfully");
       setIsAddUserDialogOpen(false);
       reset();
-      fetchUsers(); 
+      fetchUsers();
     } catch (error: any) {
       console.error("Error creating user:", error);
       toast.error(error.response?.data?.message || "Failed to create user");
@@ -562,6 +564,20 @@ export default function AdminProfile() {
                   <p className="text-red-500 text-sm">{errors.phone.message}</p>
                 )}
               </div>
+              {/* Add the location field */}
+              <div className="space-y-2">
+                <Label htmlFor="location">Location</Label>
+                <Input
+                  id="location"
+                  {...register("location")}
+                  placeholder="Enter location"
+                />
+                {errors.location && (
+                  <p className="text-red-500 text-sm">
+                    {errors.location.message}
+                  </p>
+                )}
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="role">Role</Label>
                 <Select
@@ -601,7 +617,6 @@ export default function AdminProfile() {
           </form>
         </DialogContent>
       </Dialog>
-
 
       <AlertDialog
         open={alertDialog.open}

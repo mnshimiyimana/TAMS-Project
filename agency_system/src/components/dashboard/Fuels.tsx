@@ -38,12 +38,10 @@ export default function Fuels() {
   const filtersActive =
     !!filters.plateNumber || !!filters.date || !!filters.agencyName;
 
-  // Initial data load
   useEffect(() => {
     dispatch(fetchFuelTransactions());
   }, [dispatch]);
 
-  // Clear timeout when component unmounts
   useEffect(() => {
     return () => {
       if (searchTimeout) {
@@ -56,12 +54,10 @@ export default function Fuels() {
     const value = e.target.value;
     dispatch(setSearchQuery(value));
 
-    // Clear any existing timeout
     if (searchTimeout) {
       clearTimeout(searchTimeout);
     }
 
-    // Set new timeout
     const newTimeout = setTimeout(() => {
       console.log("Executing search for:", value);
       dispatch(fetchFuelTransactions());
@@ -72,7 +68,6 @@ export default function Fuels() {
 
   const handleClearSearch = () => {
     dispatch(setSearchQuery(""));
-    // Immediately trigger search with empty query
     dispatch(fetchFuelTransactions());
   };
 
@@ -95,7 +90,6 @@ export default function Fuels() {
     setIsDialogOpen(false);
     setTransactionToEdit(null);
 
-    // Refresh the list after dialog closes
     dispatch(fetchFuelTransactions());
   };
 
@@ -118,7 +112,6 @@ export default function Fuels() {
         { header: "Last Fill Price", key: "lastFillPrice", width: 15 },
       ];
 
-      // Add agency column for superadmins
       if (isSuperAdmin) {
         columns.push({ header: "Agency", key: "agencyName", width: 20 });
       }
@@ -140,7 +133,6 @@ export default function Fuels() {
         new Date().toISOString().split("T")[0]
       }`;
 
-      // Add filters to filename
       if (filters.agencyName) {
         filename += `_Agency-${filters.agencyName}`;
       }

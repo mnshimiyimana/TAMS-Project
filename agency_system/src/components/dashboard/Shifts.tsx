@@ -42,16 +42,13 @@ export default function Shifts() {
   const agencyName = user?.agencyName || "";
   const isSuperAdmin = userRole === "superadmin";
 
-  // Check if any filters are active
   const filtersActive =
     !!filters.destination || !!filters.date || !!filters.agencyName;
 
-  // Load shifts data on component mount and when refresh trigger changes
   useEffect(() => {
     dispatch(fetchShifts());
   }, [dispatch, refreshTrigger]);
 
-  // Clear timeout when component unmounts
   useEffect(() => {
     return () => {
       if (searchTimeout) {
@@ -60,7 +57,6 @@ export default function Shifts() {
     };
   }, [searchTimeout]);
 
-  // Listen for shift update events
   useEffect(() => {
     const handleShiftUpdate = () => {
       dispatch(fetchVehicles());
@@ -82,12 +78,10 @@ export default function Shifts() {
     const value = e.target.value;
     dispatch(setSearchQuery(value));
 
-    // Clear any existing timeout
     if (searchTimeout) {
       clearTimeout(searchTimeout);
     }
 
-    // Set new timeout
     const newTimeout = setTimeout(() => {
       console.log("Executing search for shifts with:", value);
       dispatch(fetchShifts());
@@ -98,7 +92,6 @@ export default function Shifts() {
 
   const handleClearSearch = () => {
     dispatch(setSearchQuery(""));
-    // Immediately trigger search with empty query
     dispatch(fetchShifts());
   };
 

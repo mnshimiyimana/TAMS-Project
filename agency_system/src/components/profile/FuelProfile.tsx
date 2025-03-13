@@ -52,7 +52,6 @@ import {
 } from "recharts";
 import { useRouter } from "next/navigation";
 
-// **shadcn/ui** Select
 import {
   Select,
   SelectTrigger,
@@ -108,7 +107,6 @@ export default function FuelProfile() {
     averagePrice: 0,
     transactionsCount: 0,
   });
-  // Set a default value for API_BASE_URL if the environment variable is not defined
   const API_BASE_URL =
     process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com";
   const [chartData, setChartData] = useState<ChartData[]>([]);
@@ -125,7 +123,6 @@ export default function FuelProfile() {
   const token =
     typeof window !== "undefined" ? localStorage.getItem("token") : "";
 
-  // First try loading data from Redux
   useEffect(() => {
     const loadFromRedux = async () => {
       try {

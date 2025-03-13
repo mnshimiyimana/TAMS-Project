@@ -18,20 +18,17 @@ export default function FuelsDropdowns() {
     (state: RootState) => state.fuels
   );
 
-  // Get user role from auth state
   const userRole = useSelector(
     (state: RootState) => state.auth.user?.role || ""
   );
   const isSuperAdmin = userRole === "superadmin";
 
-  // Get unique plate numbers
   const plateNumbers = useMemo(() => {
     return Array.from(
       new Set(fuelTransactions.map((transaction) => transaction.plateNumber))
     ).sort();
   }, [fuelTransactions]);
 
-  // Get unique dates, formatted for display
   const dates = useMemo(() => {
     return Array.from(
       new Set(
@@ -43,7 +40,6 @@ export default function FuelsDropdowns() {
     ).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
   }, [fuelTransactions]);
 
-  // Get unique agencies (for superadmin)
   const agencies = useMemo(() => {
     if (!isSuperAdmin) return [];
     return Array.from(
@@ -51,7 +47,7 @@ export default function FuelsDropdowns() {
         fuelTransactions.map((transaction) => transaction.agencyName || "")
       )
     )
-      .filter((agency) => agency !== "") // Filter out empty strings
+      .filter((agency) => agency !== "") 
       .sort();
   }, [fuelTransactions, isSuperAdmin]);
 
@@ -59,13 +55,11 @@ export default function FuelsDropdowns() {
     dispatch(
       setFilter({ key: "plateNumber", value: value === "all" ? null : value })
     );
-    // Refresh transactions with new filter
     dispatch(fetchFuelTransactions());
   };
 
   const handleDateChange = (value: string | null) => {
     dispatch(setFilter({ key: "date", value: value === "all" ? null : value }));
-    // Refresh transactions with new filter
     dispatch(fetchFuelTransactions());
   };
 
@@ -73,13 +67,11 @@ export default function FuelsDropdowns() {
     dispatch(
       setFilter({ key: "agencyName", value: value === "all" ? null : value })
     );
-    // Refresh transactions with new filter
     dispatch(fetchFuelTransactions());
   };
 
   return (
     <div className="flex gap-6">
-      {/* Agency dropdown (superadmin only) */}
       {isSuperAdmin && (
         <div className="w-48">
           <Select
@@ -101,7 +93,6 @@ export default function FuelsDropdowns() {
         </div>
       )}
 
-      {/* Plate number dropdown */}
       <div className="w-40">
         <Select
           value={filters.plateNumber || ""}
@@ -121,7 +112,6 @@ export default function FuelsDropdowns() {
         </Select>
       </div>
 
-      {/* Date dropdown */}
       <div className="w-40">
         <Select
           value={filters.date || ""}

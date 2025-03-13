@@ -28,25 +28,22 @@ export default function DriversDropdowns({
   const [agency, setAgency] = useState("all");
   const [agencies, setAgencies] = useState<string[]>([]);
 
-  // Get user role from redux store
   const user = useSelector((state: RootState) => state.auth.user);
   const userRole = user?.role || "";
   const userAgency = user?.agencyName || "";
   const isSuperAdmin = userRole === "superadmin";
 
-  // Load agencies list for superadmin
   useEffect(() => {
     if (isSuperAdmin) {
       const fetchAgencies = async () => {
         try {
           const response = await getDrivers({ limit: 1000 });
           if (response && response.drivers) {
-            // Extract unique agency names
             const uniqueAgencies = [
               ...new Set(
                 response.drivers
                   .map((driver) => driver.agencyName)
-                  .filter((agency) => agency) // Remove undefined/null
+                  .filter((agency) => agency)
               ),
             ];
             setAgencies(uniqueAgencies as string[]);
@@ -62,32 +59,26 @@ export default function DriversDropdowns({
 
   const handleStatusChange = (value: string) => {
     setStatus(value);
-    // Only pass the actual status value to the parent component
-    // If "all" is selected, pass an empty string to show all statuses
+
     onStatusChange(value === "all" ? "" : value);
   };
 
   const handleShiftChange = (value: string) => {
     setShift(value);
-    // Only call onShiftChange if it's provided
     if (onShiftChange) {
-      // Pass empty string for "all"
       onShiftChange(value === "all" ? "" : value);
     }
   };
 
   const handleAgencyChange = (value: string) => {
     setAgency(value);
-    // Only call onAgencyChange if it's provided
     if (onAgencyChange) {
-      // Pass empty string for "all"
       onAgencyChange(value === "all" ? "" : value);
     }
   };
 
   return (
     <div className="flex gap-6">
-      {/* Agency Dropdown (Superadmin only) */}
       {isSuperAdmin && onAgencyChange && (
         <div className="w-48">
           <Select value={agency} onValueChange={handleAgencyChange}>
@@ -106,7 +97,6 @@ export default function DriversDropdowns({
         </div>
       )}
 
-      {/* Status Dropdown */}
       <div className="w-40">
         <Select onValueChange={handleStatusChange} value={status}>
           <SelectTrigger className="flex items-center justify-between">
@@ -121,7 +111,6 @@ export default function DriversDropdowns({
         </Select>
       </div>
 
-      {/* Last Shift Dropdown */}
       <div className="w-40">
         <Select onValueChange={handleShiftChange} value={shift}>
           <SelectTrigger className="flex items-center justify-between">

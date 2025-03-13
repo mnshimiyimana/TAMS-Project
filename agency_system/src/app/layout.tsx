@@ -1,10 +1,8 @@
 "use client";
 
 import { Provider } from 'react-redux';
-import store from '../redux/store'; // import your Redux store
+import store from '../redux/store';
 import { Work_Sans } from 'next/font/google';
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
-import { AppSidebar } from "@/components/dashboard/Sidebar"
 import './globals.css';
 
 const workSans = Work_Sans({

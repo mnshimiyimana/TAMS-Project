@@ -115,7 +115,6 @@ function ClientFeatureWrapper({
 }) {
   const searchParams = useSearchParams();
   
-  // Handle URL parameters
   useEffect(() => {
     if (!user?.role) return;
 

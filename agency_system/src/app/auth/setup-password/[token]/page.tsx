@@ -175,8 +175,8 @@ export default function SetupPassword() {
 
       <div className="w-full lg:w-1/2 flex flex-col justify-center items-center overflow-y-auto py-8">
         <div className="w-full max-w-md ">
-          {/* Debug info section - remove in production */}
-          <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded text-xs">
+
+          {/* <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded text-xs">
             <p>
               <strong>Debug Info:</strong>
             </p>
@@ -184,7 +184,7 @@ export default function SetupPassword() {
             <p>Path: {debugInfo.pathname}</p>
             <p>Token: {token ? `${token.substring(0, 6)}...` : "Not found"}</p>
             <p>API URL: {API_BASE_URL}</p>
-          </div>
+          </div> */}
 
           <div className="mb-6">
             <h1 className="text-2xl font-semibold text-gray-800 mb-2">

@@ -4,7 +4,6 @@ import Driver from "../models/driverModel.js";
 import Shift from "../models/shiftModel.js";
 import FuelManagement from "../models/fuelManagementModel.js";
 
-// Get dashboard data based on user role
 export const getDashboardData = async (req, res) => {
   try {
     const user = await User.findById(req.userId);
@@ -15,7 +14,6 @@ export const getDashboardData = async (req, res) => {
 
     let dashboardData = {};
 
-    // Common data for all roles - basic agency info
     dashboardData.user = {
       username: user.username,
       role: user.role,
@@ -23,7 +21,6 @@ export const getDashboardData = async (req, res) => {
       lastLogin: user.lastLogin,
     };
 
-    // Role-specific data
     switch (user.role) {
       case "superadmin":
         dashboardData = await getSuperAdminDashboard(dashboardData);
@@ -55,9 +52,7 @@ export const getDashboardData = async (req, res) => {
   }
 };
 
-// Superadmin dashboard - agency management overview without operational data
 async function getSuperAdminDashboard(dashboardData) {
-  // Count high-level system stats only
   const agencies = await User.aggregate([
     {
       $group: {
@@ -89,12 +84,10 @@ async function getSuperAdminDashboard(dashboardData) {
     },
   ]);
 
-  // Get admins list (only showing non-sensitive data)
   const adminUsers = await User.find({ role: "admin" })
     .select("username email agencyName createdAt lastLogin")
     .sort({ agencyName: 1 });
 
-  // System summary stats
   const systemStats = {
     agencyCount: agencies.length,
     adminCount: await User.countDocuments({ role: "admin" }),
@@ -109,24 +102,19 @@ async function getSuperAdminDashboard(dashboardData) {
   };
 }
 
-// Admin dashboard - agency-wide overview
 async function getAdminDashboard(dashboardData, agencyName) {
-  // Agency users
   const users = await User.find({ agencyName })
     .select("-password")
     .sort({ createdAt: -1 });
 
-  // Agency assets
   const buses = await Bus.find({ agencyName });
   const drivers = await Driver.find({ agencyName });
 
-  // Current shifts
   const activeShifts = await Shift.find({
     agencyName,
-    endTime: { $exists: false }, // Shifts that haven't ended
+    endTime: { $exists: false }, 
   });
 
-  // Recent fuel transactions
   const fuelTransactions = await FuelManagement.find({ agencyName })
     .sort({ fuelDate: -1 })
     .limit(5);
@@ -147,9 +135,7 @@ async function getAdminDashboard(dashboardData, agencyName) {
   };
 }
 
-// Manager dashboard - operational data
 async function getManagerDashboard(dashboardData, agencyName) {
-  // Available resources
   const availableBuses = await Bus.find({
     agencyName,
     status: "Available",
@@ -160,13 +146,11 @@ async function getManagerDashboard(dashboardData, agencyName) {
     status: "Off shift",
   });
 
-  // Active shifts
   const activeShifts = await Shift.find({
     agencyName,
     endTime: { $exists: false },
   });
 
-  // Today's scheduled shifts
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -188,17 +172,13 @@ async function getManagerDashboard(dashboardData, agencyName) {
   };
 }
 
-// Fuel manager dashboard - fuel-related data
 async function getFuelDashboard(dashboardData, agencyName) {
-  // Recent fuel transactions
   const recentFuelTransactions = await FuelManagement.find({ agencyName })
     .sort({ fuelDate: -1 })
     .limit(10);
 
-  // Bus list with fuel info
   const buses = await Bus.find({ agencyName });
 
-  // Calculate fuel statistics (simplified example)
   const fuelStats = await FuelManagement.aggregate([
     { $match: { agencyName } },
     {

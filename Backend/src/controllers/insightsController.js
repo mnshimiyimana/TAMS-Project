@@ -59,7 +59,6 @@ export const deleteInsight = async (req, res) => {
   }
 };
 
-// New methods for packages and fines insights
 
 export const generatePackageInsights = async (req, res) => {
   try {
@@ -75,10 +74,8 @@ export const generatePackageInsights = async (req, res) => {
       query.createdAt = { $gte: new Date(startDate), $lte: new Date(endDate) };
     }
 
-    // Get all packages for this agency in the date range
     const packages = await Package.find(query);
 
-    // Calculate package analytics
     const totalPackages = packages.length;
     const deliveredPackages = packages.filter(
       (pkg) => pkg.status === "Delivered"
@@ -86,7 +83,6 @@ export const generatePackageInsights = async (req, res) => {
     const successRate =
       totalPackages > 0 ? (deliveredPackages / totalPackages) * 100 : 0;
 
-    // Calculate hot routes
     const routeCounts = {};
     packages.forEach((pkg) => {
       const route = `${pkg.pickupLocation}-${pkg.deliveryLocation}`;
@@ -101,7 +97,6 @@ export const generatePackageInsights = async (req, res) => {
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
 
-    // Calculate transit times for delivered packages
     let totalTransitTime = 0;
     let packagesWithTransitTime = 0;
 
@@ -120,17 +115,15 @@ export const generatePackageInsights = async (req, res) => {
         ? totalTransitTime / packagesWithTransitTime
         : 0;
 
-    // Create the package analytics object
     const packageAnalytics = {
       deliveryEfficiency: successRate,
       packageVolume: totalPackages,
       successRate: successRate,
       averageTransitTime: averageTransitTime,
       hotRoutes: hotRoutes,
-      packageTrends: [], // This would be populated with historical data
+      packageTrends: [], 
     };
 
-    // Check if there's an existing insight for today
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -140,11 +133,9 @@ export const generatePackageInsights = async (req, res) => {
     });
 
     if (insight) {
-      // Update existing insight
       insight.packageAnalytics = packageAnalytics;
       await insight.save();
     } else {
-      // Create new insight
       insight = new Insights({
         agencyId,
         reportDate: new Date(),
@@ -169,7 +160,6 @@ export const generateFineInsights = async (req, res) => {
       return res.status(400).json({ message: "Agency ID is required" });
     }
 
-    // Sample fine data (in production, this would come from a fines collection)
     const sampleFineData = {
       totalAmount: 245000,
       unpaidAmount: 78500,
@@ -221,7 +211,6 @@ export const generateFineInsights = async (req, res) => {
       ],
     };
 
-    // Check if there's an existing insight for today
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -231,11 +220,9 @@ export const generateFineInsights = async (req, res) => {
     });
 
     if (insight) {
-      // Update existing insight
       insight.finesAnalytics = sampleFineData;
       await insight.save();
     } else {
-      // Create new insight
       insight = new Insights({
         agencyId,
         reportDate: new Date(),

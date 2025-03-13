@@ -43,7 +43,6 @@ export default function Vehicles() {
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     dispatch(setSearchQuery(e.target.value));
-    // Trigger search after a short delay
     const timer = setTimeout(() => {
       dispatch(fetchVehicles());
     }, 500);
@@ -66,11 +65,9 @@ export default function Vehicles() {
 
   useEffect(() => {
     const handleShiftUpdate = () => {
-      // Refresh vehicles data when shifts are updated
       dispatch(fetchVehicles());
     };
 
-    // Listen for the shift updated event
     window.addEventListener("shift_updated", handleShiftUpdate);
 
     return () => {
@@ -84,15 +81,12 @@ export default function Vehicles() {
 
       let vehiclesToExport: Vehicle[] = [];
 
-      // Use the API to get vehicles with filters applied
       try {
         const params: any = {};
 
-        // Apply all current filters
         if (filters.status) params.status = filters.status;
         if (searchQuery) params.search = searchQuery;
 
-        // Apply agency filter based on role
         if (!isSuperAdmin) {
           params.agencyName = agencyName;
         } else if (filters.agencyName) {
@@ -103,7 +97,6 @@ export default function Vehicles() {
         vehiclesToExport = response.buses || response;
       } catch (error) {
         console.error("Error fetching vehicles for export:", error);
-        // Fallback to current filtered data if API call fails
         vehiclesToExport = [...filteredVehicles];
       }
 

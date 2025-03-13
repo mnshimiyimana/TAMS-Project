@@ -69,7 +69,6 @@ export const getShifts = async (req, res) => {
       query.endTime = { $exists: true };
     }
 
-    // Filter by fine status (new)
     if (req.query.fined === "true") {
       query.fined = true;
     } else if (req.query.fined === "false") {
@@ -152,15 +151,11 @@ export const updateShift = async (req, res) => {
         .json({ message: "Not authorized to change shift's agency" });
     }
 
-    // Handle fine information
     if (req.body.hasOwnProperty("fined")) {
-      // If fined is set to false, clear fine information
       if (req.body.fined === false) {
         req.body.fineAmount = 0;
         req.body.fineReason = "";
-      }
-      // If fined is true but no fine data is provided, reject
-      else if (
+      } else if (
         req.body.fined === true &&
         (!req.body.fineAmount || !req.body.fineReason)
       ) {
@@ -205,7 +200,6 @@ export const updateShift = async (req, res) => {
       }
     }
 
-    // Send fine notification to driver if shift was fined
     if (req.body.fined === true && !shift.fined) {
       const driver = await Driver.findOne({
         $or: [
@@ -216,8 +210,6 @@ export const updateShift = async (req, res) => {
       });
 
       if (driver && driver.email) {
-        // You can add a separate notification for fines here
-        // For example: await sendFineNotification(driver, updatedShift);
         console.log(`Fine notification should be sent to ${driver.email}`);
       }
     }

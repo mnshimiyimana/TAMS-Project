@@ -50,6 +50,7 @@ interface UserInfo {
 
 function useSetupToken() {
   const params = useParams();
+  console.log("Params received:", params);
   return params?.token as string;
 }
 
@@ -60,6 +61,11 @@ export default function SetupPassword() {
   const [isComplete, setIsComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [debugInfo, setDebugInfo] = useState<any>({
+    fullUrl: "",
+    pathname: "",
+    token: "",
+  });
 
   const {
     register,
@@ -70,15 +76,29 @@ export default function SetupPassword() {
     resolver: zodResolver(userSetupSchema),
   });
 
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com"
+  const API_BASE_URL =
+    process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com";
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setDebugInfo({
+        fullUrl: window.location.href,
+        pathname: window.location.pathname,
+        token: token,
+      });
+    }
+  }, [token]);
 
   useEffect(() => {
     async function verifyToken() {
       try {
         setIsLoading(true);
+        console.log("Attempting to verify token:", token);
+
         const response = await axios.get(
           `${API_BASE_URL}/api/auth/verify-setup-token/${token}`
         );
+        console.log("Token verification successful:", response.data);
 
         const userData = response.data.user;
         setUserInfo(userData);
@@ -95,6 +115,7 @@ export default function SetupPassword() {
 
         if (axios.isAxiosError(err)) {
           errorMessage = err.response?.data?.message || errorMessage;
+          console.error("Axios error details:", err.response?.data);
         }
 
         setError(errorMessage);
@@ -105,12 +126,21 @@ export default function SetupPassword() {
 
     if (token) {
       verifyToken();
+    } else {
+      console.error("No token found in URL parameters");
+      setError("No setup token found in the URL.");
+      setIsLoading(false);
     }
   }, [token, setValue]);
 
   const onSubmit = async (data: UserSetupFormData) => {
     try {
       setIsSubmitting(true);
+      console.log("Submitting form with data:", {
+        ...data,
+        password: "[REDACTED]",
+      });
+
       await axios.post(
         `${API_BASE_URL}/api/auth/update-user-with-password/${token}`,
         {
@@ -130,6 +160,7 @@ export default function SetupPassword() {
 
       if (axios.isAxiosError(err)) {
         errorMessage = err.response?.data?.message || errorMessage;
+        console.error("Axios submission error details:", err.response?.data);
       }
 
       toast.error(errorMessage);
@@ -144,6 +175,17 @@ export default function SetupPassword() {
 
       <div className="w-full lg:w-1/2 flex flex-col justify-center items-center overflow-y-auto py-8">
         <div className="w-full max-w-md ">
+          {/* Debug info section - remove in production */}
+          <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded text-xs">
+            <p>
+              <strong>Debug Info:</strong>
+            </p>
+            <p>Full URL: {debugInfo.fullUrl}</p>
+            <p>Path: {debugInfo.pathname}</p>
+            <p>Token: {token ? `${token.substring(0, 6)}...` : "Not found"}</p>
+            <p>API URL: {API_BASE_URL}</p>
+          </div>
+
           <div className="mb-6">
             <h1 className="text-2xl font-semibold text-gray-800 mb-2">
               Complete Your Account Setup
@@ -191,6 +233,7 @@ export default function SetupPassword() {
             </div>
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+              {/* Form fields remain the same */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="username">Username</Label>

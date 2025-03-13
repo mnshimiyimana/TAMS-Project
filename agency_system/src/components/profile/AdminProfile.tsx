@@ -169,6 +169,8 @@ export default function AdminProfile() {
   const onAddUser = async (data: NewUserFormData) => {
     try {
       setIsAddingUser(true);
+      console.log("Submitting user data:", data);
+
       const response = await axios.post(
         `${API_BASE_URL}/api/auth/create-user`,
         data,
@@ -186,7 +188,11 @@ export default function AdminProfile() {
       fetchUsers();
     } catch (error: any) {
       console.error("Error creating user:", error);
-      toast.error(error.response?.data?.message || "Failed to create user");
+      if (error.response?.data?.missing) {
+        toast.error(`Missing required field: ${error.response.data.missing}`);
+      } else {
+        toast.error(error.response?.data?.message || "Failed to create user");
+      }
     } finally {
       setIsAddingUser(false);
     }
@@ -219,8 +225,9 @@ export default function AdminProfile() {
 
   const resendSetupEmail = async (userId: string) => {
     try {
+      // FIX: Corrected API endpoint with /api prefix
       const response = await axios.post(
-        `${API_BASE_URL}/auth/resend-setup-email`,
+        `${API_BASE_URL}/api/auth/resend-setup-email`,
         { userId },
         {
           headers: {
@@ -564,7 +571,6 @@ export default function AdminProfile() {
                   <p className="text-red-500 text-sm">{errors.phone.message}</p>
                 )}
               </div>
-              {/* Add the location field */}
               <div className="space-y-2">
                 <Label htmlFor="location">Location</Label>
                 <Input

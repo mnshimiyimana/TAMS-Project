@@ -3,6 +3,11 @@ import crypto from "crypto";
 import { User } from "../models/userModel.js";
 import Agency from "../models/agencyModel.js";
 import sendEmail from "../config/emailService.js";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const FRONTEND_URL = process.env.FRONTEND_URL || "https://www.tamsrw.site";
 
 export const createAdmin = async (req, res) => {
   try {
@@ -77,7 +82,7 @@ export const createAdmin = async (req, res) => {
     await newAdmin.save();
     console.log("Admin created with ID:", newAdmin._id);
 
-    const resetURL = `https://www.tamsrw.site/setup-password/${resetToken}`;
+    const resetURL = `${FRONTEND_URL}/auth/setup-password/${resetToken}`;
 
     console.log("Password setup URL:", resetURL);
 
@@ -147,10 +152,42 @@ export const createUser = async (req, res) => {
     }
 
     const adminAgency = admin.agencyName;
-    const { username, email, phone, location } = req.body;
+    const { username, email, phone, location, role } = req.body;
 
-    if (!username || !email || !phone || !location) {
-      return res.status(400).json({ message: "All fields are required" });
+    console.log("Received request to create user:", {
+      username,
+      email,
+      phone,
+      location,
+      role,
+    });
+
+    if (!username || !email || !phone || !location || !role) {
+      console.log("Missing required fields:", {
+        username,
+        email,
+        phone,
+        location,
+        role,
+      });
+      return res.status(400).json({
+        message: "All fields are required",
+        missing: !username
+          ? "username"
+          : !email
+          ? "email"
+          : !phone
+          ? "phone"
+          : !location
+          ? "location"
+          : "role",
+      });
+    }
+
+    if (role !== "manager" && role !== "fuel") {
+      return res
+        .status(400)
+        .json({ message: "Invalid role. Must be 'manager' or 'fuel'" });
     }
 
     const existingUser = await User.findOne({
@@ -174,17 +211,21 @@ export const createUser = async (req, res) => {
       email,
       phone,
       location,
-      role: "user",
+      role: role, 
       agencyName: adminAgency,
       createdBy: adminId,
       passwordResetToken,
       passwordResetExpires: Date.now() + 24 * 60 * 60 * 1000,
       passwordSet: false,
+      isActive: true, 
     });
 
     await newUser.save();
+    console.log("User created with ID:", newUser._id);
 
-    const resetURL = `https://www.tamsrw.site/auth/setup-password/${resetToken}`;
+    const resetURL = `${FRONTEND_URL}/auth/setup-password/${resetToken}`;
+    console.log("Password setup URL:", resetURL);
+
     const message = `
       Hello ${username},
       
@@ -201,14 +242,32 @@ export const createUser = async (req, res) => {
     `;
 
     try {
+      console.log("Attempting to send email to:", email);
       const emailResult = await sendEmail(
         email,
         "Welcome to TAMS - Set Up Your Password",
         message
       );
-      console.log(
-        `Email sent to ${email} with message ID: ${emailResult.messageId}`
-      );
+      console.log("Email result:", emailResult);
+
+      if (!emailResult.success) {
+        console.error("Email sending failed:", emailResult.error);
+
+        console.log("====================================================");
+        console.log("🔗 DEVELOPMENT - SETUP LINK:");
+        console.log(resetURL);
+        console.log("====================================================");
+
+        return res.status(201).json({
+          message:
+            "User created successfully but email delivery failed. Please note the setup URL for manual sharing.",
+          userId: newUser._id,
+          agencyName: newUser.agencyName,
+          setupUrl:
+            process.env.NODE_ENV === "development" ? resetURL : undefined,
+          emailError: emailResult.error,
+        });
+      }
 
       res.status(201).json({
         message: "User created successfully. Password setup email sent.",
@@ -223,11 +282,15 @@ export const createUser = async (req, res) => {
           "User created successfully but email delivery failed. Please inform the user manually.",
         userId: newUser._id,
         agencyName: newUser.agencyName,
+        setupUrl: process.env.NODE_ENV === "development" ? resetURL : undefined,
       });
     }
   } catch (error) {
     console.error("Error creating user:", error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
   }
 };
 
@@ -264,10 +327,7 @@ export const getAgencyUsers = async (req, res) => {
       "-password -passwordResetToken -passwordResetExpires"
     );
 
-    res.status(200).json({
-      message: "Users retrieved successfully",
-      users,
-    });
+    res.status(200).json(users);
   } catch (error) {
     console.error("Error getting agency users:", error);
     res.status(500).json({ message: "Internal server error" });

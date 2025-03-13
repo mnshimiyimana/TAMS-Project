@@ -1,7 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  async redirects() {
+    return [
+      {
+        source: '/setup-password/:token',
+        destination: '/auth/setup-password/:token',
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   MoreVertical,
   Edit,
@@ -46,7 +47,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-// Define table headers with agency column for superadmins
 const standardHeaders = [
   "Plate Number",
   "Driver Name",
@@ -68,13 +68,11 @@ export default function ShiftsTable({ onEdit, agencyName }: ShiftsTableProps) {
   const { filteredShifts, status, error, currentPage, totalCount } =
     useSelector((state: RootState) => state.shifts);
 
-  // Get user info for role-based access control
   const userRole = useSelector(
     (state: RootState) => state.auth.user?.role || ""
   );
   const isSuperAdmin = userRole === "superadmin";
 
-  // Define table headers based on role
   const tableHeaders = isSuperAdmin
     ? [...standardHeaders.slice(0, -1), "Agency", "Actions"]
     : standardHeaders;
@@ -107,7 +105,6 @@ export default function ShiftsTable({ onEdit, agencyName }: ShiftsTableProps) {
     try {
       await dispatch(deleteShift(shiftToDelete)).unwrap();
       toast.success("Shift deleted successfully");
-      // Refresh data after deletion
       dispatch(fetchShifts());
     } catch (error) {
       toast.error("Failed to delete shift");
@@ -131,7 +128,33 @@ export default function ShiftsTable({ onEdit, agencyName }: ShiftsTableProps) {
     }
   };
 
-  // Use the filteredShifts directly without pagination if the API already paginates
+  const getShiftStatus = (shift: Shift): string => {
+    const now = new Date();
+    const startTime = new Date(shift.startTime);
+
+    if (!shift.endTime) {
+      if (startTime > now) {
+        return "Scheduled";
+      }
+      return "In Progress";
+    }
+
+    return "Completed";
+  };
+
+  const getStatusBadgeClass = (status: string): string => {
+    switch (status) {
+      case "Scheduled":
+        return "bg-blue-100 text-blue-800";
+      case "In Progress":
+        return "bg-yellow-100 text-yellow-800";
+      case "Completed":
+        return "bg-green-100 text-green-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
   const displayShifts = filteredShifts;
 
   const formatDate = (dateStr: string | Date | undefined) => {
@@ -179,7 +202,6 @@ export default function ShiftsTable({ onEdit, agencyName }: ShiftsTableProps) {
           </TableHeader>
           <TableBody>
             {status === "loading" && filteredShifts.length === 0 ? (
-              // Loading skeleton state
               Array.from({ length: 5 }).map((_, index) => (
                 <TableRow key={`skeleton-${index}`}>
                   {Array.from({ length: tableHeaders.length }).map(
@@ -195,7 +217,6 @@ export default function ShiftsTable({ onEdit, agencyName }: ShiftsTableProps) {
                 </TableRow>
               ))
             ) : filteredShifts.length === 0 ? (
-              // Empty state
               <TableRow>
                 <TableCell
                   colSpan={tableHeaders.length}
@@ -205,7 +226,6 @@ export default function ShiftsTable({ onEdit, agencyName }: ShiftsTableProps) {
                 </TableCell>
               </TableRow>
             ) : (
-              // Normal data display
               displayShifts.map((shift) => (
                 <TableRow key={shift._id}>
                   <TableCell className="px-5 py-4">
@@ -236,24 +256,36 @@ export default function ShiftsTable({ onEdit, agencyName }: ShiftsTableProps) {
                     </TableCell>
                   )}
                   <TableCell className="px-8 py-4 text-center">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost">
-                          <MoreVertical className="w-5 h-5" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        <DropdownMenuItem onClick={() => handleEdit(shift)}>
-                          <Edit className="w-4 h-4 mr-2" /> Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleDeleteClick(shift._id)}
-                          className="text-red-500"
+                    <div className="flex flex-col items-center">
+                      <div className="mb-2">
+                        <Badge
+                          variant="outline"
+                          className={`text-xs px-2 py-0.5 ${getStatusBadgeClass(
+                            getShiftStatus(shift)
+                          )}`}
                         >
-                          <Trash2 className="w-4 h-4 mr-2" /> Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                          {getShiftStatus(shift)}
+                        </Badge>
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost">
+                            <MoreVertical className="w-5 h-5" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <DropdownMenuItem onClick={() => handleEdit(shift)}>
+                            <Edit className="w-4 h-4 mr-2" /> Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleDeleteClick(shift._id)}
+                            className="text-red-500"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

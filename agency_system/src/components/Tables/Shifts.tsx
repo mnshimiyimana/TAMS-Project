@@ -132,14 +132,19 @@ export default function ShiftsTable({ onEdit, agencyName }: ShiftsTableProps) {
     const now = new Date();
     const startTime = new Date(shift.startTime);
 
-    if (!shift.endTime) {
-      if (startTime > now) {
-        return "Scheduled";
-      }
-      return "In Progress";
+    // If start time is in the future, it's scheduled
+    if (startTime > now) {
+      return "Scheduled";
     }
 
-    return "Completed";
+    if (shift.endTime) {
+      const endTime = new Date(shift.endTime);
+      if (now >= endTime) {
+        return "Completed";
+      }
+    }
+
+    return "In Progress";
   };
 
   const getStatusBadgeClass = (status: string): string => {

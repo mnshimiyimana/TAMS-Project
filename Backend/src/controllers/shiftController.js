@@ -166,6 +166,94 @@ export const updateShift = async (req, res) => {
       }
     }
 
+    const isCompletingShift = !shift.endTime && req.body.endTime;
+
+    if (isCompletingShift) {
+      console.log(
+        `Shift ${shift._id} is being completed. Updating resources...`
+      );
+
+      try {
+        const vehicle = await Bus.findOne({
+          plateNumber: shift.plateNumber,
+          agencyName: shift.agencyName,
+        });
+
+        if (vehicle) {
+          console.log(
+            `Updating vehicle ${vehicle._id} (${vehicle.plateNumber}) status to Available`
+          );
+          vehicle.status = "Available";
+          await vehicle.save();
+        } else {
+          console.log(
+            `Vehicle with plate number ${shift.plateNumber} not found`
+          );
+        }
+
+        const driver = await Driver.findOne({
+          $or: [{ driverId: shift.driverName }, { names: shift.driverName }],
+          agencyName: shift.agencyName,
+        });
+
+        if (driver && driver.status !== "On leave") {
+          console.log(
+            `Updating driver ${driver._id} (${driver.names}) status to Off shift`
+          );
+          driver.status = "Off shift";
+          driver.lastShift = new Date().toISOString();
+          await driver.save();
+        } else {
+          console.log(`Driver ${shift.driverName} not found or is on leave`);
+        }
+      } catch (resourceError) {
+        console.error(
+          "Error updating resources during shift completion:",
+          resourceError
+        );
+      }
+    }
+
+    if (req.body.actualEndTime && !shift.actualEndTime) {
+      console.log(
+        `Recording actual end time for shift ${shift._id}. Ensuring resources are released...`
+      );
+
+      try {
+        const vehicle = await Bus.findOne({
+          plateNumber: shift.plateNumber,
+          agencyName: shift.agencyName,
+        });
+
+        if (vehicle && vehicle.status === "Assigned") {
+          console.log(
+            `Updating vehicle ${vehicle._id} (${vehicle.plateNumber}) status to Available`
+          );
+          vehicle.status = "Available";
+          await vehicle.save();
+        }
+
+        const driver = await Driver.findOne({
+          $or: [{ driverId: shift.driverName }, { names: shift.driverName }],
+          agencyName: shift.agencyName,
+        });
+
+        if (driver && driver.status === "On Shift") {
+          console.log(
+            `Updating driver ${driver._id} (${driver.names}) status to Off shift`
+          );
+          driver.status = "Off shift";
+          driver.lastShift = new Date().toISOString();
+          await driver.save();
+        }
+      } catch (resourceError) {
+        console.error(
+          "Error updating resources during actual end time recording:",
+          resourceError
+        );
+      }
+    }
+
     const updatedShift = await Shift.findByIdAndUpdate(
       req.params.id,
       req.body,

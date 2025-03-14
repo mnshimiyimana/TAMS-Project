@@ -25,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
+import { getDrivers, Driver } from "@/services/driverService"; // Import the driver API
 
 const fuelSchema = z.object({
   plateNumber: z.string().min(5, "Plate number is required"),
@@ -60,13 +61,19 @@ export default function AddFuelDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditing = !!fuelToEdit;
 
-  // Get user role to determine if agency can be changed
-  const userRole = useSelector((state: RootState) => state.auth.user?.role || "");
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [driversLoading, setDriversLoading] = useState(false);
+  const [filteredDrivers, setFilteredDrivers] = useState<Driver[]>([]);
+
+  const userRole = useSelector(
+    (state: RootState) => state.auth.user?.role || ""
+  );
   const isSuperAdmin = userRole === "superadmin";
 
-  // Get agency options from vehicles for superadmin
-  const agencyOptions = useSelector((state: RootState) => 
-    Array.from(new Set(state.vehicles.vehicles.map(v => v.agencyName).filter(Boolean)))
+  const agencyOptions = useSelector((state: RootState) =>
+    Array.from(
+      new Set(state.vehicles.vehicles.map((v) => v.agencyName).filter(Boolean))
+    )
   );
 
   const vehicles = useSelector((state: RootState) => state.vehicles.vehicles);
@@ -75,8 +82,8 @@ export default function AddFuelDialog({
   );
 
   const [filteredVehicles, setFilteredVehicles] = useState(vehicles);
-  const selectedAgency = useSelector((state: RootState) => 
-    state.fuels.filters.agencyName || agencyName
+  const selectedAgency = useSelector(
+    (state: RootState) => state.fuels.filters.agencyName || agencyName
   );
 
   useEffect(() => {
@@ -85,14 +92,40 @@ export default function AddFuelDialog({
     }
   }, [dispatch, vehicles, vehiclesLoading]);
 
-  // Filter vehicles by selected agency
+  useEffect(() => {
+    const fetchDriversData = async () => {
+      setDriversLoading(true);
+      try {
+        const params = {
+          agencyName: selectedAgency,
+          limit: 100, 
+        };
+        const response = await getDrivers(params);
+        setDrivers(response.drivers);
+      } catch (error) {
+        console.error("Error fetching drivers:", error);
+        toast.error("Failed to load drivers");
+      } finally {
+        setDriversLoading(false);
+      }
+    };
+
+    fetchDriversData();
+  }, [selectedAgency]);
+
   useEffect(() => {
     if (selectedAgency) {
-      setFilteredVehicles(vehicles.filter(v => v.agencyName === selectedAgency));
+      setFilteredVehicles(
+        vehicles.filter((v) => v.agencyName === selectedAgency)
+      );
+      setFilteredDrivers(
+        drivers.filter((d) => d.agencyName === selectedAgency)
+      );
     } else {
       setFilteredVehicles(vehicles);
+      setFilteredDrivers(drivers);
     }
-  }, [vehicles, selectedAgency]);
+  }, [vehicles, drivers, selectedAgency]);
 
   const {
     register,
@@ -119,7 +152,10 @@ export default function AddFuelDialog({
     if (fuelToEdit) {
       setValue("plateNumber", fuelToEdit.plateNumber);
       setValue("driverName", fuelToEdit.driverName);
-      setValue("fuelDate", new Date(fuelToEdit.fuelDate).toISOString().split('T')[0]);
+      setValue(
+        "fuelDate",
+        new Date(fuelToEdit.fuelDate).toISOString().split("T")[0]
+      );
       setValue("amount", fuelToEdit.amount);
       setValue("amountPrice", fuelToEdit.amountPrice);
       setValue("lastFill", fuelToEdit.lastFill);
@@ -135,13 +171,13 @@ export default function AddFuelDialog({
     try {
       setIsSubmitting(true);
 
-      // Validate agency permission
       if (!isSuperAdmin && data.agencyName !== agencyName) {
-        toast.error("You don't have permission to create fuel transactions for other agencies");
+        toast.error(
+          "You don't have permission to create fuel transactions for other agencies"
+        );
         return;
       }
 
-      // Ensure agency is set
       const fuelData = {
         ...data,
         agencyName: data.agencyName || agencyName,
@@ -160,9 +196,8 @@ export default function AddFuelDialog({
         toast.success("Fuel transaction added successfully!");
       }
 
-      // Refresh the fuel transactions list
       dispatch(fetchFuelTransactions());
-      
+
       reset();
       onClose();
     } catch (error: any) {
@@ -195,7 +230,6 @@ export default function AddFuelDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {/* Agency selection for superadmin */}
           {isSuperAdmin && (
             <div>
               <Label htmlFor="agencyName">Agency</Label>
@@ -221,28 +255,21 @@ export default function AddFuelDialog({
               )}
             </div>
           )}
-          
-          {/* Hidden agency field for non-superadmins */}
+
           {!isSuperAdmin && (
-            <input 
-              type="hidden" 
-              {...register("agencyName")} 
-              value={agencyName} 
+            <input
+              type="hidden"
+              {...register("agencyName")}
+              value={agencyName}
             />
           )}
 
-          {/* Plate Number */}
           <div>
             <Label htmlFor="plateNumber">Plate Number</Label>
             <Select
               value={watch("plateNumber")}
               onValueChange={(value) => {
                 setValue("plateNumber", value);
-                // Auto-suggest driver name based on selected vehicle
-                const vehicle = vehicles.find((v) => v.plateNumber === value);
-                if (vehicle) {
-                  setValue("driverName", vehicle.busId);
-                }
               }}
             >
               <SelectTrigger>
@@ -263,26 +290,48 @@ export default function AddFuelDialog({
             )}
           </div>
 
-          {/* Driver Name */}
           <div>
-            <Label htmlFor="driverName">
-              Driver Name{" "}
-              {suggestedVehicle && `(Suggested: ${suggestedVehicle.busId})`}
-            </Label>
-            <Input
-              id="driverName"
-              type="text"
-              placeholder="Enter driver's name"
-              {...register("driverName")}
-            />
+            <Label htmlFor="driverName">Driver Name</Label>
+            <Select
+              value={watch("driverName")}
+              onValueChange={(value) => setValue("driverName", value)}
+            >
+              <SelectTrigger id="driverName">
+                <SelectValue placeholder="Select a driver" />
+              </SelectTrigger>
+              <SelectContent>
+                {driversLoading ? (
+                  <SelectItem value="loading" disabled>
+                    Loading drivers...
+                  </SelectItem>
+                ) : filteredDrivers.length > 0 ? (
+                  filteredDrivers.map((driver) => (
+                    <SelectItem key={driver._id} value={driver.names}>
+                      {driver.names} - {driver.driverId}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="none" disabled>
+                    No drivers found
+                  </SelectItem>
+                )}
+              </SelectContent>
+            </Select>
             {errors.driverName && (
               <p className="text-red-500 text-sm">
                 {errors.driverName.message}
               </p>
             )}
+            <Input
+              className="mt-2"
+              id="driverNameInput"
+              type="text"
+              placeholder="Or type driver's name manually"
+              value={watch("driverName")}
+              onChange={(e) => setValue("driverName", e.target.value)}
+            />
           </div>
 
-          {/* Fuel Date */}
           <div>
             <Label htmlFor="fuelDate">Fuel Date</Label>
             <Input id="fuelDate" type="date" {...register("fuelDate")} />
@@ -291,7 +340,6 @@ export default function AddFuelDialog({
             )}
           </div>
 
-          {/* Fuel Amount */}
           <div>
             <Label htmlFor="amount">Fuel Amount (L)</Label>
             <Input
@@ -306,7 +354,6 @@ export default function AddFuelDialog({
             )}
           </div>
 
-          {/* Amount Price */}
           <div>
             <Label htmlFor="amountPrice">Amount Price (Per L)</Label>
             <Input
@@ -323,7 +370,6 @@ export default function AddFuelDialog({
             )}
           </div>
 
-          {/* Last Fill */}
           <div>
             <Label htmlFor="lastFill">Last Fill (Liters)</Label>
             <Input

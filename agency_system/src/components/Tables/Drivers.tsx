@@ -278,6 +278,35 @@ export default function DriversTable({
     return statusStyles[status as Status] || defaultStatusStyle;
   };
 
+  const [refreshCounter, setRefreshCounter] = useState(0);
+
+  useEffect(() => {
+    // Event listener for status change events
+    const handleDriverStatusChange = () => {
+      setRefreshCounter((prev) => prev + 1);
+    };
+
+    window.addEventListener("driver_status_changed", handleDriverStatusChange);
+
+    return () => {
+      window.removeEventListener(
+        "driver_status_changed",
+        handleDriverStatusChange
+      );
+    };
+  }, []);
+
+  useEffect(() => {
+    fetchDrivers();
+  }, [
+    currentPage,
+    searchQuery,
+    statusFilter,
+    agencyFilter,
+    refreshTrigger,
+    refreshCounter,
+  ]);
+
   if (error) {
     return (
       <div className="w-full py-10 flex flex-col items-center justify-center text-center">
@@ -360,7 +389,7 @@ export default function DriversTable({
                         ? format(new Date(lastShift), "yyyy-MM-dd")
                         : "N/A"}
                     </TableCell>
-                    <TableCell className="px-5 py-4 text-xs">
+                    <TableCell className="px- py-4 text-xs">
                       {driverAgency || agencyName}
                     </TableCell>
                     <TableCell className="px-8 py-4 text-center">

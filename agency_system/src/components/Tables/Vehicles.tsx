@@ -86,7 +86,7 @@ export default function VehiclesTable({
   );
   const isSuperAdmin = userRole === "superadmin";
 
-  const pageSize = 5; // This should match the backend pagination
+  const pageSize = 5; 
   const totalPages = Math.ceil(totalCount / pageSize);
 
   const [deleteDialog, setDeleteDialog] = useState<{
@@ -109,7 +109,6 @@ export default function VehiclesTable({
     try {
       await dispatch(deleteVehicle(deleteDialog.vehicleId)).unwrap();
       toast.success("Vehicle deleted successfully!");
-      // Refresh data after deletion
       dispatch(fetchVehicles());
     } catch (error) {
       toast.error(
@@ -136,6 +135,27 @@ export default function VehiclesTable({
       dispatch(setPage(currentPage + 1));
     }
   };
+
+  const [localRefreshCounter, setLocalRefreshCounter] = useState(0);
+
+  useEffect(() => {
+    const handleVehicleStatusChange = () => {
+      setLocalRefreshCounter((prev) => prev + 1);
+      dispatch(fetchVehicles());
+    };
+
+    window.addEventListener(
+      "vehicle_status_changed",
+      handleVehicleStatusChange
+    );
+
+    return () => {
+      window.removeEventListener(
+        "vehicle_status_changed",
+        handleVehicleStatusChange
+      );
+    };
+  }, [dispatch]);
 
   if (status === "loading" && filteredVehicles.length === 0) {
     return (

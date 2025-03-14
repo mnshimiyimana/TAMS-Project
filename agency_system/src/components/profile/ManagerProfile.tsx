@@ -200,6 +200,80 @@ export default function ManagerProfile() {
         }
       );
 
+      // Update resource statuses
+      try {
+        // Update vehicle status
+        const vehiclesResponse = await axios.get(
+          `${API_BASE_URL}/api/buses?plateNumber=${editingShift.plateNumber}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        const vehicles = Array.isArray(vehiclesResponse.data)
+          ? vehiclesResponse.data
+          : vehiclesResponse.data && vehiclesResponse.data.buses
+          ? vehiclesResponse.data.buses
+          : [];
+
+        const vehicleToUpdate = vehicles.find(
+          (v: { plateNumber: string; }) => v.plateNumber === editingShift.plateNumber
+        );
+
+        if (vehicleToUpdate && vehicleToUpdate.status === "Assigned") {
+          await axios.patch(
+            `${API_BASE_URL}/api/buses/${vehicleToUpdate._id}`,
+            { status: "Available" },
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+        }
+
+        // Update driver status
+        const driversResponse = await axios.get(
+          `${API_BASE_URL}/api/drivers?names=${editingShift.driverName}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        const drivers =
+          driversResponse.data && driversResponse.data.drivers
+            ? driversResponse.data.drivers
+            : [];
+
+        const driverToUpdate = drivers.find(
+          (d: { names: string; }) => d.names === editingShift.driverName
+        );
+
+        if (driverToUpdate && driverToUpdate.status === "On Shift") {
+          await axios.patch(
+            `${API_BASE_URL}/api/drivers/${driverToUpdate._id}`,
+            {
+              status: "Off shift",
+              lastShift: new Date().toISOString(),
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+        }
+      } catch (resourceError) {
+        console.error("Error updating resource statuses:", resourceError);
+        // Continue with the function even if resource updates fail
+      }
+
       toast.success("Shift end time and details recorded successfully");
 
       setEditingShift(null);

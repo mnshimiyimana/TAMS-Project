@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 
-// ========= Enhanced Types =========
 export interface ActivitySummary {
   totalShifts: number;
   upcomingShifts: number;
@@ -117,21 +116,18 @@ export const useManagerProfile = () => {
     }
   }, [editingShift]);
 
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com"
-
+  const API_BASE_URL =
+    process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com";
 
   const fetchManagerData = async () => {
     try {
       setIsLoading(true);
 
-      const shiftsResponse = await axios.get(
-        `${API_BASE_URL}/api/shifts`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const shiftsResponse = await axios.get(`${API_BASE_URL}/api/shifts`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       let shifts: RecentShift[] = [];
 
@@ -160,41 +156,32 @@ export const useManagerProfile = () => {
         setDisplayedShifts([]);
       }
 
-      const driversResponse = await axios.get(
-        `${API_BASE_URL}/api/drivers`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const driversResponse = await axios.get(`${API_BASE_URL}/api/drivers`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       const drivers =
         driversResponse.data && driversResponse.data.drivers
           ? driversResponse.data.drivers
           : [];
 
-      const vehiclesResponse = await axios.get(
-        `${API_BASE_URL}/api/buses`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const vehiclesResponse = await axios.get(`${API_BASE_URL}/api/buses`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       const vehicles = Array.isArray(vehiclesResponse.data)
         ? vehiclesResponse.data
         : vehiclesResponse.data && vehiclesResponse.data.buses
         ? vehiclesResponse.data.buses
         : [];
 
-      const packagesResponse = await axios.get(
-        `${API_BASE_URL}/api/packages`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const packagesResponse = await axios.get(`${API_BASE_URL}/api/packages`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       let packages: Package[] = [];
       if (Array.isArray(packagesResponse.data)) {
@@ -306,6 +293,15 @@ export const useManagerProfile = () => {
     try {
       setIsCompletingShift(shiftId);
 
+      const shiftToComplete = allShifts.find((shift) => shift._id === shiftId);
+      if (!shiftToComplete) {
+        throw new Error("Shift not found");
+      }
+
+      console.log(
+        `Completing shift for driver ${shiftToComplete.driverName} with vehicle ${shiftToComplete.plateNumber}`
+      );
+
       const endTime = new Date().toISOString();
 
       await axios.patch(
@@ -329,7 +325,11 @@ export const useManagerProfile = () => {
 
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("shift_updated"));
+        window.dispatchEvent(new CustomEvent("driver_status_changed"));
+        window.dispatchEvent(new CustomEvent("vehicle_status_changed"));
       }
+
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       fetchManagerData();
     } catch (error) {
@@ -341,49 +341,49 @@ export const useManagerProfile = () => {
   };
 
   // Modified to include fine information
-  const updateActualEndTime = async () => {
-    if (!editingShift) return;
-    try {
-      setIsUpdatingEndTime(true);
+  // const updateActualEndTime = async () => {
+  //   if (!editingShift) return;
+  //   try {
+  //     setIsUpdatingEndTime(true);
 
-      const actualEndTimeValue = new Date(actualEndTime).toISOString();
+  //     const actualEndTimeValue = new Date(actualEndTime).toISOString();
 
-      await axios.patch(
-        `${API_BASE_URL}/api/shifts/${editingShift._id}`,
-        { actualEndTime: actualEndTimeValue },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+  //     await axios.patch(
+  //       `${API_BASE_URL}/api/shifts/${editingShift._id}`,
+  //       { actualEndTime: actualEndTimeValue },
+  //       {
+  //         headers: {
+  //           Authorization: `Bearer ${token}`,
+  //           "Content-Type": "application/json",
+  //         },
+  //       }
+  //     );
 
-      toast.success("Actual end time recorded successfully");
+  //     toast.success("Actual end time recorded successfully");
 
-      setAllShifts((prevShifts) =>
-        prevShifts.map((shift) =>
-          shift._id === editingShift._id
-            ? { ...shift, actualEndTime: actualEndTimeValue }
-            : shift
-        )
-      );
+  //     setAllShifts((prevShifts) =>
+  //       prevShifts.map((shift) =>
+  //         shift._id === editingShift._id
+  //           ? { ...shift, actualEndTime: actualEndTimeValue }
+  //           : shift
+  //       )
+  //     );
 
-      setEditingShift(null);
-      setActualEndTime("");
+  //     setEditingShift(null);
+  //     setActualEndTime("");
 
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent("shift_updated"));
-      }
+  //     if (typeof window !== "undefined") {
+  //       window.dispatchEvent(new CustomEvent("shift_updated"));
+  //     }
 
-      fetchManagerData();
-    } catch (error) {
-      console.error("Error recording actual end time:", error);
-      toast.error("Failed to record actual end time. Please try again.");
-    } finally {
-      setIsUpdatingEndTime(false);
-    }
-  };
+  //     fetchManagerData();
+  //   } catch (error) {
+  //     console.error("Error recording actual end time:", error);
+  //     toast.error("Failed to record actual end time. Please try again.");
+  //   } finally {
+  //     setIsUpdatingEndTime(false);
+  //   }
+  // };
 
   const getBadgeClasses = (status: string) => {
     switch (status) {
@@ -441,6 +441,58 @@ export const useManagerProfile = () => {
 
   const getPackageStatusColor = (status: string) => {
     return status;
+  };
+
+  const updateActualEndTime = async () => {
+    if (!editingShift) return;
+    try {
+      setIsUpdatingEndTime(true);
+
+      console.log(
+        `Recording actual end time for shift with driver ${editingShift.driverName} and vehicle ${editingShift.plateNumber}`
+      );
+
+      const actualEndTimeValue = new Date(actualEndTime).toISOString();
+
+      await axios.patch(
+        `${API_BASE_URL}/api/shifts/${editingShift._id}`,
+        { actualEndTime: actualEndTimeValue },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      toast.success("Actual end time recorded successfully");
+
+      setAllShifts((prevShifts) =>
+        prevShifts.map((shift) =>
+          shift._id === editingShift._id
+            ? { ...shift, actualEndTime: actualEndTimeValue }
+            : shift
+        )
+      );
+
+      setEditingShift(null);
+      setActualEndTime("");
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("shift_updated"));
+        window.dispatchEvent(new CustomEvent("driver_status_changed"));
+        window.dispatchEvent(new CustomEvent("vehicle_status_changed"));
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      fetchManagerData();
+    } catch (error) {
+      console.error("Error recording actual end time:", error);
+      toast.error("Failed to record actual end time. Please try again.");
+    } finally {
+      setIsUpdatingEndTime(false);
+    }
   };
 
   return {

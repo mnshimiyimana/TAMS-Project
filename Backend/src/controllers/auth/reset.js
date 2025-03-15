@@ -29,19 +29,15 @@ export const sendResetLink = async (req, res) => {
       });
     }
 
-    // Generate a single secure token
     const resetToken = crypto.randomBytes(32).toString("hex");
 
-    // Store token details
     resetTokens.set(resetToken, {
       email: user.email,
       expiresAt: Date.now() + 30 * 60 * 1000, // 30 minutes expiry
     });
 
-    // Create reset link
-    const resetLink = `https://www.tamsrw.site/reset-password/${resetToken}`;
+    const resetLink = `https://www.tamsrw.site/auth/reset-password/${resetToken}`;
 
-    // Prepare email with link
     const emailText = `
       Hello ${user.username},
       
@@ -88,7 +84,6 @@ export const verifyResetToken = (req, res) => {
       return res.status(400).json({ error: "Reset token has expired" });
     }
 
-    // Token is valid
     res.status(200).json({
       message: "Token verified. Proceed to reset password",
       email: resetData.email,
@@ -168,4 +163,11 @@ export const cleanupExpiredTokens = () => {
       resetTokens.delete(token);
     }
   }
+};
+
+export const sendResetCode = sendResetLink;
+export const verifyResetCode = (req, res) => {
+  return res.status(400).json({
+    error: "This endpoint is deprecated. Please use the new reset link method.",
+  });
 };

@@ -7,9 +7,10 @@ import {
 } from "../controllers/auth/login.js";
 import { checkAdmin } from "../controllers/auth/check-admin.js";
 import {
-  sendResetCode,
-  verifyResetCode,
+  sendResetLink,
+  verifyResetToken,
   resetPassword,
+  cleanupExpiredTokens,
 } from "../controllers/auth/reset.js";
 import {
   verifySetupToken,
@@ -27,20 +28,30 @@ import { protect, authorizeRoles } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
-// Public routes
+
 router.post("/signup", signup);
 router.post("/login", login);
 router.get("/check-admin", checkAdmin);
 router.get("/check-superadmin", checkSuperAdmin);
 router.post("/create-superadmin", createSuperAdmin);
 
-router.post("/send-reset-code", sendResetCode);
-router.post("/verify-reset-code", verifyResetCode);
-router.post("/reset-password", resetPassword);
+router.post("/send-reset-link", sendResetLink);
+router.get("/verify-reset-token/:token", verifyResetToken);
+router.post("/reset-password/:token", resetPassword);
+
+
+router.post("/send-reset-code", sendResetLink);
+router.post("/verify-reset-code", (req, res) => {
+  return res.status(400).json({ error: "This endpoint is deprecated. Please use the new reset link method." });
+});
+router.post("/reset-password", (req, res) => {
+  return res.status(400).json({ error: "This endpoint is deprecated. Please use the new reset link method." });
+});
+
+
 router.get("/verify-setup-token/:token", verifySetupToken);
 router.post("/complete-setup/:token", completePasswordSetup);
 router.post("/update-user-with-password/:token", updateUserDetailsWithPassword);
-
 
 router.post(
   "/create-admin",
@@ -55,7 +66,6 @@ router.get(
   "/agency-users",
   protect,
   authorizeRoles("admin", "superadmin"),
-
   getAgencyUsers
 );
 
@@ -63,7 +73,6 @@ router.patch(
   "/user-status",
   protect,
   authorizeRoles("admin", "superadmin"),
-
   updateUserStatus
 );
 
@@ -71,8 +80,8 @@ router.post(
   "/resend-setup-email",
   protect,
   authorizeRoles("admin", "superadmin"),
-
   resendSetupEmail
 );
+
 
 export default router;

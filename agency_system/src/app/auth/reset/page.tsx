@@ -166,11 +166,11 @@ export default function ResetPage(): React.ReactElement {
 
         {token && tokenVerified && (
           <form onSubmit={handleResetPassword} className="space-y-4 w-full">
-            {userEmail && (
+            {/* {userEmail && (
               <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded mb-4">
                 Resetting password for: <strong>{userEmail}</strong>
               </div>
-            )}
+            )} */}
 
             <div>
               <Label htmlFor="newPassword" className="text-gray-700">

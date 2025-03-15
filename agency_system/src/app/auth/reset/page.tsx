@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import AuthBackground from "@/components/sections/AuthBackground";
-import { Fingerprint, ArrowLeft } from "lucide-react";
+import { Fingerprint, ArrowLeft, Mail } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,6 @@ export default function ResetPage(): React.ReactElement {
   const params = useParams();
   const token = params?.token as string | undefined;
 
-  const [email, setEmail] = useState<string>("");
   const [newPassword, setNewPassword] = useState<string>("");
   const [confirmPassword, setConfirmPassword] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
@@ -64,43 +63,6 @@ export default function ResetPage(): React.ReactElement {
     }
   };
 
-  const handleSendResetLink = async (
-    e: React.FormEvent<HTMLFormElement>
-  ): Promise<void> => {
-    e.preventDefault();
-    if (!email) {
-      setError("Please enter your email address");
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-    setSuccess("");
-
-    try {
-      const response = await fetch(`${API_URL}/send-reset-link`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = (await response.json()) as ResetResponse;
-
-      if (response.ok) {
-        setSuccess(
-          "Password reset link has been sent to your email. Please check your inbox."
-        );
-        setEmail("");
-      } else {
-        setError(data.error || "Failed to send reset link.");
-      }
-    } catch (err) {
-      setError("Something went wrong. Please try again later.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleResetPassword = async (
     e: React.FormEvent<HTMLFormElement>
   ): Promise<void> => {
@@ -125,7 +87,7 @@ export default function ResetPage(): React.ReactElement {
     setError("");
 
     try {
-      const response = await fetch(`${API_URL}/reset-password/${token}`, {
+      const response = await fetch(`${API_URL}/reset/${token}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ newPassword }),
@@ -160,11 +122,16 @@ export default function ResetPage(): React.ReactElement {
 
         <div>
           <h1 className="text-2xl font-semibold">Password Reset</h1>
-          <p className="text-sm text-gray-600 mt-1">
-            {token && tokenVerified
-              ? "Enter your new password"
-              : "Enter your email to receive a reset link"}
-          </p>
+          {!token && (
+            <p className="text-sm text-gray-600 mt-1">
+              Check your email for the password reset link
+            </p>
+          )}
+          {token && tokenVerified && (
+            <p className="text-sm text-gray-600 mt-1">
+              Enter your new password
+            </p>
+          )}
         </div>
 
         {error && (
@@ -179,43 +146,24 @@ export default function ResetPage(): React.ReactElement {
           </div>
         )}
 
-        {/* Request Reset Link Form */}
         {!token && (
-          <form onSubmit={handleSendResetLink} className="space-y-4 w-full">
-            <div>
-              <Label htmlFor="email" className="text-gray-700">
-                Email Address
-              </Label>
-              <Input
-                type="email"
-                id="email"
-                placeholder="Enter your registered email"
-                value={email}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setEmail(e.target.value)
-                }
-                className="mt-1 py-3 text-base w-full"
-              />
+          <div className="py-4">
+            <div className="bg-green-50 border border-green-200 text-green-700 px-6 py-6 rounded flex flex-col items-center text-center">
+              <Mail className="w-12 h-12 text-green-500 mb-3" />
+              <h2 className="text-xl font-medium">Check Your Email</h2>
+              <p className="mt-2">
+                Please check your inbox for the password reset link.
+              </p>
             </div>
-
-            <Button
-              type="submit"
-              className="bg-[#00a651] w-full py-6 hover:bg-green-500 text-white font-medium"
-              disabled={loading}
-            >
-              {loading ? "Sending..." : "Send Reset Link"}
-            </Button>
-          </form>
+          </div>
         )}
 
-        {/* Token verification message */}
         {token && loading && (
           <div className="text-center py-8">
             <div className="animate-pulse">Verifying your reset link...</div>
           </div>
         )}
 
-        {/* Reset Password Form (when token is verified) */}
         {token && tokenVerified && (
           <form onSubmit={handleResetPassword} className="space-y-4 w-full">
             {userEmail && (
@@ -266,39 +214,11 @@ export default function ResetPage(): React.ReactElement {
           </form>
         )}
 
-        {/* Invalid token message */}
         {token && !tokenVerified && !loading && (
           <div className="space-y-4">
             <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
-              Your reset link is invalid or has expired. Please request a new
-              one.
+              Your reset link is invalid or has expired. Please contact support to request a new one.
             </div>
-
-            <form onSubmit={handleSendResetLink} className="space-y-4 w-full">
-              <div>
-                <Label htmlFor="email" className="text-gray-700">
-                  Email Address
-                </Label>
-                <Input
-                  type="email"
-                  id="email"
-                  placeholder="Enter your registered email"
-                  value={email}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setEmail(e.target.value)
-                  }
-                  className="mt-1 py-3 text-base w-full"
-                />
-              </div>
-
-              <Button
-                type="submit"
-                className="bg-[#00a651] w-full py-6 hover:bg-green-500 text-white font-medium"
-                disabled={loading}
-              >
-                {loading ? "Sending..." : "Send New Reset Link"}
-              </Button>
-            </form>
           </div>
         )}
 

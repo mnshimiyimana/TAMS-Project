@@ -148,10 +148,10 @@ export default function ResetPage(): React.ReactElement {
 
         {!token && (
           <div className="py-4">
-            <div className="bg-green-50 border border-green-200 text-green-700 px-6 py-6 rounded flex flex-col items-center text-center">
-              <Mail className="w-12 h-12 text-green-500 mb-3" />
-              <h2 className="text-xl font-medium">Check Your Email</h2>
-              <p className="mt-2">
+            <div className=" border border-green-200 text-green-700 px-6 py-6 rounded flex flex-col items-center text-center">
+              <Mail className="w-12 h-12 mb-3" />
+              <h2 className="text-xl font-medium text-black">Check Your Email</h2>
+              <p className="mt-2 text-gray-700 text-sm">
                 Please check your inbox for the password reset link.
               </p>
             </div>

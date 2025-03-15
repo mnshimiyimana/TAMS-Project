@@ -5,7 +5,7 @@ import sendEmail from "../../config/emailService.js";
 
 const resetTokens = new Map();
 
-export const sendResetCode = async (req, res) => {
+export const sendResetLink = async (req, res) => {
   try {
     const { email } = req.body;
 
@@ -17,7 +17,8 @@ export const sendResetCode = async (req, res) => {
 
     if (!user) {
       return res.status(200).json({
-        message: "If a user with this email exists, a reset code has been sent",
+        message:
+          "If a user with this email exists, a password reset link has been sent",
       });
     }
 
@@ -28,24 +29,28 @@ export const sendResetCode = async (req, res) => {
       });
     }
 
+    // Generate a single secure token
     const resetToken = crypto.randomBytes(32).toString("hex");
-    const resetCode = crypto.randomInt(100000, 999999).toString();
 
+    // Store token details
     resetTokens.set(resetToken, {
       email: user.email,
-      code: resetCode,
-      expiresAt: Date.now() + 30 * 60 * 1000,
+      expiresAt: Date.now() + 30 * 60 * 1000, // 30 minutes expiry
     });
 
-    // Prepare email
+    // Create reset link
+    const resetLink = `https://www.tamsrw.site/reset-password/${resetToken}`;
+
+    // Prepare email with link
     const emailText = `
       Hello ${user.username},
       
       You've requested to reset your password for the Transport Agency Management System.
       
-      Your password reset code is: ${resetCode}
+      Please click the link below to reset your password:
+      ${resetLink}
       
-      This code will expire in 30 minutes.
+      This link will expire in 30 minutes.
       
       If you didn't request a password reset, please ignore this email or contact your administrator.
       
@@ -53,61 +58,53 @@ export const sendResetCode = async (req, res) => {
       Transport Agency Management Team
     `;
 
-    await sendEmail(user.email, "Password Reset Code", emailText);
+    await sendEmail(user.email, "Password Reset Link", emailText);
 
     res.status(200).json({
-      message: "Reset code sent to email",
-      resetToken,
+      message: "Password reset link sent to email",
     });
   } catch (error) {
-    console.error("Error sending reset code:", error);
-    res.status(500).json({ error: "Error sending reset code" });
+    console.error("Error sending reset link:", error);
+    res.status(500).json({ error: "Error sending reset link" });
   }
 };
 
-export const verifyResetCode = (req, res) => {
+export const verifyResetToken = (req, res) => {
   try {
-    const { resetToken, code } = req.body;
+    const { token } = req.params;
 
-    if (!resetToken || !code) {
-      return res
-        .status(400)
-        .json({ error: "Reset token and code are required" });
+    if (!token) {
+      return res.status(400).json({ error: "Reset token is required" });
     }
 
-    const resetData = resetTokens.get(resetToken);
+    const resetData = resetTokens.get(token);
 
     if (!resetData) {
       return res.status(400).json({ error: "Invalid or expired reset token" });
     }
 
     if (Date.now() > resetData.expiresAt) {
-      resetTokens.delete(resetToken);
-      return res.status(400).json({ error: "Reset code has expired" });
+      resetTokens.delete(token);
+      return res.status(400).json({ error: "Reset token has expired" });
     }
 
-    if (resetData.code !== code) {
-      return res.status(400).json({ error: "Invalid reset code" });
-    }
-
-    resetData.verified = true;
-    resetTokens.set(resetToken, resetData);
-
+    // Token is valid
     res.status(200).json({
-      message: "Code verified. Proceed to reset password",
-      resetToken,
+      message: "Token verified. Proceed to reset password",
+      email: resetData.email,
     });
   } catch (error) {
-    console.error("Error verifying reset code:", error);
-    res.status(500).json({ error: "Error verifying reset code" });
+    console.error("Error verifying reset token:", error);
+    res.status(500).json({ error: "Error verifying reset token" });
   }
 };
 
 export const resetPassword = async (req, res) => {
   try {
-    const { resetToken, newPassword } = req.body;
+    const { token } = req.params;
+    const { newPassword } = req.body;
 
-    if (!resetToken || !newPassword) {
+    if (!token || !newPassword) {
       return res
         .status(400)
         .json({ error: "Reset token and new password are required" });
@@ -119,16 +116,14 @@ export const resetPassword = async (req, res) => {
         .json({ error: "Password must be at least 8 characters long" });
     }
 
-    const resetData = resetTokens.get(resetToken);
+    const resetData = resetTokens.get(token);
 
-    if (!resetData || !resetData.verified) {
-      return res
-        .status(400)
-        .json({ error: "Invalid reset token or code not verified" });
+    if (!resetData) {
+      return res.status(400).json({ error: "Invalid or expired reset token" });
     }
 
     if (Date.now() > resetData.expiresAt) {
-      resetTokens.delete(resetToken);
+      resetTokens.delete(token);
       return res.status(400).json({ error: "Reset token has expired" });
     }
 
@@ -143,7 +138,7 @@ export const resetPassword = async (req, res) => {
     user.password = hashedPassword;
     await user.save();
 
-    resetTokens.delete(resetToken);
+    resetTokens.delete(token);
 
     const emailText = `
       Hello ${user.username},

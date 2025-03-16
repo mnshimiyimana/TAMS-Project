@@ -15,6 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import type { PieProps } from "recharts";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -39,6 +40,7 @@ import {
   PieChart,
   Pie,
   Cell,
+  Sector,
 } from "recharts";
 import {
   ChartBarIcon,
@@ -107,7 +109,25 @@ interface FinedShift {
   updatedAt: string;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com"
+type ActiveShapeProps = {
+  cx: number;
+  cy: number;
+  midAngle: number;
+  innerRadius: number;
+  outerRadius: number;
+  startAngle: number;
+  endAngle: number;
+  fill: string;
+  payload: {
+    name: string;
+    value: number;
+  };
+  percent: number;
+  value: number;
+};
+
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com";
 
 const createApiClient = (token: string) => {
   const instance = axios.create({
@@ -611,6 +631,8 @@ export default function Insights() {
   const [timeFrame, setTimeFrame] = useState("30");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [vehicleActiveIndex, setVehicleActiveIndex] = useState<number>(0);
+  const [driverActiveIndex, setDriverActiveIndex] = useState<number>(0);
   const [insightsData, setInsightsData] = useState<any>({
     vehicles: [],
     drivers: [],
@@ -644,6 +666,76 @@ export default function Insights() {
   const [packageStatsError, setPackageStatsError] = useState<string | null>(
     null
   );
+
+  const renderActiveShape = (props: ActiveShapeProps) => {
+    const {
+      cx,
+      cy,
+      midAngle,
+      innerRadius,
+      outerRadius,
+      startAngle,
+      endAngle,
+      fill,
+      payload,
+      percent,
+      value,
+    } = props;
+
+    // Calculate position for the label with polar coordinates
+    const sin = Math.sin((-midAngle * Math.PI) / 180);
+    const cos = Math.cos((-midAngle * Math.PI) / 180);
+
+    // Calculate line points from pie edge to label position
+    const sx = cx + outerRadius * cos;
+    const sy = cy + outerRadius * sin;
+    const mx = cx + (outerRadius + 15) * cos;
+    const my = cy + (outerRadius + 15) * sin;
+    const ex = mx + (cos >= 0 ? 1 : -1) * 22;
+    const ey = my;
+    const textAnchor = cos >= 0 ? "start" : "end";
+
+    return (
+      <g>
+        <Sector
+          cx={cx}
+          cy={cy}
+          innerRadius={innerRadius}
+          outerRadius={outerRadius + 6}
+          startAngle={startAngle}
+          endAngle={endAngle}
+          fill={fill}
+        />
+
+        <path
+          d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`}
+          stroke={fill}
+          fill="none"
+        />
+
+        <text
+          x={ex + (cos >= 0 ? 1 : -1) * 12}
+          y={ey}
+          textAnchor={textAnchor}
+          fill="#333"
+          className="text-sm font-medium"
+        >
+          {`${payload.name}: ${value}`}
+        </text>
+
+        <text
+          x={ex + (cos >= 0 ? 1 : -1) * 12}
+          y={ey}
+          dy={18}
+          textAnchor={textAnchor}
+          fill="#666"
+          className="text-xs"
+        >
+          {`(${(percent * 100).toFixed(0)}%)`}
+        </text>
+      </g>
+    );
+  };
 
   const [finedShifts, setFinedShifts] = useState<FinedShift[]>([]);
   const [fineFilters, setFineFilters] = useState({
@@ -1100,37 +1192,19 @@ export default function Insights() {
     });
   };
 
-  const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
+  const COLORS = [
+    "#0088FE",
+    "#00C49F",
+    "#FFBB28",
+    "#FF8042",
+    "#8884d8",
+    "#82ca9d",
+    "#ffc658",
+  ];
 
-  const renderActiveShape = (props: any) => {
-    const {
-      cx,
-      cy,
-      midAngle,
-      innerRadius,
-      outerRadius,
-      startAngle,
-      endAngle,
-      fill,
-      payload,
-      percent,
-      value,
-    } = props;
-    return (
-      <g>
-        <text x={cx} y={cy} dy={8} textAnchor="middle" fill={fill}>
-          {payload.name}
-        </text>
-        <text
-          x={cx}
-          y={cy + 20}
-          dy={8}
-          textAnchor="middle"
-          fill="#999"
-        >{`${value} (${(percent * 100).toFixed(0)}%)`}</text>
-      </g>
-    );
-  };
+  // Remove this function inside your component
+  // Remove this function inside your component
+  // Remove this function inside your component
 
   if (isLoading) {
     return (
@@ -1192,7 +1266,7 @@ export default function Insights() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-16">
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-5">
             <div className="flex justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-500">Vehicles</p>
@@ -1401,16 +1475,19 @@ export default function Insights() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={metrics.vehicleMetrics.statusDistribution}
+                    activeIndex={vehicleActiveIndex}
+                    activeShape={renderActiveShape as any}
+                    data={metrics.vehicleMetrics.statusDistribution || []}
                     cx="50%"
                     cy="50%"
-                    labelLine={false}
-                    label={renderActiveShape}
+                    innerRadius={60}
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"
+                    onMouseEnter={(_, index) => setVehicleActiveIndex(index)}
+                    paddingAngle={3}
                   >
-                    {metrics.vehicleMetrics.statusDistribution.map(
+                    {(metrics.vehicleMetrics.statusDistribution || []).map(
                       (entry: any, index: number) => (
                         <Cell
                           key={`cell-${index}`}
@@ -1419,8 +1496,14 @@ export default function Insights() {
                       )
                     )}
                   </Pie>
-                  <Legend />
-                  <Tooltip />
+                  <Legend
+                    verticalAlign="bottom"
+                    align="center"
+                    layout="horizontal"
+                    formatter={(value) => (
+                      <span className="text-sm">{value}</span>
+                    )}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -1442,7 +1525,7 @@ export default function Insights() {
                   margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
+                  <XAxis dataKey="date" className="text-sm"/>
                   <YAxis yAxisId="left" />
                   <YAxis yAxisId="right" orientation="right" />
                   <Tooltip />
@@ -1486,8 +1569,8 @@ export default function Insights() {
                   margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="plateNumber" />
-                  <YAxis />
+                  <XAxis dataKey="plateNumber" className="text-sm" />
+                  <YAxis className="text-sm" />
                   <Tooltip />
                   <Legend />
                   <Bar dataKey="trips" fill="#3b82f6" name="Number of Trips" />
@@ -1512,7 +1595,7 @@ export default function Insights() {
                   margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
+                  <XAxis dataKey="date" className="text-sm" />
                   <YAxis />
                   <Tooltip />
                   <Legend />
@@ -1543,14 +1626,17 @@ export default function Insights() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
+                    activeIndex={driverActiveIndex}
+                    activeShape={renderActiveShape as any}
                     data={metrics.driverMetrics.statusDistribution}
                     cx="50%"
                     cy="50%"
-                    labelLine={false}
-                    label={renderActiveShape}
+                    innerRadius={60}
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"
+                    onMouseEnter={(_, index) => setDriverActiveIndex(index)}
+                    paddingAngle={3}
                   >
                     {metrics.driverMetrics.statusDistribution.map(
                       (entry: any, index: number) => (
@@ -1561,8 +1647,14 @@ export default function Insights() {
                       )
                     )}
                   </Pie>
-                  <Legend />
-                  <Tooltip />
+                  <Legend
+                    verticalAlign="bottom"
+                    align="center"
+                    layout="horizontal"
+                    formatter={(value) => (
+                      <span className="text-sm">{value}</span>
+                    )}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -1585,8 +1677,8 @@ export default function Insights() {
                   layout="vertical"
                 >
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" />
-                  <YAxis type="category" dataKey="driverName" width={100} />
+                  <XAxis type="number" className="text-xs" />
+                  <YAxis type="category" dataKey="driverName" width={100} className="text-xs" />
                   <Tooltip />
                   <Legend />
                   <Bar

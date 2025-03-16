@@ -233,7 +233,7 @@ export default function VehiclesTable({
           <TableHeader>
             <TableRow className="bg-gray-100">
               {tableHeaders.map((header) => (
-                <TableHead key={header} className="px-5 py-3 text-left">
+                <TableHead key={header} className="py-4 text-left">
                   {header}
                 </TableHead>
               ))}

@@ -371,11 +371,11 @@ export default function DriversTable({
 
                 return (
                   <TableRow key={_id}>
-                    <TableCell className="px-4 py-4">{driverId}</TableCell>
-                    <TableCell className="px- py-4">{names}</TableCell>
-                    <TableCell className="px- py-4">{email}</TableCell>
-                    <TableCell className="px-4 py-4">{phoneNumber}</TableCell>
-                    <TableCell className="px-5 py-4">
+                    <TableCell className=" py-4">{driverId}</TableCell>
+                    <TableCell className=" py-4">{names}</TableCell>
+                    <TableCell className=" py-4">{email}</TableCell>
+                    <TableCell className=" py-4">{phoneNumber}</TableCell>
+                    <TableCell className=" py-4">
                       <span
                         className={`${getStatusStyle(
                           status

@@ -23,26 +23,20 @@ import { protect } from "./middlewares/authMiddleware.js";
 import { enforceAgencyIsolation } from "./middlewares/agencyIsolationMiddleware.js";
 // import auditLogRoutes from "./routes/auditLogRoutes.js";
 
-// environment variables
 dotenv.config();
 
-// MongoDB
 connectDB();
 
 const app = express();
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// Middleware
 app.use(express.json());
 app.use(cors());
 app.use(helmet());
 app.use(morgan("dev"));
 
-// Authentication routes (no agency isolation)
 app.use("/api/auth", authRoutes);
 
-// All other routes should apply protect middleware and agency isolation
-// Protected routes
 app.use("/api/agencies", protect, enforceAgencyIsolation, agencyRoutes);
 app.use("/api/drivers", protect, enforceAgencyIsolation, driverRoutes);
 app.use("/api/buses", protect, enforceAgencyIsolation, busRoutes);
@@ -60,18 +54,16 @@ app.use(
 );
 app.use("/api/shifts", protect, enforceAgencyIsolation, shiftRoutes);
 app.use("/api/insights", protect, enforceAgencyIsolation, insightRoutes);
-app.use("/api/superadmin", protect, superadminRoutes); // Superadmin bypasses isolation by default
+app.use("/api/superadmin", protect, superadminRoutes);
 app.use("/api/dashboard", protect, enforceAgencyIsolation, dashboardRoutes);
 app.use("/api/feedback", protect, enforceAgencyIsolation, feedbackRoutes);
 app.use("/api/packages", protect, enforceAgencyIsolation, packageRoutes);
 // app.use("/api/audit-logs", auditLogRoutes);
 
-// Test route
 app.get("/", (req, res) => {
   res.send("API is running...");
 });
 
-// Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({

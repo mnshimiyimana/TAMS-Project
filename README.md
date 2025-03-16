@@ -62,4 +62,4 @@ The deployment will be done as follows:
 [The video demonstration of the functionalities of the app ](https://drive.google.com/drive/folders/1cf1LgthPSMHHpU96jdYx_oc9J65z2uyv?usp=sharing).
 
 ## Diagrams
-[This documents contains more about this solution and the diagrams.](https://docs.google.com/document/d/1uZ8FpQc0XpowwupFdv4rj8iCfTfS_Xqe/edit)
+[This documents contains more about this solution and the diagrams.]()

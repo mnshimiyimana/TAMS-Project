@@ -33,7 +33,7 @@ export const sendResetLink = async (req, res) => {
 
     resetTokens.set(resetToken, {
       email: user.email,
-      expiresAt: Date.now() + 30 * 60 * 1000, // 30 minutes expiry
+      expiresAt: Date.now() + 30 * 60 * 1000,
     });
 
     const resetLink = `https://www.tamsrw.site/auth/reset-password/${resetToken}`;

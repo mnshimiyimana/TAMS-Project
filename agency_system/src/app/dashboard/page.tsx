@@ -36,7 +36,7 @@ export default function DashboardPage() {
   };
 
   const navigateToDashboard = () => {
-    router.push("/dashboard?feature=drivers");
+    router.push("/dashboard");
   };
 
   if (isLoading) {

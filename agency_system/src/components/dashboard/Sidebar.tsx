@@ -75,7 +75,7 @@ export function AppSidebar({
   };
 
    const navigateToDashboard = () => {
-    router.push("/dashboard?feature=drivers");
+    router.push("/dashboard");
   };
 
   return (

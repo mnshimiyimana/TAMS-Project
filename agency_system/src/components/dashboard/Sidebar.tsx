@@ -74,11 +74,15 @@ export function AppSidebar({
     window.location.href = "/auth/sign-in";
   };
 
+   const navigateToDashboard = () => {
+    router.push("/dashboard?feature=drivers");
+  };
+
   return (
     <Sidebar className="flex flex-col h-screen text-black">
       <SidebarContent className="flex flex-col flex-1">
         <SidebarGroup>
-          <SidebarGroupLabel className="text-2xl text-green-500 py-10">
+          <SidebarGroupLabel className="text-2xl text-green-500 py-10" onClick={navigateToDashboard}>
             TAMS
           </SidebarGroupLabel>
           <SidebarGroupContent>

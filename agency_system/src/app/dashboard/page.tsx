@@ -35,6 +35,10 @@ export default function DashboardPage() {
     router.push("/auth/sign-in");
   };
 
+  const navigateToDashboard = () => {
+    router.push("/dashboard?feature=drivers");
+  };
+
   if (isLoading) {
     return (
       <div className="h-screen flex items-center justify-center">
@@ -72,7 +76,7 @@ export default function DashboardPage() {
               </div>
               <div className="flex items-center gap-2 cursor-pointer" onClick={handleLogout}>
                 <UserRound className="text-gray-600" />
-                <div className="hidden md:block">
+                <div className="hidden md:block" onClick={navigateToDashboard} >
                   <p className="text-sm font-medium">{user?.username}</p>
                   <p className="text-xs text-gray-500">{user?.role}</p>
                 </div>

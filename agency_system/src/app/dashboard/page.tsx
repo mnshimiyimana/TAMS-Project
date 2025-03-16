@@ -74,9 +74,9 @@ export default function DashboardPage() {
                   2
                 </span>
               </div>
-              <div className="flex items-center gap-2 cursor-pointer" onClick={handleLogout}>
+              <div className="flex items-center gap-2 cursor-pointer" onClick={navigateToDashboard}>
                 <UserRound className="text-gray-600" />
-                <div className="hidden md:block" onClick={navigateToDashboard} >
+                <div className="hidden md:block">
                   <p className="text-sm font-medium">{user?.username}</p>
                   <p className="text-xs text-gray-500">{user?.role}</p>
                 </div>

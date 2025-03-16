@@ -82,7 +82,7 @@ export function AppSidebar({
     <Sidebar className="flex flex-col h-screen text-black">
       <SidebarContent className="flex flex-col flex-1">
         <SidebarGroup>
-          <SidebarGroupLabel className="text-2xl text-green-500 py-10" onClick={navigateToDashboard}>
+          <SidebarGroupLabel className="text-2xl text-green-500 py-10 cursor-pointer" onClick={navigateToDashboard}>
             TAMS
           </SidebarGroupLabel>
           <SidebarGroupContent>

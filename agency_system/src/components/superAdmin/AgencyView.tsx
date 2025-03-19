@@ -28,24 +28,29 @@ export default function AgencyView({ agency, onBack }: AgencyViewProps) {
   const resources = agency.resources || {};
   const userStats = agency.userStats || { total: 0 };
 
+  // FIXED: Changed how we access package status data to match the actual data structure
+  // The data structure in superadminController.js shows that package counts are stored
+  // directly in the resourceCounts object
   const packageData = {
     total: resources.packages || 0,
-    delivered: resources.totalDelivered || 0,
-    inTransit: resources.totalInTransit || 0,
-    pending: resources.totalPending || 0,
-    cancelled: resources.totalCancelled || 0,
-    returned: resources.totalReturned || 0,
+    delivered: resources.deliveredPackages || 0,
+    inTransit: resources.inTransitPackages || 0,
+    pending: resources.pendingPackages || 0,
+    cancelled: resources.cancelledPackages || 0,
+    returned: resources.returnedPackages || 0,
   };
 
-  const hasDetailedPackageData =
-    resources.totalDelivered ||
-    resources.totalInTransit ||
-    resources.totalPending ||
-    resources.totalCancelled ||
-    resources.totalReturned;
-
+  // Log the data structure to help with debugging
   console.log("Agency data:", agency);
   console.log("Resources data:", resources);
+  console.log("Package data:", packageData);
+
+  const hasDetailedPackageData =
+    packageData.delivered > 0 ||
+    packageData.inTransit > 0 ||
+    packageData.pending > 0 ||
+    packageData.cancelled > 0 ||
+    packageData.returned > 0;
 
   const deliveryRate =
     packageData.total > 0

@@ -47,6 +47,7 @@ import {
   Bus,
   User,
   Clock,
+  Package,
 } from "lucide-react";
 
 export default function AgencyManagement() {
@@ -159,6 +160,10 @@ export default function AgencyManagement() {
                         <span className="flex items-center">
                           <User className="h-3 w-3 mr-1" />
                           {agency.resources?.drivers || 0}
+                        </span>
+                        <span className="flex items-center">
+                          <Package className="h-3 w-3 mr-1" />
+                          {agency.resources?.packages || 0}
                         </span>
                         <span className="flex items-center">
                           <Clock className="h-3 w-3 mr-1" />

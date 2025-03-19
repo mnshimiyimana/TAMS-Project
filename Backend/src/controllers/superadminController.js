@@ -205,8 +205,14 @@ export const getAgencyHighLevelStats = async (req, res) => {
       shifts: await Shift.countDocuments({ agencyName }),
       fuelTransactions: await FuelManagement.countDocuments({ agencyName }),
       packages: await Package.countDocuments({ agencyName }),
-      pendingPackages: await Package.countDocuments({ agencyName, status: "Pending" }),
-      deliveredPackages: await Package.countDocuments({ agencyName, status: "Delivered" })
+      pendingPackages: await Package.countDocuments({
+        agencyName,
+        status: "Pending",
+      }),
+      deliveredPackages: await Package.countDocuments({
+        agencyName,
+        status: "Delivered",
+      }),
     };
 
     const activityMetrics = {
@@ -341,10 +347,13 @@ export const getAgenciesDashboard = async (req, res) => {
         const feedback = await Feedback.countDocuments({
           agencyName: agency.agencyName,
         });
+        const packages = await Package.countDocuments({
+          agencyName: agency.agencyName,
+        });
 
         return {
           agencyName: agency.agencyName,
-          resourceCounts: { buses, drivers, shifts, feedback },
+          resourceCounts: { buses, drivers, shifts, feedback, packages },
         };
       })
     );
@@ -364,6 +373,7 @@ export const getAgenciesDashboard = async (req, res) => {
         drivers: 0,
         shifts: 0,
         feedback: 0,
+        packages: 0,
       };
 
       return {
@@ -440,7 +450,13 @@ export const getEnhancedSystemSummary = async (req, res) => {
     const totalShifts = await Shift.countDocuments();
     const totalFeedback = await Feedback.countDocuments();
     const totalPackages = await Package.countDocuments();
-    const deliveredPackages = await Package.countDocuments({ status: "Delivered" });
+    const deliveredPackages = await Package.countDocuments({
+      status: "Delivered",
+    });
+    const pendingPackages = await Package.countDocuments({ status: "Pending" });
+    const inTransitPackages = await Package.countDocuments({
+      status: "In Transit",
+    });
 
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -450,6 +466,10 @@ export const getEnhancedSystemSummary = async (req, res) => {
     });
 
     const newFeedbackLast30Days = await Feedback.countDocuments({
+      createdAt: { $gte: thirtyDaysAgo },
+    });
+
+    const newPackagesLast30Days = await Package.countDocuments({
       createdAt: { $gte: thirtyDaysAgo },
     });
 
@@ -472,6 +492,25 @@ export const getEnhancedSystemSummary = async (req, res) => {
       },
     ]);
 
+    const recentPackagesByStatus = await Package.aggregate([
+      {
+        $match: { createdAt: { $gte: thirtyDaysAgo } },
+      },
+      {
+        $group: {
+          _id: "$status",
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          status: "$_id",
+          count: 1,
+        },
+      },
+    ]);
+
     res.status(200).json({
       agencyStats: {
         totalAgencies,
@@ -489,12 +528,19 @@ export const getEnhancedSystemSummary = async (req, res) => {
         totalFeedback,
         totalPackages,
         deliveredPackages,
-        packageDeliveryRate: totalPackages > 0 ? ((deliveredPackages / totalPackages) * 100).toFixed(2) : 0,
+        pendingPackages,
+        inTransitPackages,
+        packageDeliveryRate:
+          totalPackages > 0
+            ? ((deliveredPackages / totalPackages) * 100).toFixed(2)
+            : 0,
       },
       recentActivity: {
         newUsersLast30Days,
         newFeedbackLast30Days,
+        newPackagesLast30Days,
         feedbackByType: recentFeedbackByType,
+        packagesByStatus: recentPackagesByStatus,
       },
       recentAgencies,
       recentLogins: recentActivity,
@@ -883,5 +929,16 @@ export const searchUsers = async (req, res) => {
   } catch (error) {
     console.error("Error searching users:", error);
     res.status(500).json({ error: error.message });
+  }
+};
+
+const createAuditLog = async (logData) => {
+  try {
+    const log = new AuditLog(logData);
+    await log.save();
+    return log;
+  } catch (error) {
+    console.error("Error creating audit log:", error);
+    return null;
   }
 };

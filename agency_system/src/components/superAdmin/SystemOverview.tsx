@@ -7,7 +7,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { Building2, Users, Bus, Settings } from "lucide-react";
+import { Building2, Users, Bus, Settings, Package } from "lucide-react";
 
 export default function SystemOverview() {
   const {
@@ -76,9 +76,10 @@ export default function SystemOverview() {
               {dashboardLoading
                 ? "..."
                 : (summary?.resourceStats?.totalBuses || 0) +
-                  (summary?.resourceStats?.totalDrivers || 0)}
+                  (summary?.resourceStats?.totalDrivers || 0) +
+                  (summary?.resourceStats?.totalPackages || 0)}
             </div>
-            <p className="text-xs text-gray-500">Vehicles and Drivers</p>
+            <p className="text-xs text-gray-500">Vehicles, Drivers, Packages</p>
           </CardContent>
         </Card>
 
@@ -254,7 +255,7 @@ export default function SystemOverview() {
               <h3 className="font-semibold mb-2">Resource Statistics</h3>
               {dashboardLoading ? (
                 <div className="space-y-2">
-                  {Array.from({ length: 4 }).map((_, i) => (
+                  {Array.from({ length: 5 }).map((_, i) => (
                     <div key={i} className="flex items-center justify-between">
                       <div className="h-3 w-20 bg-gray-200 rounded animate-pulse"></div>
                       <div className="h-3 w-12 bg-gray-200 rounded animate-pulse"></div>
@@ -273,6 +274,18 @@ export default function SystemOverview() {
                     <span className="text-sm">Drivers</span>
                     <span className="text-sm font-medium">
                       {summary?.resourceStats?.totalDrivers || 0}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm">Packages</span>
+                    <span className="text-sm font-medium">
+                      {summary?.resourceStats?.totalPackages || 0}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm">Delivered</span>
+                    <span className="text-sm font-medium">
+                      {summary?.resourceStats?.deliveredPackages || 0}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -322,6 +335,14 @@ export default function SystemOverview() {
                             summary.timespan.lastAgencyCreated
                           ).toLocaleDateString()
                         : "N/A"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Package Delivery Rate</span>
+                    <span className="font-medium">
+                      {summary?.resourceStats?.packageDeliveryRate
+                        ? `${summary.resourceStats.packageDeliveryRate}%`
+                        : "0%"}
                     </span>
                   </div>
                 </div>

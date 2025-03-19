@@ -47,7 +47,7 @@ interface PackagesState {
     status: string | null;
     driverName: string | null;
     plateNumber: string | null;
-    receiverId: string | null; 
+    receiverId: string | null;
     dateRange: {
       from: string | null;
       to: string | null;
@@ -96,7 +96,8 @@ const initialState: PackagesState = {
   stats: null,
 };
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com";
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com";
 
 export const fetchPackages = createAsyncThunk(
   "packages/fetchPackages",
@@ -108,7 +109,7 @@ export const fetchPackages = createAsyncThunk(
       status = null,
       driverName = null,
       plateNumber = null,
-      receiverId = null, 
+      receiverId = null,
       dateFrom = null,
       dateTo = null,
     }: {
@@ -235,10 +236,9 @@ export const fetchPackageStats = createAsyncThunk(
   }
 );
 
-
 export const createPackage = createAsyncThunk(
   "packages/createPackage",
-  async (packageData: any, { rejectWithValue }) => {
+  async (packageData: any, { dispatch, rejectWithValue }) => {
     try {
       const token = localStorage.getItem("token");
       if (!token) {
@@ -253,7 +253,7 @@ export const createPackage = createAsyncThunk(
         "senderPhone",
         "receiverName",
         "receiverPhone",
-        "receiverId", // Added receiverId to required fields
+        "receiverId",
         "pickupLocation",
         "deliveryLocation",
         "shiftId",
@@ -284,31 +284,46 @@ export const createPackage = createAsyncThunk(
         process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com";
       console.log("API URL:", `${API_URL}/api/packages`);
 
-      const response = await axios.post(
-        `${API_URL}/api/packages`,
-        processedData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
+      try {
+        const response = await axios.post(
+          `${API_URL}/api/packages`,
+          processedData,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        console.log("Create package response:", response.data);
+
+        return response.data.package;
+      } catch (error: any) {
+        console.error("Create package error:", error.response || error);
+
+        if (error.response && error.response.data) {
+          console.error("Server error message:", error.response.data.message);
+          console.error("Server error details:", error.response.data);
+
+          if (error.response.status === 403 || error.response.status === 400) {
+            console.log(
+              "Received error but package might have been created. Refreshing packages list."
+            );
+            dispatch(fetchPackages({}));
+          }
         }
-      );
 
-      console.log("Create package response:", response.data);
-      return response.data.package;
-    } catch (error: any) {
-      console.error("Create package error:", error.response || error);
-
-      if (error.response && error.response.data) {
-        console.error("Server error message:", error.response.data.message);
-        console.error("Server error details:", error.response.data);
+        return rejectWithValue(
+          error.response?.data?.message ||
+            error.message ||
+            "Failed to create package"
+        );
       }
-
+    } catch (error: any) {
+      console.error("Unhandled create package error:", error);
       return rejectWithValue(
-        error.response?.data?.message ||
-          error.message ||
-          "Failed to create package"
+        "Unexpected error occurred while creating package"
       );
     }
   }
@@ -478,7 +493,6 @@ const packagesSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // fetchPackages reducers
       .addCase(fetchPackages.pending, (state) => {
         state.status = "loading";
         state.error = null;
@@ -497,7 +511,6 @@ const packagesSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // fetchPackageById reducers
       .addCase(fetchPackageById.pending, (state) => {
         state.status = "loading";
         state.error = null;
@@ -512,7 +525,6 @@ const packagesSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // fetchPackageStats reducers
       .addCase(fetchPackageStats.pending, (state) => {
         state.error = null;
       })
@@ -524,7 +536,6 @@ const packagesSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // createPackage reducers
       .addCase(createPackage.pending, (state) => {
         state.error = null;
       })
@@ -538,13 +549,11 @@ const packagesSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // updatePackage reducers
       .addCase(updatePackage.pending, (state) => {
         state.error = null;
       })
       .addCase(updatePackage.fulfilled, (state, action) => {
         const updatedPackage = action.payload;
-        // Update in packages array
         const index = state.packages.findIndex(
           (p) => p._id === updatedPackage._id
         );
@@ -552,7 +561,6 @@ const packagesSlice = createSlice({
           state.packages[index] = updatedPackage;
         }
 
-        // Update in filteredPackages array
         const filteredIndex = state.filteredPackages.findIndex(
           (p) => p._id === updatedPackage._id
         );
@@ -560,7 +568,6 @@ const packagesSlice = createSlice({
           state.filteredPackages[filteredIndex] = updatedPackage;
         }
 
-        // Update selectedPackage if it matches
         if (
           state.selectedPackage &&
           state.selectedPackage._id === updatedPackage._id
@@ -574,13 +581,11 @@ const packagesSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // updatePackageStatus reducers
       .addCase(updatePackageStatus.pending, (state) => {
         state.error = null;
       })
       .addCase(updatePackageStatus.fulfilled, (state, action) => {
         const updatedPackage = action.payload;
-        // Update in packages array
         const index = state.packages.findIndex(
           (p) => p._id === updatedPackage._id
         );
@@ -588,7 +593,6 @@ const packagesSlice = createSlice({
           state.packages[index] = updatedPackage;
         }
 
-        // Update in filteredPackages array
         const filteredIndex = state.filteredPackages.findIndex(
           (p) => p._id === updatedPackage._id
         );
@@ -596,7 +600,6 @@ const packagesSlice = createSlice({
           state.filteredPackages[filteredIndex] = updatedPackage;
         }
 
-        // Update selectedPackage if it matches
         if (
           state.selectedPackage &&
           state.selectedPackage._id === updatedPackage._id
@@ -610,7 +613,6 @@ const packagesSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // deletePackage reducers
       .addCase(deletePackage.pending, (state) => {
         state.error = null;
       })

@@ -57,7 +57,6 @@ export default function AgencyView({ agency, onBack }: AgencyViewProps) {
     setIsLoading(false);
   };
 
-  // Fetch package stats for this specific agency
   const fetchPackageStats = async () => {
     if (!agency?.agencyName) return;
 
@@ -71,7 +70,6 @@ export default function AgencyView({ agency, onBack }: AgencyViewProps) {
       const API_URL =
         process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com";
 
-      // Make a direct call to get package stats for this agency
       const response = await axios.get(
         `${API_URL}/api/packages/stats?agencyName=${encodeURIComponent(
           agency.agencyName
@@ -83,7 +81,6 @@ export default function AgencyView({ agency, onBack }: AgencyViewProps) {
 
       console.log("Package stats API response:", response.data);
 
-      // Handle different response formats
       const stats = response.data.stats || response.data || {};
 
       const totalDelivered =
@@ -112,7 +109,6 @@ export default function AgencyView({ agency, onBack }: AgencyViewProps) {
     }
   };
 
-  // Fetch shift statistics for this agency
   const fetchShiftStats = async () => {
     if (!agency?.agencyName) return;
 
@@ -126,7 +122,6 @@ export default function AgencyView({ agency, onBack }: AgencyViewProps) {
       const API_URL =
         process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com";
 
-      // For shift stats, we need to get all shifts and calculate ourselves
       const response = await axios.get(
         `${API_URL}/api/shifts?agencyName=${encodeURIComponent(
           agency.agencyName
@@ -140,14 +135,12 @@ export default function AgencyView({ agency, onBack }: AgencyViewProps) {
 
       const shifts = response.data.shifts || [];
 
-      // Calculate actual statistics by analyzing the shifts with correct time categorization
       const now = new Date();
       let activeCount = 0;
       let scheduledCount = 0;
       let completedCount = 0;
 
       shifts.forEach((shift: { actualEndTime: any; startTime: string | number | Date; }) => {
-        // If it has an actualEndTime, it's completed
         if (shift.actualEndTime) {
           completedCount++;
           return;
@@ -155,11 +148,9 @@ export default function AgencyView({ agency, onBack }: AgencyViewProps) {
 
         const startTime = new Date(shift.startTime);
 
-        // If start time is in the future, it's scheduled
         if (startTime > now) {
           scheduledCount++;
         }
-        // If start time is in the past and no actualEndTime, it's active/ongoing
         else {
           activeCount++;
         }
@@ -176,7 +167,6 @@ export default function AgencyView({ agency, onBack }: AgencyViewProps) {
     }
   };
 
-  // Fetch fuel records for this agency
   const fetchFuelStats = async () => {
     if (!agency?.agencyName) return;
 
@@ -190,7 +180,6 @@ export default function AgencyView({ agency, onBack }: AgencyViewProps) {
       const API_URL =
         process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com";
 
-      // Looking at the controller, the correct endpoint is /api/fuel-management
       const response = await axios.get(
         `${API_URL}/api/fuel-management?agencyName=${encodeURIComponent(
           agency.agencyName
@@ -202,7 +191,6 @@ export default function AgencyView({ agency, onBack }: AgencyViewProps) {
 
       console.log("Fuel API response:", response.data);
 
-      // Determine total fuel transactions from different response formats
       let totalFuelRecords = 0;
 
       if (
@@ -222,7 +210,6 @@ export default function AgencyView({ agency, onBack }: AgencyViewProps) {
     } catch (error) {
       console.error("Error fetching fuel stats:", error);
       try {
-        // Try alternate endpoint as a fallback
         const token = localStorage.getItem("token");
         const API_URL =
           process.env.NEXT_PUBLIC_API_URL ||
@@ -258,7 +245,6 @@ export default function AgencyView({ agency, onBack }: AgencyViewProps) {
     }
   };
 
-  // Fetch all stats when the component mounts
   useEffect(() => {
     fetchAllStats();
   }, [agency?.agencyName]);
@@ -291,7 +277,6 @@ export default function AgencyView({ agency, onBack }: AgencyViewProps) {
       ? (fleetData.drivers / fleetData.buses).toFixed(1)
       : "N/A";
 
-  // Combined active + scheduled count for display
   const totalActiveCount = shiftStats.active + shiftStats.scheduled;
 
   const operationsData = {
@@ -354,7 +339,6 @@ export default function AgencyView({ agency, onBack }: AgencyViewProps) {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
-            {/* Users Section */}
             <Card className="border shadow-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg flex items-center gap-2">

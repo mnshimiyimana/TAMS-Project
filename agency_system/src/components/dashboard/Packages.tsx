@@ -66,21 +66,31 @@ export default function Packages() {
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [receiverIdFilter, setReceiverIdFilter] = useState("");
+  // ADDED: State to track when refresh is happening
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Function to fetch packages with current filters
+  // MODIFIED: Improved fetchPackagesWithFilters function with error handling
   const fetchPackagesWithFilters = async () => {
-    await dispatch(
-      fetchPackages({
-        page: currentPage,
-        search: searchQuery,
-        status: filters.status,
-        driverName: filters.driverName,
-        plateNumber: filters.plateNumber,
-        receiverId: filters.receiverId,
-        dateFrom: filters.dateRange.from,
-        dateTo: filters.dateRange.to,
-      })
-    );
+    try {
+      setIsRefreshing(true);
+      await dispatch(
+        fetchPackages({
+          page: currentPage,
+          search: searchQuery,
+          status: filters.status,
+          driverName: filters.driverName,
+          plateNumber: filters.plateNumber,
+          receiverId: filters.receiverId,
+          dateFrom: filters.dateRange.from,
+          dateTo: filters.dateRange.to,
+        })
+      ).unwrap();
+    } catch (error) {
+      console.error("Error fetching packages:", error);
+      toast.error("Failed to refresh packages");
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   // Initial data load
@@ -118,8 +128,16 @@ export default function Packages() {
     setSelectedPackage(null);
   };
 
-  const handlePackageUpdated = () => {
-    fetchPackagesWithFilters();
+  // MODIFIED: Enhanced handlePackageUpdated to refresh both packages and stats
+  const handlePackageUpdated = async () => {
+    // Force a refresh of the packages data
+    await fetchPackagesWithFilters();
+
+    // Also refresh the stats
+    await dispatch(fetchPackageStats({}));
+
+    // Optional: Show a toast notification
+    toast.success("Package data refreshed");
   };
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -162,6 +180,7 @@ export default function Packages() {
     setReceiverIdFilter("");
   };
 
+  // MODIFIED: Enhanced refreshData to use async/await and handle promises properly
   const refreshData = async () => {
     await fetchPackagesWithFilters();
     await dispatch(fetchPackageStats({}));
@@ -443,14 +462,17 @@ export default function Packages() {
                 </Button>
               )}
 
-              {/* Refresh Button */}
+              {/* MODIFIED: Added isRefreshing state to refresh button */}
               <Button
                 variant="outline"
                 size="icon"
                 onClick={refreshData}
                 title="Refresh data"
+                disabled={isRefreshing}
               >
-                <RefreshCw className="h-4 w-4" />
+                <RefreshCw
+                  className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+                />
               </Button>
             </div>
           </div>

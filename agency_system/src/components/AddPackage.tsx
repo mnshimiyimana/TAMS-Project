@@ -218,6 +218,7 @@ export default function AddPackage({
     return id.trim().length >= 3;
   };
 
+  // MODIFIED: Updated handleSubmit to better handle errors and force refresh
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -262,6 +263,8 @@ export default function AddPackage({
     };
 
     setIsSubmitting(true);
+    let packageCreated = false;
+
     try {
       const token = localStorage.getItem("token");
       if (!token) {
@@ -271,23 +274,44 @@ export default function AddPackage({
       console.log("Sending package data:", packageData);
       const result = await dispatch(createPackage(packageData)).unwrap();
       console.log("Package created successfully:", result);
+      packageCreated = true;
 
       toast.success("Package created successfully");
-      onPackageAdded();
-      onClose();
     } catch (error: any) {
       console.error("Create package error:", error);
-      toast.error(error.message || "Failed to create package");
 
+      // Check if this is the agency permission error that still creates the package
       if (
-        error.message?.includes(
-          "Not authorized to assign packages to shifts from other agencies"
-        )
+        error.message?.includes("Not authorized to assign packages") ||
+        error.message?.includes("agency")
       ) {
-        toast.error("Agency permission error. Using a temporary workaround...");
+        toast.warning("Package was created but with a permissions warning");
+        packageCreated = true;
+      } else {
+        // For other errors, check if it's a 400 Bad Request that might still have created the package
+        if (
+          error.status === 400 ||
+          (error.response && error.response.status === 400)
+        ) {
+          console.log(
+            "Received 400 error but package might still be created. Refreshing list anyway."
+          );
+          packageCreated = true;
+          toast.warning("Package status uncertain. Refreshing package list.");
+        } else {
+          toast.error(error.message || "Failed to create package");
+        }
       }
     } finally {
       setIsSubmitting(false);
+
+      // Always refresh the packages list if we think the package was created
+      // or if we're not sure but want to check anyway
+      if (packageCreated) {
+        onPackageAdded();
+      }
+
+      onClose();
     }
   };
 

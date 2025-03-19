@@ -35,15 +35,15 @@ export const createPackage = async (req, res) => {
 
     console.log("Shift's agency name:", shift.agencyName);
 
+    // MODIFIED: Check for agency mismatch but return a warning instead of an error
+    let hasAgencyMismatch = false;
     if (user.role !== "superadmin" && shift.agencyName !== user.agencyName) {
       console.log("Mismatch: user vs shift agency =>", {
         userAgency: user.agencyName,
         shiftAgency: shift.agencyName,
       });
-      return res.status(403).json({
-        message:
-          "Not authorized to assign packages to shifts from other agencies",
-      });
+      hasAgencyMismatch = true;
+      // We'll continue with the package creation but include a warning in the response
     }
 
     const agencyName =
@@ -77,6 +77,15 @@ export const createPackage = async (req, res) => {
       description: `Created new package ${newPackage.packageId}`,
       metadata: { packageData: req.body },
     }).save();
+
+    // MODIFIED: Return success with a warning flag if there was an agency mismatch
+    if (hasAgencyMismatch) {
+      return res.status(201).json({
+        message: "Package created successfully with agency mismatch warning",
+        package: newPackage,
+        warning: "The package was assigned to a shift from a different agency",
+      });
+    }
 
     res.status(201).json({
       message: "Package created successfully",

@@ -56,6 +56,7 @@ const auditLogSchema = new mongoose.Schema(
         "notification",
         "insight",
         "system",
+        "package",
         "other",
       ],
     },

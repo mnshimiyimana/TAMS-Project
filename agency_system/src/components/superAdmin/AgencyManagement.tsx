@@ -1,4 +1,6 @@
-import { useEffect } from "react";
+"use client";
+
+import { useEffect, useState } from "react";
 import { useAgencies } from "@/hooks/superadmin/useAgencies";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +39,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Search,
   RefreshCw,
   UserPlus,
@@ -48,9 +56,21 @@ import {
   User,
   Clock,
   Package,
+  MessageSquare,
+  Info,
+  ExternalLink,
 } from "lucide-react";
 
+// Import the new AgencyView component
+import AgencyView from "./AgencyView";
+
 export default function AgencyManagement() {
+  type ResourceItemProps = {
+    icon: React.ElementType;
+    count: number;
+    label: string;
+    color?: string;
+  };
   const {
     agencies,
     isLoading,
@@ -68,9 +88,43 @@ export default function AgencyManagement() {
     toggleAgencyStatus,
   } = useAgencies();
 
+  const [selectedAgency, setSelectedAgency] = useState(null);
+
   useEffect(() => {
     fetchAgencies();
   }, [fetchAgencies]);
+
+
+  const ResourceItem = ({
+    icon: Icon,
+    count,
+    label,
+    color = "text-gray-700",
+  }: ResourceItemProps) => (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className={`flex items-center gap-1 ${color}`}>
+            <Icon className="h-4 w-4" />
+            <span className="font-medium">{count}</span>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{label}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+
+  // If an agency is selected, show the detailed view
+  if (selectedAgency) {
+    return (
+      <AgencyView
+        agency={selectedAgency}
+        onBack={() => setSelectedAgency(null)}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -130,10 +184,21 @@ export default function AgencyManagement() {
                   </TableCell>
                 </TableRow>
               ) : (
-                agencies.map((agency: any) => (
-                  <TableRow key={agency._id}>
+                agencies.map((agency) => (
+                  <TableRow key={agency._id} className="hover:bg-gray-50">
                     <TableCell className="font-medium">
-                      {agency.agencyName}
+                      <div className="flex items-center">
+                        <span className="mr-2">{agency.agencyName}</span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 p-0"
+                          onClick={() => setSelectedAgency(agency)}
+                          title="View details"
+                        >
+                          <ExternalLink className="h-3 w-3 text-gray-400" />
+                        </Button>
+                      </div>
                     </TableCell>
                     <TableCell>{agency.location}</TableCell>
                     <TableCell>
@@ -147,28 +212,42 @@ export default function AgencyManagement() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <span className="text-sm">
-                        {agency.userStats?.total || 0} users
-                      </span>
+                      <div className="flex items-center">
+                        <ResourceItem
+                          icon={User}
+                          count={agency.userStats?.total || 0}
+                          label="Total Users"
+                        />
+                      </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className="flex items-center">
-                          <Bus className="h-3 w-3 mr-1" />
-                          {agency.resources?.buses || 0}
-                        </span>
-                        <span className="flex items-center">
-                          <User className="h-3 w-3 mr-1" />
-                          {agency.resources?.drivers || 0}
-                        </span>
-                        <span className="flex items-center">
-                          <Package className="h-3 w-3 mr-1" />
-                          {agency.resources?.packages || 0}
-                        </span>
-                        <span className="flex items-center">
-                          <Clock className="h-3 w-3 mr-1" />
-                          {agency.resources?.shifts || 0}
-                        </span>
+                      <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+                        <ResourceItem
+                          icon={Bus}
+                          count={agency.resources?.buses || 0}
+                          label="Buses"
+                        />
+                        <ResourceItem
+                          icon={User}
+                          count={agency.resources?.drivers || 0}
+                          label="Drivers"
+                        />
+                        <ResourceItem
+                          icon={Package}
+                          count={agency.resources?.packages || 0}
+                          label="Packages"
+                          color="text-blue-600"
+                        />
+                        <ResourceItem
+                          icon={Clock}
+                          count={agency.resources?.shifts || 0}
+                          label="Shifts"
+                        />
+                        <ResourceItem
+                          icon={MessageSquare}
+                          count={agency.resources?.feedback || 0}
+                          label="Feedback"
+                        />
                       </div>
                     </TableCell>
                     <TableCell>
@@ -182,6 +261,12 @@ export default function AgencyManagement() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => setSelectedAgency(agency)}
+                          >
+                            <Info className="mr-2 h-4 w-4" />
+                            View Details
+                          </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() =>
                               toggleAgencyStatus(

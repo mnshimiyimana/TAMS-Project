@@ -199,21 +199,57 @@ export const getAgencyHighLevelStats = async (req, res) => {
       },
     ]);
 
-    const resourceCounts = {
-      buses: await Bus.countDocuments({ agencyName }),
-      drivers: await Driver.countDocuments({ agencyName }),
-      shifts: await Shift.countDocuments({ agencyName }),
-      fuelTransactions: await FuelManagement.countDocuments({ agencyName }),
-      packages: await Package.countDocuments({ agencyName }),
-      pendingPackages: await Package.countDocuments({
-        agencyName,
-        status: "Pending",
-      }),
-      deliveredPackages: await Package.countDocuments({
-        agencyName,
-        status: "Delivered",
-      }),
-    };
+    const resourceCounts = await Promise.all(
+      agencies.map(async (agency) => {
+        const agencyName = agency.agencyName;
+        const buses = await Bus.countDocuments({ agencyName });
+        const drivers = await Driver.countDocuments({ agencyName });
+        const shifts = await Shift.countDocuments({ agencyName });
+        const activeShifts = await Shift.countDocuments({
+          agencyName,
+          endTime: { $exists: false },
+        });
+        const feedback = await Feedback.countDocuments({ agencyName });
+        const packages = await Package.countDocuments({ agencyName });
+        const deliveredPackages = await Package.countDocuments({
+          agencyName,
+          status: "Delivered",
+        });
+        const inTransitPackages = await Package.countDocuments({
+          agencyName,
+          status: "In Transit",
+        });
+        const pendingPackages = await Package.countDocuments({
+          agencyName,
+          status: "Pending",
+        });
+        const cancelledPackages = await Package.countDocuments({
+          agencyName,
+          status: "Cancelled",
+        });
+        const returnedPackages = await Package.countDocuments({
+          agencyName,
+          status: "Returned",
+        });
+
+        return {
+          agencyName,
+          resourceCounts: {
+            buses,
+            drivers,
+            shifts,
+            activeShifts,
+            feedback,
+            packages,
+            deliveredPackages,
+            inTransitPackages,
+            pendingPackages,
+            cancelledPackages,
+            returnedPackages,
+          },
+        };
+      })
+    );
 
     const activityMetrics = {
       lastUserCreated: await User.findOne({ agencyName })

@@ -395,7 +395,7 @@ export default function AgencyView({ agency, onBack }: AgencyViewProps) {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="rounded-lg bg-green-50 p-3">
+                  <div className="rounded-lg border p-3">
                     <div className="text-sm text-gray-600 mb-1">Delivered</div>
                     <div className="text-xl font-semibold text-green-600">
                       {isLoading ? (
@@ -406,7 +406,7 @@ export default function AgencyView({ agency, onBack }: AgencyViewProps) {
                     </div>
                   </div>
 
-                  <div className="rounded-lg bg-blue-50 p-3">
+                  <div className="rounded-lg border p-3">
                     <div className="text-sm text-gray-600 mb-1">In Transit</div>
                     <div className="text-xl font-semibold text-blue-600">
                       {isLoading ? (
@@ -417,7 +417,7 @@ export default function AgencyView({ agency, onBack }: AgencyViewProps) {
                     </div>
                   </div>
 
-                  <div className="rounded-lg bg-yellow-50 p-3">
+                  <div className="rounded-lg border p-3">
                     <div className="text-sm text-gray-600 mb-1">Pending</div>
                     <div className="text-xl font-semibold text-yellow-600">
                       {isLoading ? (
@@ -428,7 +428,7 @@ export default function AgencyView({ agency, onBack }: AgencyViewProps) {
                     </div>
                   </div>
 
-                  <div className="rounded-lg bg-purple-50 p-3">
+                  <div className="rounded-lg border p-3">
                     <div className="text-sm text-gray-600 mb-1">
                       Delivery Rate
                     </div>
@@ -467,21 +467,21 @@ export default function AgencyView({ agency, onBack }: AgencyViewProps) {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="rounded-lg bg-red-50 p-3">
+                  <div className="rounded-lg border p-3">
                     <div className="text-sm text-gray-600 mb-1">Buses</div>
                     <div className="text-xl font-semibold text-red-600">
                       {fleetData.buses}
                     </div>
                   </div>
 
-                  <div className="rounded-lg bg-orange-50 p-3">
+                  <div className="rounded-lg border p-3">
                     <div className="text-sm text-gray-600 mb-1">Drivers</div>
                     <div className="text-xl font-semibold text-orange-600">
                       {fleetData.drivers}
                     </div>
                   </div>
 
-                  <div className="rounded-lg bg-cyan-50 p-3">
+                  <div className="rounded-lg border p-3">
                     <div className="text-sm text-gray-600 mb-1">
                       Driver:Bus Ratio
                     </div>
@@ -490,7 +490,7 @@ export default function AgencyView({ agency, onBack }: AgencyViewProps) {
                     </div>
                   </div>
 
-                  <div className="rounded-lg bg-indigo-50 p-3">
+                  <div className="rounded-lg border p-3">
                     <div className="text-sm text-gray-600 mb-1">
                       Fuel Records
                     </div>
@@ -516,7 +516,7 @@ export default function AgencyView({ agency, onBack }: AgencyViewProps) {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="rounded-lg bg-amber-50 p-3">
+                  <div className="rounded-lg border p-3">
                     <div className="text-sm text-gray-600 mb-1">
                       Total Shifts
                     </div>
@@ -525,7 +525,7 @@ export default function AgencyView({ agency, onBack }: AgencyViewProps) {
                     </div>
                   </div>
 
-                  <div className="rounded-lg bg-emerald-50 p-3">
+                  <div className="rounded-lg border p-3">
                     <div className="text-sm text-gray-600 mb-1">
                       Active Shifts
                     </div>
@@ -546,7 +546,7 @@ export default function AgencyView({ agency, onBack }: AgencyViewProps) {
                     </div>
                   </div>
 
-                  <div className="rounded-lg bg-green-50 p-3">
+                  <div className="rounded-lg border p-3">
                     <div className="text-sm text-gray-600 mb-1">
                       Completed Shifts
                     </div>
@@ -559,7 +559,7 @@ export default function AgencyView({ agency, onBack }: AgencyViewProps) {
                     </div>
                   </div>
 
-                  <div className="rounded-lg bg-pink-50 p-3">
+                  <div className="rounded-lg border p-3">
                     <div className="text-sm text-gray-600 mb-1">Feedback</div>
                     <div className="text-xl font-semibold text-pink-600">
                       {operationsData.feedback}

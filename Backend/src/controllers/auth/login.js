@@ -5,10 +5,14 @@ import { User } from "../../models/userModel.js";
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
+    }
 
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      return res.status(401).json({ message: "No account found with this email address" });
     }
 
     if (!user.isActive) {
@@ -19,13 +23,13 @@ export const login = async (req, res) => {
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      return res.status(401).json({ message: "Incorrect password" });
     }
 
     const token = jwt.sign(
       {
         id: user._id,
-        userId: user._id, 
+        userId: user._id,
         role: user.role,
         agencyName: user.agencyName,
       },
@@ -49,7 +53,7 @@ export const login = async (req, res) => {
     });
   } catch (error) {
     console.error("Login error:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ message: "An error occurred during login. Please try again." });
   }
 };
 
@@ -72,9 +76,15 @@ export const createSuperAdmin = async (req, res) => {
     });
 
     if (existingUser) {
-      return res.status(400).json({
-        message: "User with this email, phone, or username already exists",
-      });
+      if (existingUser.email === email) {
+        return res.status(400).json({ message: "Email address is already registered" });
+      } else if (existingUser.phone === phone) {
+        return res.status(400).json({ message: "Phone number is already registered" });
+      } else if (existingUser.username === username) {
+        return res.status(400).json({ message: "Username is already taken" });
+      } else {
+        return res.status(400).json({ message: "User already exists" });
+      }
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);

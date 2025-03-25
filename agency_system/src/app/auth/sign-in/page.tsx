@@ -14,6 +14,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/redux/store";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import Alert from "@/components/Alert"; // Import the Alert component
 
 const signInSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -41,7 +42,6 @@ export default function SignIn() {
     // Clear any previous errors when mounting the component
     dispatch(clearError());
 
-   
     const token = localStorage.getItem("token");
     if (token) {
       router.push("/dashboard");
@@ -81,7 +81,9 @@ export default function SignIn() {
           </div>
 
           {error && (
-            <p className="text-red-500 text-sm text-center mb-4">{error}</p>
+            <div className="mb-4">
+              <Alert type="error" message={error} />
+            </div>
           )}
 
           <form

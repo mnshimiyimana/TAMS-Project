@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
+import Alert from "@/components/Alert"; // Import the Alert component
 
 interface TokenVerificationResponse {
   message: string;
@@ -23,6 +24,7 @@ export default function ResetPage(): React.ReactElement {
   const params = useParams();
   const token = params?.token as string | undefined;
 
+  const [email, setEmail] = useState<string>("");
   const [newPassword, setNewPassword] = useState<string>("");
   const [confirmPassword, setConfirmPassword] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
@@ -30,6 +32,7 @@ export default function ResetPage(): React.ReactElement {
   const [success, setSuccess] = useState<string>("");
   const [tokenVerified, setTokenVerified] = useState<boolean>(false);
   const [userEmail, setUserEmail] = useState<string>("");
+  const [emailSent, setEmailSent] = useState<boolean>(false);
 
   const API_URL = "https://tams-project.onrender.com/api/auth";
 
@@ -58,6 +61,46 @@ export default function ResetPage(): React.ReactElement {
       }
     } catch (err) {
       setError("Something went wrong verifying your reset link.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendResetLink = async (
+    e: React.FormEvent<HTMLFormElement>
+  ): Promise<void> => {
+    e.preventDefault();
+
+    if (!email) {
+      setError("Please enter your email");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await fetch(`${API_URL}/send-reset-link`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = (await response.json()) as ResetResponse;
+
+      if (response.ok) {
+        // Check if the backend found a user or not
+        if (data.error === "User not found") {
+          setError("No account found with this email address.");
+        } else {
+          setEmailSent(true);
+          setSuccess(data.message || "Reset link sent to your email");
+        }
+      } else {
+        setError(data.error || "Failed to send reset link.");
+      }
+    } catch (err) {
+      setError("Something went wrong. Please try again later.");
     } finally {
       setLoading(false);
     }
@@ -122,7 +165,12 @@ export default function ResetPage(): React.ReactElement {
 
         <div>
           <h1 className="text-2xl font-semibold">Password Reset</h1>
-          {!token && (
+          {!token && !emailSent && (
+            <p className="text-sm text-gray-600 mt-1">
+              Enter your email to receive a password reset link
+            </p>
+          )}
+          {!token && emailSent && (
             <p className="text-sm text-gray-600 mt-1">
               Check your email for the password reset link
             </p>
@@ -134,23 +182,45 @@ export default function ResetPage(): React.ReactElement {
           )}
         </div>
 
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
-            {error}
-          </div>
+        {error && <Alert type="error" message={error} />}
+
+        {success && <Alert type="success" message={success} />}
+
+        {!token && !emailSent && (
+          <form onSubmit={handleSendResetLink} className="space-y-4 w-full">
+            <div>
+              <Label htmlFor="email" className="text-gray-700">
+                Email Address
+              </Label>
+              <Input
+                type="email"
+                id="email"
+                placeholder="Enter your registered email"
+                value={email}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setEmail(e.target.value)
+                }
+                className="mt-1 py-3 text-base w-full"
+              />
+            </div>
+
+            <Button
+              type="submit"
+              className="bg-[#00a651] w-full py-4 hover:bg-green-500 text-white font-medium"
+              disabled={loading}
+            >
+              {loading ? "Sending..." : "Send Reset Link"}
+            </Button>
+          </form>
         )}
 
-        {success && (
-          <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded">
-            {success}
-          </div>
-        )}
-
-        {!token && (
+        {!token && emailSent && (
           <div className="py-4">
-            <div className=" border border-green-200 text-green-700 px-6 py-6 rounded flex flex-col items-center text-center">
+            <div className="border border-green-200 text-green-700 px-6 py-6 rounded flex flex-col items-center text-center">
               <Mail className="w-12 h-12 mb-3" />
-              <h2 className="text-xl font-medium text-black">Check Your Email</h2>
+              <h2 className="text-xl font-medium text-black">
+                Check Your Email
+              </h2>
               <p className="mt-2 text-gray-700 text-sm">
                 Please check your inbox for the password reset link.
               </p>
@@ -166,12 +236,6 @@ export default function ResetPage(): React.ReactElement {
 
         {token && tokenVerified && (
           <form onSubmit={handleResetPassword} className="space-y-4 w-full">
-            {/* {userEmail && (
-              <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded mb-4">
-                Resetting password for: <strong>{userEmail}</strong>
-              </div>
-            )} */}
-
             <div>
               <Label htmlFor="newPassword" className="text-gray-700">
                 New Password
@@ -216,9 +280,10 @@ export default function ResetPage(): React.ReactElement {
 
         {token && !tokenVerified && !loading && (
           <div className="space-y-4">
-            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
-              Your reset link is invalid or has expired. Please contact support to request a new one.
-            </div>
+            <Alert
+              type="error"
+              message="Your reset link is invalid or has expired. Please request a new one."
+            />
           </div>
         )}
 

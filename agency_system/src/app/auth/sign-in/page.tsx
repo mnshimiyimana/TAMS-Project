@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,7 +14,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/redux/store";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import Alert from "@/components/Alert"; // Import the Alert component
+import Alert from "@/components/Alert";
 
 const signInSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -25,6 +25,7 @@ type SignInFormData = z.infer<typeof signInSchema>;
 
 export default function SignIn() {
   const dispatch = useDispatch<AppDispatch>();
+
   const { isLoading, error, user } = useSelector(
     (state: RootState) => state.auth
   );
@@ -39,7 +40,6 @@ export default function SignIn() {
   });
 
   useEffect(() => {
-    // Clear any previous errors when mounting the component
     dispatch(clearError());
 
     const token = localStorage.getItem("token");
@@ -64,6 +64,22 @@ export default function SignIn() {
   const onSubmit = async (data: SignInFormData) => {
     dispatch(signIn(data));
   };
+
+  const [localError, setLocalError] = useState<string>("");
+
+  useEffect(() => {
+    if (error) {
+      setLocalError(error);
+
+      const timer = setTimeout(() => {
+        dispatch(clearError());
+        setLocalError("");
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [error, dispatch]);
+
 
   return (
     <div className="min-h-screen flex">

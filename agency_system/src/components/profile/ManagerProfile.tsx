@@ -47,7 +47,7 @@ import {
   XCircle,
   RotateCcw,
   AlertTriangle,
-  DollarSign,
+  CurrencyIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
@@ -94,6 +94,7 @@ export default function ManagerProfile() {
   const [fineAmount, setFineAmount] = useState("");
   const [fineReason, setFineReason] = useState("");
   const [isLoadingPackages, setIsLoadingPackages] = useState(false);
+  const [isUpdatingFine, setIsUpdatingFine] = useState(false);
 
   const fetchShiftPackages = async () => {
     if (displayedShifts.length === 0) return;
@@ -173,6 +174,8 @@ export default function ManagerProfile() {
       return;
     }
 
+    setIsUpdatingFine(true);
+
     try {
       const token = localStorage.getItem("token");
       if (!token) throw new Error("Authentication required");
@@ -219,7 +222,8 @@ export default function ManagerProfile() {
           : [];
 
         const vehicleToUpdate = vehicles.find(
-          (v: { plateNumber: string; }) => v.plateNumber === editingShift.plateNumber
+          (v: { plateNumber: string }) =>
+            v.plateNumber === editingShift.plateNumber
         );
 
         if (vehicleToUpdate && vehicleToUpdate.status === "Assigned") {
@@ -251,7 +255,7 @@ export default function ManagerProfile() {
             : [];
 
         const driverToUpdate = drivers.find(
-          (d: { names: string; }) => d.names === editingShift.driverName
+          (d: { names: string }) => d.names === editingShift.driverName
         );
 
         if (driverToUpdate && driverToUpdate.status === "On Shift") {
@@ -292,6 +296,8 @@ export default function ManagerProfile() {
       toast.error(
         error.message || "Failed to record shift details. Please try again."
       );
+    } finally {
+      setIsUpdatingFine(false);
     }
   };
 
@@ -827,7 +833,7 @@ export default function ManagerProfile() {
                                   <div className="flex items-center gap-2 mt-2 text-red-600">
                                     <AlertTriangle className="h-4 w-4" />
                                     <span>
-                                      Fined: ${shift.fineAmount} -{" "}
+                                      Fined: RWF{shift.fineAmount} -{" "}
                                       {shift.fineReason}
                                     </span>
                                   </div>
@@ -1093,27 +1099,27 @@ export default function ManagerProfile() {
                           htmlFor="fineAmount"
                           className="text-sm font-medium"
                         >
-                          Fine Amount ($){" "}
+                          Fine Amount (RWF){" "}
                           <span className="text-red-500">*</span>
                         </Label>
                         <div className="relative">
-                          <DollarSign className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+                          <CurrencyIcon className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none z-10" />
                           <Input
                             id="fineAmount"
                             type="number"
                             placeholder="0.00"
                             value={fineAmount}
                             onChange={(e) => setFineAmount(e.target.value)}
-                            className={`pl-8 border-${
+                            className={`pl-8 w-full border-${
                               !fineAmount && isFined ? "red-500" : "red-200"
                             } focus:border-red-300 focus:ring focus:ring-red-200 focus:ring-opacity-50`}
                           />
-                          {!fineAmount && isFined && (
-                            <p className="text-xs text-red-500 mt-1">
-                              Please enter the fine amount
-                            </p>
-                          )}
                         </div>
+                        {!fineAmount && isFined && (
+                          <p className="text-xs text-red-500 mt-1">
+                            Please enter the fine amount
+                          </p>
+                        )}
                       </div>
 
                       <div>
@@ -1147,7 +1153,6 @@ export default function ManagerProfile() {
             )}
           </div>
 
-          {/* Sticky footer with improved styling */}
           <DialogFooter className="sticky bottom-0 bg-white pt-4 pb-2 border-t border-gray-100">
             <div className="w-full flex flex-col sm:flex-row-reverse sm:justify-between sm:space-x-2">
               <Button
@@ -1155,11 +1160,12 @@ export default function ManagerProfile() {
                 disabled={
                   !actualEndTime ||
                   isUpdatingEndTime ||
+                  isUpdatingFine ||
                   (isFined && (!fineAmount || !fineReason))
                 }
                 className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto mb-2 sm:mb-0"
               >
-                {isUpdatingEndTime ? (
+                {isUpdatingEndTime || isUpdatingFine ? (
                   <>
                     <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
                     Updating...
@@ -1174,7 +1180,7 @@ export default function ManagerProfile() {
               <Button
                 variant="outline"
                 onClick={() => setEditingShift(null)}
-                disabled={isUpdatingEndTime}
+                disabled={isUpdatingEndTime || isUpdatingFine}
                 className="border-gray-300 w-full sm:w-auto"
               >
                 <X className="h-4 w-4 mr-2" />

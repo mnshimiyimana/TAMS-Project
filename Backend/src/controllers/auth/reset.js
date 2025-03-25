@@ -16,9 +16,9 @@ export const sendResetLink = async (req, res) => {
     const user = await User.findOne({ email });
 
     if (!user) {
-      return res.status(200).json({
-        message:
-          "If a user with this email exists, a password reset link has been sent",
+      // Changed this to return a proper error when user is not found
+      return res.status(404).json({
+        error: "User not found",
       });
     }
 

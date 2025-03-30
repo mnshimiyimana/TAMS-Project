@@ -23,9 +23,16 @@ export const createPackage = async (req, res) => {
     console.log("User's role:", user.role);
     console.log("User's agency name:", user.agencyName);
 
-    const { shiftId } = req.body;
+    const { shiftId, price } = req.body;
     if (!shiftId) {
       return res.status(400).json({ message: "Shift ID is required" });
+    }
+
+    // Validate price is a number and is not negative
+    if (price === undefined || isNaN(Number(price)) || Number(price) < 0) {
+      return res
+        .status(400)
+        .json({ message: "Valid price amount is required" });
     }
 
     const shift = await Shift.findById(shiftId);
@@ -35,7 +42,7 @@ export const createPackage = async (req, res) => {
 
     console.log("Shift's agency name:", shift.agencyName);
 
-    // MODIFIED: Check for agency mismatch but return a warning instead of an error
+    // Check for agency mismatch but return a warning instead of an error
     let hasAgencyMismatch = false;
     if (user.role !== "superadmin" && shift.agencyName !== user.agencyName) {
       console.log("Mismatch: user vs shift agency =>", {
@@ -53,6 +60,8 @@ export const createPackage = async (req, res) => {
 
     const packageData = {
       ...req.body,
+      price: Number(req.body.price), // Convert price to number explicitly
+      weight: Number(req.body.weight), // Ensure weight is also a number
       agencyName,
       driverName: shift.driverName,
       plateNumber: shift.plateNumber,
@@ -74,11 +83,11 @@ export const createPackage = async (req, res) => {
       action: "create",
       resourceType: "package",
       resourceId: newPackage._id,
-      description: `Created new package ${newPackage.packageId}`,
+      description: `Created new package ${newPackage.packageId} with price ${newPackage.price}`,
       metadata: { packageData: req.body },
     }).save();
 
-    // MODIFIED: Return success with a warning flag if there was an agency mismatch
+    // Return success with a warning flag if there was an agency mismatch
     if (hasAgencyMismatch) {
       return res.status(201).json({
         message: "Package created successfully with agency mismatch warning",
@@ -262,6 +271,26 @@ export const updatePackage = async (req, res) => {
       return res
         .status(403)
         .json({ message: "Not authorized to update this package" });
+    }
+
+    // If price is being updated, validate it
+    if (req.body.price !== undefined) {
+      const price = Number(req.body.price);
+      if (isNaN(price) || price < 0) {
+        return res
+          .status(400)
+          .json({ message: "Valid price amount is required" });
+      }
+      req.body.price = price; // Ensure it's stored as a number
+    }
+
+    // If weight is being updated, validate it
+    if (req.body.weight !== undefined) {
+      const weight = Number(req.body.weight);
+      if (isNaN(weight) || weight <= 0) {
+        return res.status(400).json({ message: "Valid weight is required" });
+      }
+      req.body.weight = weight; // Ensure it's stored as a number
     }
 
     if (
@@ -528,6 +557,7 @@ export const getPackageStats = async (req, res) => {
                 delivered: {
                   $sum: { $cond: [{ $eq: ["$status", "Delivered"] }, 1, 0] },
                 },
+                totalRevenue: { $sum: "$price" }, // Add revenue stats
               },
             },
             {
@@ -552,6 +582,7 @@ export const getPackageStats = async (req, res) => {
                 },
                 count: 1,
                 delivered: 1,
+                totalRevenue: 1, // Include revenue in output
                 deliveryRate: {
                   $multiply: [
                     {
@@ -598,6 +629,29 @@ export const getPackageStats = async (req, res) => {
                 totalPending: {
                   $sum: { $cond: [{ $eq: ["$status", "Pending"] }, 1, 0] },
                 },
+                totalRevenue: { $sum: "$price" }, // Total revenue
+                averagePrice: { $avg: "$price" }, // Average price per package
+              },
+            },
+          ],
+
+          // Add revenue statistics by status
+          revenueByStatus: [
+            {
+              $group: {
+                _id: "$status",
+                totalRevenue: { $sum: "$price" },
+                count: { $sum: 1 },
+                avgPrice: { $avg: "$price" },
+              },
+            },
+            {
+              $project: {
+                status: "$_id",
+                totalRevenue: 1,
+                count: 1,
+                avgPrice: 1,
+                _id: 0,
               },
             },
           ],
@@ -610,6 +664,7 @@ export const getPackageStats = async (req, res) => {
         statusDistribution: stats[0].statusStats,
         monthlyTrend: stats[0].monthlyTrend,
         topDrivers: stats[0].topDrivers,
+        revenueByStatus: stats[0].revenueByStatus,
         totals: stats[0].totalStats[0] || {
           total: 0,
           totalDelivered: 0,
@@ -617,6 +672,8 @@ export const getPackageStats = async (req, res) => {
           totalReturned: 0,
           totalInTransit: 0,
           totalPending: 0,
+          totalRevenue: 0,
+          averagePrice: 0,
         },
       },
     });

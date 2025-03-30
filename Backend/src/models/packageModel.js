@@ -15,6 +15,11 @@ const packageSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    price: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
     senderName: {
       type: String,
       required: true,

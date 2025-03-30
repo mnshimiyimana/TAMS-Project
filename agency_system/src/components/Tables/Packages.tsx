@@ -72,10 +72,11 @@ export default function PackagesTable({
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("rwf", {
+    return new Intl.NumberFormat("en-RW", {
       style: "currency",
       currency: "RWF",
-      minimumFractionDigits: 2,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
     }).format(amount || 0);
   };
 

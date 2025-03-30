@@ -34,7 +34,7 @@ import {
   CalendarDays,
   TrendingUp,
   Car,
-  DollarSign,
+  CurrencyIcon,
   X,
   AlertTriangle,
 } from "lucide-react";
@@ -515,7 +515,7 @@ export default function FuelProfile() {
                           {formatCurrency(fuelStats.totalSpent)}
                         </p>
                       </div>
-                      <DollarSign className="h-6 w-8 text-blue-600" />
+                      <CurrencyIcon className="h-6 w-8 text-blue-600" />
                     </div>
                   </CardContent>
                 </Card>

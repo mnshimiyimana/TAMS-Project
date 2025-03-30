@@ -1,12 +1,14 @@
 import axios from "axios";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com" ;
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "https://tams-project.onrender.com";
 
 export interface Package {
   _id: string;
   packageId: string;
   description: string;
   weight: number;
+  price: number; // Added price field
   senderName: string;
   senderPhone: string;
   receiverName: string;
@@ -135,12 +137,23 @@ export const createPackage = async (
       throw new Error("Authentication required");
     }
 
-    const response = await axios.post(`${API_URL}/api/packages`, packageData, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    });
+    // Ensure price is a number before sending
+    const formattedData = {
+      ...packageData,
+      price: Number(packageData.price),
+      weight: Number(packageData.weight),
+    };
+
+    const response = await axios.post(
+      `${API_URL}/api/packages`,
+      formattedData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
 
     return response.data.package;
   } catch (error: any) {
@@ -160,9 +173,20 @@ export const updatePackage = async (
       throw new Error("Authentication required");
     }
 
+    // Format numeric values before sending
+    const formattedData = { ...packageData };
+
+    if (formattedData.price !== undefined) {
+      formattedData.price = Number(formattedData.price);
+    }
+
+    if (formattedData.weight !== undefined) {
+      formattedData.weight = Number(formattedData.weight);
+    }
+
     const response = await axios.put(
       `${API_URL}/api/packages/${id}`,
-      packageData,
+      formattedData,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -286,6 +310,15 @@ export const formatWeight = (weight: number) => {
   return `${weight.toFixed(2)} kg`;
 };
 
+// New utility function to format currency
+export const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD", // Change to your preferred currency
+    minimumFractionDigits: 2,
+  }).format(amount || 0);
+};
+
 const packageService = {
   getPackages,
   getPackageById,
@@ -297,6 +330,7 @@ const packageService = {
   formatPackageStatus,
   formatDate,
   formatWeight,
+  formatCurrency,
 };
 
 export default packageService;

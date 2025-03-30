@@ -99,6 +99,11 @@ export default function ViewPackageDialog({
     packageData.receiverId && packageData.receiverId.trim() !== ""
   );
 
+  const formatPrice = (price: number | undefined) => {
+    if (price === undefined) return "N/A";
+    return `${price.toLocaleString()} RWF`;
+  };
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
@@ -132,13 +137,19 @@ export default function ViewPackageDialog({
             </div>
 
             <div>
+              <Label className="text-sm text-gray-500">Price</Label>
+              <p className="font-medium text-green-700">
+                {formatPrice(packageData.price)}
+              </p>
+            </div>
+
+            <div>
               <Label className="text-sm text-gray-500">Description</Label>
               <p className="font-medium">{packageData.description}</p>
             </div>
 
-            {/* NATIONAL ID SECTION - Simplified with direct access */}
-            <div className="border rounded-md p-3 bg-blue-50">
-              <Label className="font-medium text-blue-700 flex items-center mb-2">
+            <div className="border rounded-md p-3">
+              <Label className="font-medium  flex items-center mb-2">
                 <Shield className="h-5 w-5 mr-1" />
                 National ID Verification
               </Label>

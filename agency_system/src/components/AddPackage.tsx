@@ -25,7 +25,7 @@ import { createPackage } from "@/redux/slices/packagesSlice";
 import { toast } from "sonner";
 import { nanoid } from "nanoid";
 import axios from "axios";
-import { Shield } from "lucide-react";
+import { Shield, CreditCard } from "lucide-react";
 
 interface ShiftOption {
   _id: string;
@@ -59,6 +59,7 @@ export default function AddPackage({
     packageId: `PKG-${nanoid(8).toUpperCase()}`,
     description: "",
     weight: 0,
+    price: 0,
     senderName: "",
     senderPhone: "",
     receiverName: "",
@@ -190,6 +191,7 @@ export default function AddPackage({
       packageId: `PKG-${nanoid(8).toUpperCase()}`,
       description: "",
       weight: 0,
+      price: 0, 
       senderName: "",
       senderPhone: "",
       receiverName: "",
@@ -218,7 +220,23 @@ export default function AddPackage({
     return id.trim().length >= 3;
   };
 
-  // MODIFIED: Updated handleSubmit to better handle errors and force refresh
+  const calculatePriceFromWeight = (weight: number): number => {
+    const basePrice = 10; 
+    const pricePerKg = 2; 
+    return basePrice + weight * pricePerKg;
+  };
+
+  const handleWeightChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const weight = parseFloat(e.target.value);
+    const suggestedPrice = calculatePriceFromWeight(weight);
+
+    setFormData((prev) => ({
+      ...prev,
+      weight: weight,
+      price: suggestedPrice,
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -234,6 +252,11 @@ export default function AddPackage({
 
     if (!isValidNationalId(formData.receiverId)) {
       toast.error("Please enter a valid National ID (minimum 3 characters)");
+      return;
+    }
+
+    if (formData.price <= 0) {
+      toast.error("Please enter a valid price amount");
       return;
     }
 
@@ -257,6 +280,7 @@ export default function AddPackage({
     const packageData = {
       ...formData,
       weight: Number(formData.weight),
+      price: Number(formData.price), 
       driverName: selectedShift.driverName,
       plateNumber: selectedShift.plateNumber,
       agencyName,
@@ -280,7 +304,6 @@ export default function AddPackage({
     } catch (error: any) {
       console.error("Create package error:", error);
 
-      // Check if this is the agency permission error that still creates the package
       if (
         error.message?.includes("Not authorized to assign packages") ||
         error.message?.includes("agency")
@@ -288,7 +311,6 @@ export default function AddPackage({
         toast.warning("Package was created but with a permissions warning");
         packageCreated = true;
       } else {
-        // For other errors, check if it's a 400 Bad Request that might still have created the package
         if (
           error.status === 400 ||
           (error.response && error.response.status === 400)
@@ -305,8 +327,6 @@ export default function AddPackage({
     } finally {
       setIsSubmitting(false);
 
-      // Always refresh the packages list if we think the package was created
-      // or if we're not sure but want to check anyway
       if (packageCreated) {
         onPackageAdded();
       }
@@ -343,10 +363,33 @@ export default function AddPackage({
                 min="0.1"
                 step="0.1"
                 value={formData.weight}
-                onChange={handleInputChange}
+                onChange={handleWeightChange} 
                 required
               />
             </div>
+          </div>
+
+          {/* New Price field */}
+          <div className="space-y-2">
+            <Label htmlFor="price" className="flex items-center">
+              <CreditCard className="h-4 w-4 mr-1 text-green-600" />
+              Price/Amount
+            </Label>
+            <Input
+              id="price"
+              name="price"
+              type="number"
+              min="0.01"
+              step="0.01"
+              value={formData.price}
+              onChange={handleInputChange}
+              required
+              placeholder="Enter amount to be paid by sender"
+              className="border-green-200 focus:border-green-300"
+            />
+            <p className="text-xs text-gray-500">
+              Amount to be paid by the sender for shipping service
+            </p>
           </div>
 
           <div className="space-y-2">

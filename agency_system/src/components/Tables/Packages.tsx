@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Eye, MoreHorizontal, Shield } from "lucide-react";
+import { Eye, MoreHorizontal, Shield, CreditCard } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -71,6 +71,14 @@ export default function PackagesTable({
     }
   };
 
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("rwf", {
+      style: "currency",
+      currency: "RWF",
+      minimumFractionDigits: 2,
+    }).format(amount || 0);
+  };
+
   const renderPackageRows = () => {
     if (status === "loading") {
       return Array(5)
@@ -82,6 +90,9 @@ export default function PackagesTable({
             </TableCell>
             <TableCell>
               <Skeleton className="h-4 w-[120px]" />
+            </TableCell>
+            <TableCell>
+              <Skeleton className="h-4 w-[80px]" />
             </TableCell>
             <TableCell>
               <Skeleton className="h-4 w-[80px]" />
@@ -124,6 +135,9 @@ export default function PackagesTable({
             {pkg.description}
           </TableCell>
           <TableCell>{pkg.weight} kg</TableCell>
+          <TableCell className="font-medium text-gray-800">
+            {formatCurrency(pkg.price)}
+          </TableCell>
           <TableCell>
             <div>
               <p className="font-medium">{pkg.senderName}</p>
@@ -134,7 +148,6 @@ export default function PackagesTable({
             <div>
               <p className="font-medium">{pkg.receiverName}</p>
               <p className="text-xs text-gray-500">{pkg.receiverPhone}</p>
-              {/* Show National ID with a security icon */}
               <div className="flex items-center mt-1">
                 <TooltipProvider>
                   <Tooltip>
@@ -242,11 +255,17 @@ export default function PackagesTable({
         <TableHeader>
           <TableRow className="bg-gray-100">
             <TableHead className="w-[120px]">Package ID</TableHead>
-            <TableHead className="w-[160px]">Description</TableHead>
+            <TableHead className="w-[150px]">Description</TableHead>
             <TableHead className="w-[80px]">Weight</TableHead>
+            <TableHead className="w-[100px]">
+              <div className="flex items-center">
+                <CreditCard className="h-4 w-4 mr-1 text-gray-800" />
+                Price
+              </div>
+            </TableHead>
             <TableHead className="w-[180px]">Sender</TableHead>
             <TableHead className="w-[200px]">Receiver</TableHead>
-            <TableHead className="w-[220px]">Driver / Vehicle</TableHead>
+            <TableHead className="w-[180px]">Driver / Vehicle</TableHead>
             <TableHead className="w-[100px]">Status</TableHead>
             <TableHead className="w-[80px] text-right">Actions</TableHead>
           </TableRow>
@@ -264,9 +283,7 @@ export default function PackagesTable({
               variant="outline"
               size="sm"
               disabled={currentPage === 1}
-              onClick={() => {
-                // Handle pagination
-              }}
+              onClick={() => {}}
             >
               Previous
             </Button>
@@ -274,9 +291,7 @@ export default function PackagesTable({
               variant="outline"
               size="sm"
               disabled={currentPage === totalPages}
-              onClick={() => {
-                // Handle pagination
-              }}
+              onClick={() => {}}
             >
               Next
             </Button>

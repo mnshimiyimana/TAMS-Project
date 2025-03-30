@@ -14,6 +14,7 @@ export interface Package {
   packageId: string;
   description: string;
   weight: number;
+  price: number;  // New price field
   senderName: string;
   senderPhone: string;
   receiverName: string;

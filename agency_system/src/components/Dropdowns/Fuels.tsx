@@ -8,7 +8,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import { setFilter, fetchFuelTransactions } from "@/redux/slices/fuelsSlice";
 

@@ -10,7 +10,6 @@ import {
   PackageIcon,
 } from "lucide-react";
 import {
-  Separator,
   Sidebar,
   SidebarContent,
   SidebarGroup,

@@ -340,51 +340,6 @@ export const useManagerProfile = () => {
     }
   };
 
-  // Modified to include fine information
-  // const updateActualEndTime = async () => {
-  //   if (!editingShift) return;
-  //   try {
-  //     setIsUpdatingEndTime(true);
-
-  //     const actualEndTimeValue = new Date(actualEndTime).toISOString();
-
-  //     await axios.patch(
-  //       `${API_BASE_URL}/api/shifts/${editingShift._id}`,
-  //       { actualEndTime: actualEndTimeValue },
-  //       {
-  //         headers: {
-  //           Authorization: `Bearer ${token}`,
-  //           "Content-Type": "application/json",
-  //         },
-  //       }
-  //     );
-
-  //     toast.success("Actual end time recorded successfully");
-
-  //     setAllShifts((prevShifts) =>
-  //       prevShifts.map((shift) =>
-  //         shift._id === editingShift._id
-  //           ? { ...shift, actualEndTime: actualEndTimeValue }
-  //           : shift
-  //       )
-  //     );
-
-  //     setEditingShift(null);
-  //     setActualEndTime("");
-
-  //     if (typeof window !== "undefined") {
-  //       window.dispatchEvent(new CustomEvent("shift_updated"));
-  //     }
-
-  //     fetchManagerData();
-  //   } catch (error) {
-  //     console.error("Error recording actual end time:", error);
-  //     toast.error("Failed to record actual end time. Please try again.");
-  //   } finally {
-  //     setIsUpdatingEndTime(false);
-  //   }
-  // };
-
   const getBadgeClasses = (status: string) => {
     switch (status) {
       case "Completed":

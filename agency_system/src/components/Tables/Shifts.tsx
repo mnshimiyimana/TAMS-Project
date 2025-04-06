@@ -132,7 +132,6 @@ export default function ShiftsTable({ onEdit, agencyName }: ShiftsTableProps) {
     const now = new Date();
     const startTime = new Date(shift.startTime);
 
-    // If start time is in the future, it's scheduled
     if (startTime > now) {
       return "Scheduled";
     }

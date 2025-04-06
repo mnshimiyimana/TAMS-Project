@@ -101,7 +101,6 @@ export const fetchUserFeedback = createAsyncThunk(
   }
 );
 
-// For admin users: fetch all feedback
 export const fetchAllFeedback = createAsyncThunk(
   "feedback/fetchAll",
   async (agencyName: string | undefined, { rejectWithValue }) => {
@@ -128,7 +127,6 @@ export const fetchAllFeedback = createAsyncThunk(
   }
 );
 
-// Update feedback status (admin only)
 export const updateFeedbackStatus = createAsyncThunk(
   "feedback/updateStatus",
   async (
@@ -187,7 +185,6 @@ const feedbackSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Submit feedback
       .addCase(submitFeedback.pending, (state) => {
         state.submissionStatus = "loading";
         state.submissionError = null;

@@ -19,7 +19,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -225,7 +224,6 @@ export default function AdminProfile() {
 
   const resendSetupEmail = async (userId: string) => {
     try {
-      // FIX: Corrected API endpoint with /api prefix
       const response = await axios.post(
         `${API_BASE_URL}/api/auth/resend-setup-email`,
         { userId },

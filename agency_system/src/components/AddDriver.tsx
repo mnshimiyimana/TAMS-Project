@@ -59,7 +59,6 @@ export default function AddDriverDialog({
   );
   const [agencies, setAgencies] = useState<string[]>([]);
 
-  // Get user role to determine if agency can be changed
   const user = useSelector((state: RootState) => state.auth.user);
   const userRole = user?.role || "";
   const isSuperAdmin = userRole === "superadmin";
@@ -85,14 +84,10 @@ export default function AddDriverDialog({
     },
   });
 
-  // Watch the agency value
   const currentAgency = watch("agencyName");
 
-  // Load the list of agencies for superadmin dropdown
   useEffect(() => {
     if (isSuperAdmin) {
-      // This would normally come from an API call to get all agencies
-      // For simplicity, we're just checking if we have a value in driverToEdit
       const knownAgencies = [agencyName];
       if (
         driverToEdit?.agencyName &&
@@ -120,7 +115,6 @@ export default function AddDriverDialog({
         setLastShiftDate(new Date(driverToEdit.lastShift));
       }
     } else {
-      // For new drivers, always set the agency to the current user's agency
       setValue("agencyName", agencyName);
     }
   }, [driverToEdit, setValue, agencyName]);
@@ -129,7 +123,6 @@ export default function AddDriverDialog({
     try {
       setIsSubmitting(true);
 
-      // Check for agency permission
       if (!isSuperAdmin && data.agencyName !== agencyName) {
         toast.error("You do not have permission to change the agency");
         setIsSubmitting(false);
@@ -147,7 +140,6 @@ export default function AddDriverDialog({
         await updateDriver(driverToEdit._id, driverData);
         toast.success("Driver updated successfully!");
       } else {
-        // Create new driver
         await createDriver(driverData);
         toast.success("Driver added successfully!");
       }

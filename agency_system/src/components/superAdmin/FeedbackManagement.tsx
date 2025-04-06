@@ -56,7 +56,6 @@ export default function FeedbackManagement() {
     clearFilters,
   } = useFeedback();
 
-  // Response form state
   const [responseForm, setResponseForm] = useState({
     response: "",
     status: "in-progress",
@@ -67,7 +66,6 @@ export default function FeedbackManagement() {
     fetchStats();
   }, [fetchFeedback, fetchStats]);
 
-  // Reset form when feedback is selected
   useEffect(() => {
     if (selectedFeedback) {
       setResponseForm({
@@ -127,7 +125,6 @@ export default function FeedbackManagement() {
 
   return (
     <div className="space-y-6">
-      {/* Header with search and filters */}
       <div className="flex flex-wrap gap-4 items-center justify-between">
         <div className="flex items-center gap-2 border border-gray-300 rounded-md px-2 w-full md:w-64 bg-white">
           <Search className="w-5 h-5 text-gray-500 flex-shrink-0" />
@@ -167,7 +164,6 @@ export default function FeedbackManagement() {
             </SelectContent>
           </Select>
 
-          {/* Filter by status */}
           <Select
             value={activeFilters.status || "all-statuses"}
             onValueChange={(value) =>
@@ -189,7 +185,6 @@ export default function FeedbackManagement() {
             </SelectContent>
           </Select>
 
-          {/* Agency filter (only show if there are multiple agencies) */}
           {agencies.length > 1 && (
             <Select
               value={activeFilters.agency || "all-agencies"}
@@ -214,7 +209,6 @@ export default function FeedbackManagement() {
             </Select>
           )}
 
-          {/* Clear filters button */}
           {(activeFilters.type ||
             activeFilters.status ||
             activeFilters.agency) && (
@@ -228,7 +222,6 @@ export default function FeedbackManagement() {
             </Button>
           )}
 
-          {/* Refresh button */}
           <Button
             variant="outline"
             className="h-9 ml-auto"
@@ -242,9 +235,7 @@ export default function FeedbackManagement() {
         </div>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {/* Total Feedback */}
         <Card>
           <CardHeader className="pb-2 pt-4 px-4">
             <CardTitle className="text-sm font-medium">
@@ -258,7 +249,6 @@ export default function FeedbackManagement() {
           </CardContent>
         </Card>
 
-        {/* Pending */}
         <Card>
           <CardHeader className="pb-2 pt-4 px-4">
             <CardTitle className="text-sm font-medium">Pending</CardTitle>
@@ -273,7 +263,6 @@ export default function FeedbackManagement() {
           </CardContent>
         </Card>
 
-        {/* In Progress */}
         <Card>
           <CardHeader className="pb-2 pt-4 px-4">
             <CardTitle className="text-sm font-medium">In Progress</CardTitle>
@@ -288,7 +277,6 @@ export default function FeedbackManagement() {
           </CardContent>
         </Card>
 
-        {/* Resolved */}
         <Card>
           <CardHeader className="pb-2 pt-4 px-4">
             <CardTitle className="text-sm font-medium">Resolved</CardTitle>
@@ -306,7 +294,6 @@ export default function FeedbackManagement() {
         </Card>
       </div>
 
-      {/* Feedback Table */}
       <Card>
         <CardHeader>
           <CardTitle>Feedback Management</CardTitle>
@@ -401,7 +388,6 @@ export default function FeedbackManagement() {
         </CardContent>
       </Card>
 
-      {/* Feedback Response Dialog */}
       <Dialog
         open={!!selectedFeedback}
         onOpenChange={(open) => !open && setSelectedFeedback(null)}
@@ -416,7 +402,6 @@ export default function FeedbackManagement() {
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            {/* Original feedback message */}
             <div className="bg-gray-50 p-3 rounded-md">
               <p className="text-sm text-gray-700">
                 {selectedFeedback?.message}
@@ -455,7 +440,6 @@ export default function FeedbackManagement() {
               </div>
             )}
 
-            {/* Response form */}
             <div className="space-y-2">
               <Label htmlFor="response">Your Response</Label>
               <Textarea
@@ -468,7 +452,6 @@ export default function FeedbackManagement() {
               />
             </div>
 
-            {/* Status update */}
             <div className="space-y-2">
               <Label htmlFor="status">Update Status</Label>
               <Select

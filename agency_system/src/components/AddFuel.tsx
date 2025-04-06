@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
-import { getDrivers, Driver } from "@/services/driverService"; // Import the driver API
+import { getDrivers, Driver } from "@/services/driverService"; 
 
 const fuelSchema = z.object({
   plateNumber: z.string().min(5, "Plate number is required"),
@@ -162,7 +162,6 @@ export default function AddFuelDialog({
       setValue("lastFillPrice", fuelToEdit.lastFillPrice);
       setValue("agencyName", fuelToEdit.agencyName || agencyName);
     } else {
-      // Set default agency for new transactions
       setValue("agencyName", agencyName);
     }
   }, [fuelToEdit, setValue, agencyName]);

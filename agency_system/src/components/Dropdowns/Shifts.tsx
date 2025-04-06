@@ -8,7 +8,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import { setFilter, fetchShifts } from "@/redux/slices/shiftsSlice";
 
@@ -58,7 +57,6 @@ export default function ShiftsDropdowns() {
 
   return (
     <div className="flex gap-6">
-      {/* Agency dropdown (superadmin only) */}
       {isSuperAdmin && (
         <div className="w-48">
           <Select
@@ -80,7 +78,6 @@ export default function ShiftsDropdowns() {
         </div>
       )}
 
-      {/* Destination dropdown */}
       <div className="w-40">
         <Select
           value={filters.destination || ""}
@@ -100,7 +97,6 @@ export default function ShiftsDropdowns() {
         </Select>
       </div>
 
-      {/* Date dropdown */}
       <div className="w-40">
         <Select
           value={filters.date || ""}

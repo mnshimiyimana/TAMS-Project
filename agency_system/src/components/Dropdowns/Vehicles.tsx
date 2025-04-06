@@ -24,10 +24,8 @@ export default function VehiclesDropdowns() {
     (state: RootState) => state.auth.user?.agencyName || ""
   );
 
-  // Only superadmins should see the agency filter
   const isSuperAdmin = userRole === "superadmin";
 
-  // Get list of agencies for superadmin
   const agencyOptions = useMemo(() => {
     if (!isSuperAdmin) return [];
     return Array.from(
@@ -42,7 +40,6 @@ export default function VehiclesDropdowns() {
     ).sort();
   }, [vehicles]);
 
-  // Extract unique capacity values and sort
   const capacityOptions = useMemo(() => {
     return Array.from(
       new Set(vehicles.map((vehicle) => vehicle.capacity))
@@ -53,7 +50,6 @@ export default function VehiclesDropdowns() {
     dispatch(
       setFilter({ key: "status", value: value === "all" ? null : value })
     );
-    // Trigger refetch with updated filters
     dispatch(fetchVehicles());
   };
 
@@ -61,7 +57,6 @@ export default function VehiclesDropdowns() {
     dispatch(
       setFilter({ key: "capacity", value: value === "all" ? null : value })
     );
-    // Trigger refetch with updated filters
     dispatch(fetchVehicles());
   };
 
@@ -69,13 +64,11 @@ export default function VehiclesDropdowns() {
     dispatch(
       setFilter({ key: "agencyName", value: value === "all" ? null : value })
     );
-    // Trigger refetch with updated filters
     dispatch(fetchVehicles());
   };
 
   return (
     <div className="flex gap-6">
-      {/* Agency Dropdown (Superadmin only) */}
       {isSuperAdmin && (
         <div className="w-48">
           <Select
@@ -117,7 +110,6 @@ export default function VehiclesDropdowns() {
         </Select>
       </div>
 
-      {/* Capacity Dropdown */}
       <div className="w-40">
         <Select
           value={filters.capacity || ""}

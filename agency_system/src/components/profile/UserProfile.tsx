@@ -67,11 +67,9 @@ export default function UserProfile() {
   const [feedbackType, setFeedbackType] = useState<FeedbackType>("feedback");
   const [feedbackText, setFeedbackText] = useState("");
   
-  // Get user and auth state from Redux
   const user = useSelector((state: RootState) => state.auth.user);
   const token = localStorage.getItem("token");
 
-  // Get feedback state from Redux
   const { 
     submissionStatus, 
     submissionError, 
@@ -96,7 +94,6 @@ export default function UserProfile() {
     },
   });
 
-  // Fetch user profile
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -118,19 +115,16 @@ export default function UserProfile() {
     fetchProfile();
   }, [setValue, token]);
 
-  // Fetch user's feedback history
   useEffect(() => {
     dispatch(fetchUserFeedback());
   }, [dispatch]);
 
-  // Watch for feedback submission status changes
   useEffect(() => {
     if (submissionStatus === 'succeeded') {
       toast.success("Your submission has been received. Thank you for your feedback!");
       setFeedbackText("");
       dispatch(resetSubmissionStatus());
       
-      // Refresh feedback history after successful submission
       dispatch(fetchUserFeedback());
     } else if (submissionStatus === 'failed' && submissionError) {
       toast.error(submissionError);
@@ -155,7 +149,6 @@ export default function UserProfile() {
       toast.success("Profile updated successfully");
       setIsEditing(false);
       
-      // Update form with new data
       reset(data);
     } catch (error: any) {
       console.error("Error updating profile:", error);
@@ -175,7 +168,6 @@ export default function UserProfile() {
       return;
     }
     
-    // Dispatch the action to submit feedback using the Redux slice
     dispatch(submitFeedback({
       type: feedbackType,
       message: feedbackText

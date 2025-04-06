@@ -21,7 +21,6 @@ export function useAuthProtection(
 
   useEffect(() => {
     const checkAuth = () => {
-      // Check if token exists
       const token = localStorage.getItem("token");
 
       if (!token) {
@@ -32,10 +31,8 @@ export function useAuthProtection(
         return;
       }
 
-      // User is authenticated at this point
       setIsAuthenticated(true);
 
-      // Get user data
       const userData = localStorage.getItem("user");
       if (!userData) {
         setHasRequiredAccess(false);
@@ -48,7 +45,6 @@ export function useAuthProtection(
         const user = JSON.parse(userData);
         const userRole = user.role as UserRole;
 
-        // Check role requirements
         if (options.requiredRoles && options.requiredRoles.length > 0) {
           if (!options.requiredRoles.includes(userRole)) {
             setHasRequiredAccess(false);
@@ -58,7 +54,6 @@ export function useAuthProtection(
           }
         }
 
-        // Check feature requirements
         if (options.requiredFeatures && options.requiredFeatures.length > 0) {
           const hasFeatureAccess = options.requiredFeatures.every((feature) =>
             hasPermission(userRole, feature)
@@ -72,7 +67,6 @@ export function useAuthProtection(
           }
         }
 
-        // All checks passed
         setHasRequiredAccess(true);
       } catch (error) {
         console.error("Error parsing user data:", error);

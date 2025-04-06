@@ -10,7 +10,6 @@ describe("Auth Middleware", () => {
   let originalConsole;
 
   beforeAll(() => {
-    // Save all original console methods
     originalConsole = {
       log: console.log,
       error: console.error,
@@ -18,7 +17,6 @@ describe("Auth Middleware", () => {
       info: console.info,
     };
 
-    // Mock all console methods
     console.log = jest.fn();
     console.error = jest.fn();
     console.warn = jest.fn();
@@ -26,7 +24,6 @@ describe("Auth Middleware", () => {
   });
 
   afterAll(() => {
-    // Restore all original console methods
     console.log = originalConsole.log;
     console.error = originalConsole.error;
     console.warn = originalConsole.warn;

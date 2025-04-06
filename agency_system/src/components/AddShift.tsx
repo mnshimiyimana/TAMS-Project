@@ -65,7 +65,6 @@ export default function AddShiftDialog({
   );
   const isSuperAdmin = userRole === "superadmin";
 
-  // Get all agencies for superadmin (from vehicles for convenience)
   const agencyOptions = useSelector((state: RootState) =>
     Array.from(
       new Set(state.vehicles.vehicles.map((v) => v.agencyName).filter(Boolean))
@@ -91,11 +90,10 @@ export default function AddShiftDialog({
       destination: "",
       origin: "",
       Date: new Date().toISOString().split("T")[0],
-      agencyName: agencyName, // Default to current user's agency
+      agencyName: agencyName, 
     },
   });
 
-  // Watch agency value to trigger filtering when it changes
   const selectedAgency = watch("agencyName");
 
   useEffect(() => {
@@ -106,7 +104,6 @@ export default function AddShiftDialog({
     const fetchDriversData = async () => {
       try {
         setIsLoadingDrivers(true);
-        // If superadmin selects a different agency, fetch drivers for that agency
         const params: any = { limit: 100 };
 
         if (isSuperAdmin && selectedAgency) {
@@ -135,16 +132,13 @@ export default function AddShiftDialog({
     selectedAgency,
   ]);
 
-  // Filter vehicles based on selected agency
   useEffect(() => {
     let agencyVehicles = vehicles;
 
-    // Filter by agency if needed
     if (selectedAgency) {
       agencyVehicles = vehicles.filter((v) => v.agencyName === selectedAgency);
     }
 
-    // Then filter by availability
     const availableVehicles = agencyVehicles.filter(
       (vehicle) => vehicle.status === "Available"
     );
@@ -152,7 +146,6 @@ export default function AddShiftDialog({
     setFilteredVehicles(availableVehicles);
   }, [vehicles, selectedAgency]);
 
-  // Filter drivers based on selected agency
   useEffect(() => {
     const availableDrivers = drivers.filter(
       (driver) => driver.status === "Off shift"
@@ -160,7 +153,6 @@ export default function AddShiftDialog({
     setFilteredDrivers(availableDrivers);
   }, [drivers]);
 
-  // Include the original vehicle/driver in the filtered lists when editing
   useEffect(() => {
     if (isEditing && shiftToEdit) {
       const originalVehicle = vehicles.find(
@@ -194,7 +186,6 @@ export default function AddShiftDialog({
     filteredDrivers,
   ]);
 
-  // Set form values when editing a shift
   useEffect(() => {
     if (shiftToEdit) {
       setValue("plateNumber", shiftToEdit.plateNumber);
@@ -225,7 +216,6 @@ export default function AddShiftDialog({
     try {
       setIsSubmitting(true);
 
-      // Verify agency permission
       if (!isSuperAdmin && data.agencyName !== agencyName) {
         toast.error(
           "You don't have permission to create shifts for other agencies"
@@ -340,7 +330,6 @@ export default function AddShiftDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {/* Agency selection for superadmin */}
           {isSuperAdmin && (
             <div>
               <Label htmlFor="agencyName">Agency</Label>
@@ -366,7 +355,6 @@ export default function AddShiftDialog({
               )}
             </div>
           )}
-          {/* Hidden agency field for non-superadmins */}
           {!isSuperAdmin && (
             <input
               type="hidden"

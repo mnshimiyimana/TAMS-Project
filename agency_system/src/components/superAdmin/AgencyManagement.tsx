@@ -61,7 +61,6 @@ import {
   ExternalLink,
 } from "lucide-react";
 
-// Import the new AgencyView component
 import AgencyView from "./AgencyView";
 
 export default function AgencyManagement() {
@@ -116,7 +115,6 @@ export default function AgencyManagement() {
     </TooltipProvider>
   );
 
-  // If an agency is selected, show the detailed view
   if (selectedAgency) {
     return (
       <AgencyView

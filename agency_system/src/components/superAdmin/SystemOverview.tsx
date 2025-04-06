@@ -22,7 +22,6 @@ export default function SystemOverview() {
 
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -95,9 +94,7 @@ export default function SystemOverview() {
         </Card>
       </div>
 
-      {/* Recent Activity Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Recent Agencies */}
         <Card>
           <CardHeader>
             <CardTitle>Recent Agencies</CardTitle>
@@ -146,7 +143,6 @@ export default function SystemOverview() {
           </CardContent>
         </Card>
 
-        {/* Recent Activity */}
         <Card>
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
@@ -197,7 +193,6 @@ export default function SystemOverview() {
         </Card>
       </div>
 
-      {/* System Stats */}
       <Card>
         <CardHeader>
           <CardTitle>System Overview</CardTitle>

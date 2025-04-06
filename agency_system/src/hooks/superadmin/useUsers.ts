@@ -1,5 +1,3 @@
-// Create a new file: agency_system/src/hooks/superadmin/useUserManagement.ts
-
 import { useState, useCallback } from "react";
 import axios from "axios";
 import { toast } from "sonner";

@@ -57,13 +57,11 @@ export default function AddVehiclesDialog({
     (state: RootState) => state.vehicles
   );
 
-  // Get user role to determine if agency can be changed
   const userRole = useSelector(
     (state: RootState) => state.auth.user?.role || ""
   );
   const isSuperAdmin = userRole === "superadmin";
 
-  // Get available agencies for superadmin dropdown
   const [agencies, setAgencies] = useState<string[]>([]);
   const agencyOptions = useSelector((state: RootState) =>
     Array.from(new Set(state.vehicles.vehicles.map((v) => v.agencyName)))
@@ -87,11 +85,10 @@ export default function AddVehiclesDialog({
       status: "Available",
       capacity: 0,
       busHistory: "",
-      agencyName: agencyName, // Default to current user's agency
+      agencyName: agencyName, 
     },
   });
 
-  // Watch the agency value to detect changes
   const currentAgency = watch("agencyName");
 
   useEffect(() => {
@@ -112,13 +109,11 @@ export default function AddVehiclesDialog({
       );
       setValue("agencyName", selectedVehicle.agencyName);
     } else {
-      // For new vehicles, always set the agency to the current user's agency
       setValue("agencyName", agencyName);
     }
   }, [selectedVehicle, setValue, agencyName]);
 
   useEffect(() => {
-    // Gather available agencies (for superadmin use)
     if (isSuperAdmin) {
       setAgencies(agencyOptions);
     }
@@ -132,7 +127,6 @@ export default function AddVehiclesDialog({
 
   const onSubmit = async (data: VehicleFormData) => {
     try {
-      // Check for agency permission
       if (!isSuperAdmin && data.agencyName !== agencyName) {
         toast.error("You do not have permission to change the agency");
         return;
@@ -140,7 +134,6 @@ export default function AddVehiclesDialog({
 
       const vehicleData = {
         ...data,
-        // Ensure busHistory is an array for API
         busHistory: data.busHistory.split(",").map((item) => item.trim()),
       };
 
@@ -157,7 +150,6 @@ export default function AddVehiclesDialog({
         toast.success("Vehicle added successfully!");
       }
 
-      // Refresh vehicles list to get updated data
       dispatch(fetchVehicles());
       handleClose();
     } catch (error) {

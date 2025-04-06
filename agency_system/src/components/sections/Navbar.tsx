@@ -12,20 +12,17 @@ const Navbar = () => {
   const [isScrolledPastHero, setIsScrolledPastHero] = useState(false);
   const [activeLink, setActiveLink] = useState("home");
 
-  // Track scrolling to add background to navbar and update active section
   useEffect(() => {
     const handleScroll = () => {
       const windowHeight = window.innerHeight;
       const scrollY = window.scrollY;
 
-      // Update navbar background based on scroll position
       if (scrollY >= windowHeight) {
         setIsScrolledPastHero(true);
       } else {
         setIsScrolledPastHero(false);
       }
 
-      // Determine which section is currently in view
       const sections = ["home", "services", "about", "contact", "Discover"];
 
       if (scrollY < windowHeight * 0.5) {
@@ -33,9 +30,8 @@ const Navbar = () => {
         return;
       }
 
-      // Check which section is currently in view
       for (const section of sections) {
-        if (section === "home") continue; // We already handled home section
+        if (section === "home") continue; 
 
         const element = document.getElementById(section);
         if (element) {
@@ -57,7 +53,6 @@ const Navbar = () => {
     };
   }, []);
 
-  // Function to scroll to top for Home link
   const scrollToTop = () => {
     window.scrollTo({
       top: 0,
@@ -78,14 +73,12 @@ const Navbar = () => {
 
   return (
     <>
-      {/* Sticky Navigation Bar */}
       <div
         className={`fixed top-0 left-0 right-0 z-50 py-2 transition-all duration-300 ${
           isScrolledPastHero ? "bg-white shadow-lg" : "bg-transparent"
         }`}
       >
         <div className="container mx-auto flex items-center justify-between lg:px-16 px-8">
-          {/* Logo that changes to text when scrolled */}
           <div className="text-xl font-bold" onClick={scrollToTop}>
             {isScrolledPastHero ? (
               // Text logo when scrolled
@@ -94,7 +87,6 @@ const Navbar = () => {
                 <span className="text-xl text-black font-laila">System</span>
               </div>
             ) : (
-              // Image logo when at top
               <div className="relative h-[50px] w-[100px] cursor-pointer">
                 <Image
                   src={logo}
@@ -107,7 +99,6 @@ const Navbar = () => {
             )}
           </div>
 
-          {/* Desktop Navigation Links */}
           <ul className="hidden md:flex space-x-8 font-normal text-base">
             <li>
               <button
@@ -159,7 +150,6 @@ const Navbar = () => {
             </li>
           </ul>
 
-          {/* Login/Signup Buttons */}
           <div className="hidden md:flex items-center space-x-4">
             <Link href="/auth/sign-in">
               <button
@@ -180,7 +170,6 @@ const Navbar = () => {
             </Link>
           </div>
 
-          {/* Mobile Menu Button */}
           <button
             className={`md:hidden ${
               isScrolledPastHero ? "text-black" : "text-white"
@@ -191,7 +180,6 @@ const Navbar = () => {
           </button>
         </div>
 
-        {/* Mobile Menu Dropdown */}
         {isOpen && (
           <div className="absolute top-16 left-0 w-full bg-white text-black shadow-lg p-5 flex flex-col space-y-4 md:hidden">
             <button
@@ -242,7 +230,6 @@ const Navbar = () => {
         )}
       </div>
 
-      {/* Hero Section (Full-Screen) */}
       <section
         className="relative w-full h-screen bg-cover bg-center max-w-screen-2xl mx-auto"
         style={{ backgroundImage: `url(${bgImage.src})` }}

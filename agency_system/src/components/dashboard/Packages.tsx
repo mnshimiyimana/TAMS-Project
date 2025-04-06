@@ -66,10 +66,8 @@ export default function Packages() {
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [receiverIdFilter, setReceiverIdFilter] = useState("");
-  // ADDED: State to track when refresh is happening
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // MODIFIED: Improved fetchPackagesWithFilters function with error handling
   const fetchPackagesWithFilters = async () => {
     try {
       setIsRefreshing(true);
@@ -93,13 +91,11 @@ export default function Packages() {
     }
   };
 
-  // Initial data load
   useEffect(() => {
     fetchPackagesWithFilters();
     dispatch(fetchPackageStats({}));
   }, []);
 
-  // Refetch when filters change
   useEffect(() => {
     fetchPackagesWithFilters();
   }, [
@@ -128,15 +124,11 @@ export default function Packages() {
     setSelectedPackage(null);
   };
 
-  // MODIFIED: Enhanced handlePackageUpdated to refresh both packages and stats
   const handlePackageUpdated = async () => {
-    // Force a refresh of the packages data
     await fetchPackagesWithFilters();
 
-    // Also refresh the stats
     await dispatch(fetchPackageStats({}));
 
-    // Optional: Show a toast notification
     toast.success("Package data refreshed");
   };
 
@@ -180,7 +172,6 @@ export default function Packages() {
     setReceiverIdFilter("");
   };
 
-  // MODIFIED: Enhanced refreshData to use async/await and handle promises properly
   const refreshData = async () => {
     await fetchPackagesWithFilters();
     await dispatch(fetchPackageStats({}));
@@ -462,7 +453,6 @@ export default function Packages() {
                 </Button>
               )}
 
-              {/* MODIFIED: Added isRefreshing state to refresh button */}
               <Button
                 variant="outline"
                 size="icon"

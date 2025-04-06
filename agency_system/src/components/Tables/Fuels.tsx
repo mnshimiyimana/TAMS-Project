@@ -46,7 +46,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-// Define standard headers
 const standardHeaders = [
   "Plate Number",
   "Driver Name",
@@ -68,13 +67,11 @@ export default function FuelsTable({ onEdit, agencyName }: FuelsTableProps) {
   const { filteredTransactions, status, error, currentPage, totalCount } =
     useSelector((state: RootState) => state.fuels);
 
-  // Get user role for conditional rendering
   const userRole = useSelector(
     (state: RootState) => state.auth.user?.role || ""
   );
   const isSuperAdmin = userRole === "superadmin";
 
-  // Define headers based on role - add agency column for superadmin
   const tableHeaders = isSuperAdmin
     ? [...standardHeaders.slice(0, -1), "Agency", "Actions"]
     : standardHeaders;
@@ -110,7 +107,6 @@ export default function FuelsTable({ onEdit, agencyName }: FuelsTableProps) {
       await dispatch(deleteFuelTransaction(transactionToDelete)).unwrap();
       toast.success("Fuel transaction deleted successfully");
 
-      // Refresh data after deletion
       dispatch(fetchFuelTransactions());
     } catch (error) {
       toast.error("Failed to delete fuel transaction");
@@ -134,7 +130,6 @@ export default function FuelsTable({ onEdit, agencyName }: FuelsTableProps) {
     }
   };
 
-  // Use filtered transactions directly if server pagination is handling this
   const displayTransactions = filteredTransactions;
 
   const formatDate = (dateStr: string | Date) => {
@@ -260,7 +255,6 @@ export default function FuelsTable({ onEdit, agencyName }: FuelsTableProps) {
                   <TableCell className="px-5 py-4">
                     {transaction.lastFillPrice}
                   </TableCell>
-                  {/* Show agency column for superadmins */}
                   {isSuperAdmin && (
                     <TableCell className="px-5 py-4">
                       {transaction.agencyName || agencyName}

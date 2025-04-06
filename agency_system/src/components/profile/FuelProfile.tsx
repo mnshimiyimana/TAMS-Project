@@ -502,7 +502,6 @@ export default function FuelProfile() {
                 </div>
               )}
 
-              {/* Fuel stats cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
                 <Card className="bg-blue-50">
                   <CardContent className="p-6">

@@ -205,9 +205,7 @@ export default function UserManagement() {
           />
         </div>
         <div className="flex gap-4">
-          {/* 
-            Use "all" for the "All Roles" option 
-          */}
+         
           <Select value={roleFilter} onValueChange={setRoleFilter}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Filter by role" />
@@ -267,7 +265,6 @@ export default function UserManagement() {
                     <TableCell className="font-medium">
                       {user.username}
                     </TableCell>
-                    {/* Created Date Column */}
                     <TableCell>
                       {user.createdAt
                         ? new Date(user.createdAt).toLocaleDateString()
@@ -362,7 +359,6 @@ export default function UserManagement() {
           </Table>
         </CardContent>
 
-        {/* Pagination */}
         {!isLoading && users.length > 0 && (
           <div className="flex justify-center p-4">
             <Pagination>
@@ -410,7 +406,6 @@ export default function UserManagement() {
         )}
       </Card>
 
-      {/* Change Role Dialog */}
       <Dialog
         open={roleDialog.open}
         onOpenChange={(open) => setRoleDialog({ ...roleDialog, open })}
@@ -457,7 +452,6 @@ export default function UserManagement() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete User Dialog */}
       <AlertDialog
         open={userDeleteDialog.open}
         onOpenChange={(open) =>
@@ -484,7 +478,6 @@ export default function UserManagement() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Reset Password Dialog */}
       <AlertDialog
         open={resetPasswordDialog.open}
         onOpenChange={(open) =>

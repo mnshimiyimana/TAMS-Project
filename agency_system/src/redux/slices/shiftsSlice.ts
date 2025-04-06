@@ -276,7 +276,7 @@ const shiftsSlice = createSlice({
       })
       .addCase(addShift.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.shifts.unshift(action.payload); // Add to beginning
+        state.shifts.unshift(action.payload); 
         state.filteredShifts.unshift(action.payload);
         state.totalCount += 1;
       })

@@ -8,7 +8,7 @@ export interface Package {
   packageId: string;
   description: string;
   weight: number;
-  price: number; // Added price field
+  price: number; 
   senderName: string;
   senderPhone: string;
   receiverName: string;
@@ -137,7 +137,6 @@ export const createPackage = async (
       throw new Error("Authentication required");
     }
 
-    // Ensure price is a number before sending
     const formattedData = {
       ...packageData,
       price: Number(packageData.price),
@@ -173,7 +172,6 @@ export const updatePackage = async (
       throw new Error("Authentication required");
     }
 
-    // Format numeric values before sending
     const formattedData = { ...packageData };
 
     if (formattedData.price !== undefined) {
@@ -310,11 +308,10 @@ export const formatWeight = (weight: number) => {
   return `${weight.toFixed(2)} kg`;
 };
 
-// New utility function to format currency
 export const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "USD", // Change to your preferred currency
+    currency: "USD", 
     minimumFractionDigits: 2,
   }).format(amount || 0);
 };

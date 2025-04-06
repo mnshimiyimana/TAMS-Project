@@ -105,7 +105,6 @@ export default function DriversTable({
   const [totalDrivers, setTotalDrivers] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
-  // Get user role from redux store
   const user = useSelector((state: RootState) => state.auth.user);
   const userRole = user?.role || "";
   const isSuperAdmin = userRole === "superadmin";
@@ -128,12 +127,9 @@ export default function DriversTable({
         params.status = statusFilter;
       }
 
-      // Apply agency filter based on role
       if (!isSuperAdmin) {
-        // Force user's agency for non-superadmins
         params.agencyName = agencyName;
       } else if (agencyFilter) {
-        // Allow superadmins to filter by agency
         params.agencyName = agencyFilter;
       }
 
@@ -281,7 +277,6 @@ export default function DriversTable({
   const [refreshCounter, setRefreshCounter] = useState(0);
 
   useEffect(() => {
-    // Event listener for status change events
     const handleDriverStatusChange = () => {
       setRefreshCounter((prev) => prev + 1);
     };

@@ -51,41 +51,34 @@ const initialState: VehiclesState = {
   },
 };
 
-// Fetch vehicles with agency isolation built-in
 export const fetchVehicles = createAsyncThunk(
   "vehicles/fetchVehicles",
   async (_, { getState, rejectWithValue }) => {
     try {
-      // Get the current user's agency from auth state
       const state = getState() as RootState;
       const userAgency = state.auth.user?.agencyName || "";
       const userRole = state.auth.user?.role || "";
 
-      // If not superadmin, force agency filter
       const params: any = {};
       if (userRole !== "superadmin") {
         params.agencyName = userAgency;
       } else if (state.vehicles.filters.agencyName) {
-        // Allow superadmin to filter by agency if desired
         params.agencyName = state.vehicles.filters.agencyName;
       }
 
-      // Add other filters
       if (state.vehicles.filters.status) {
         params.status = state.vehicles.filters.status;
       }
 
-      // Add search if present
       if (state.vehicles.searchQuery) {
         params.search = state.vehicles.searchQuery;
       }
 
-      // Add pagination
       params.page = state.vehicles.currentPage;
-      params.limit = 50; // Match backend default
+      params.limit = 50; 
 
       const response = await vehiclesAPI.getAllVehicles(params);
-      return response.buses || response; // Handle both response formats
+      return response.buses || response;
     } catch (error: any) {
       return rejectWithValue(
         error.response?.data?.message ||
@@ -100,11 +93,9 @@ export const addVehicle = createAsyncThunk(
   "vehicles/addVehicle",
   async (vehicleData: Omit<Vehicle, "_id">, { getState, rejectWithValue }) => {
     try {
-      // Get the current user's agency
       const state = getState() as RootState;
       const userAgency = state.auth.user?.agencyName || "";
 
-      // Ensure agencyName is set if not provided
       const dataWithAgency = {
         ...vehicleData,
         agencyName: vehicleData.agencyName || userAgency,
@@ -129,12 +120,10 @@ export const updateVehicle = createAsyncThunk(
     { getState, rejectWithValue }
   ) => {
     try {
-      // Get the current user's agency
       const state = getState() as RootState;
       const userAgency = state.auth.user?.agencyName || "";
       const userRole = state.auth.user?.role || "";
 
-      // Non-superadmins cannot change agency
       if (
         userRole !== "superadmin" &&
         vehicleData.agencyName &&
@@ -145,7 +134,6 @@ export const updateVehicle = createAsyncThunk(
         );
       }
 
-      // Ensure agencyName is set if not provided (non-superadmin only)
       let dataToUpdate = { ...vehicleData };
       if (userRole !== "superadmin" && !dataToUpdate.agencyName) {
         dataToUpdate.agencyName = userAgency;
@@ -186,7 +174,6 @@ const vehiclesSlice = createSlice({
     setSearchQuery: (state, action: PayloadAction<string>) => {
       state.searchQuery = action.payload;
       state.currentPage = 1;
-      // Don't apply filter immediately - wait for API call
     },
     setFilter: (
       state,
@@ -198,7 +185,6 @@ const vehiclesSlice = createSlice({
       const { key, value } = action.payload;
       state.filters[key] = value === "all" ? null : value;
       state.currentPage = 1;
-      // Don't apply filter immediately - wait for API call
     },
     setPage: (state, action: PayloadAction<number>) => {
       state.currentPage = action.payload;
@@ -207,7 +193,6 @@ const vehiclesSlice = createSlice({
       state.filters = initialState.filters;
       state.searchQuery = "";
       state.currentPage = 1;
-      // Reset to fetch from API again
     },
     selectVehicle: (state, action: PayloadAction<string>) => {
       state.selectedVehicle =
@@ -217,7 +202,6 @@ const vehiclesSlice = createSlice({
     clearSelectedVehicle: (state) => {
       state.selectedVehicle = null;
     },
-    // New reducer to handle pagination response from backend
     setTotalCount: (
       state,
       action: PayloadAction<{ total: number; pages: number }>
@@ -235,13 +219,11 @@ const vehiclesSlice = createSlice({
         state.status = "succeeded";
         state.isLoading = false;
 
-        // Handle both response formats (array or paginated object)
         if (Array.isArray(action.payload)) {
           state.vehicles = action.payload;
           state.filteredVehicles = action.payload;
           state.totalCount = action.payload.length;
         } else {
-          // Handle paginated response
           state.vehicles = action.payload.buses || [];
           state.filteredVehicles = action.payload.buses || [];
           state.totalCount = action.payload.totalBuses || 0;
@@ -258,7 +240,7 @@ const vehiclesSlice = createSlice({
       })
       .addCase(addVehicle.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.vehicles.unshift(action.payload); // Add to beginning
+        state.vehicles.unshift(action.payload); 
         state.filteredVehicles.unshift(action.payload);
         state.totalCount += 1;
       })

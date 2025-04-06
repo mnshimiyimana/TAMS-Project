@@ -71,7 +71,6 @@ export const getDrivers = async (
   params: DriverParams = {}
 ): Promise<DriverResponse> => {
   try {
-    // Get user info from localStorage to apply agency isolation
     const userString = localStorage.getItem("user");
     let userAgency = "";
     let userRole = "";
@@ -86,29 +85,22 @@ export const getDrivers = async (
       }
     }
 
-    // Apply agency isolation for non-superadmins
     const queryParams = new URLSearchParams();
 
-    // Apply pagination
     queryParams.append("page", (params.page || 1).toString());
     queryParams.append("limit", (params.limit || 50).toString());
 
-    // Apply search if provided
     if (params.search) {
       queryParams.append("search", params.search);
     }
 
-    // Apply status filter if provided
     if (params.status) {
       queryParams.append("status", params.status);
     }
 
-    // Apply agency isolation based on user role
     if (userRole !== "superadmin") {
-      // Force user's agency for non-superadmins
       queryParams.append("agencyName", userAgency);
     } else if (params.agencyName) {
-      // Allow superadmins to filter by agency if they want
       queryParams.append("agencyName", params.agencyName);
     }
 
@@ -132,7 +124,6 @@ export interface CreateDriverData {
 
 export const createDriver = async (driverData: CreateDriverData) => {
   try {
-    // Get user info from localStorage for agency isolation
     const userString = localStorage.getItem("user");
     let userAgency = "";
     let userRole = "";
@@ -147,11 +138,9 @@ export const createDriver = async (driverData: CreateDriverData) => {
       }
     }
 
-    // If not superadmin, enforce user's agency
     if (userRole !== "superadmin") {
       driverData.agencyName = userAgency;
     } else if (!driverData.agencyName) {
-      // If superadmin doesn't specify agency, use their agency as default
       driverData.agencyName = userAgency;
     }
 
@@ -168,7 +157,6 @@ export const updateDriver = async (
   driverData: Partial<Driver>
 ): Promise<Driver> => {
   try {
-    // Get user info from localStorage for agency isolation
     const userString = localStorage.getItem("user");
     let userAgency = "";
     let userRole = "";
@@ -183,7 +171,6 @@ export const updateDriver = async (
       }
     }
 
-    // If not superadmin and trying to change agency, block it
     if (
       userRole !== "superadmin" &&
       driverData.agencyName &&
@@ -192,7 +179,6 @@ export const updateDriver = async (
       throw new Error("You do not have permission to change the agency");
     }
 
-    // If not superadmin, enforce user's agency
     if (userRole !== "superadmin") {
       driverData.agencyName = userAgency;
     }

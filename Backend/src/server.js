@@ -21,6 +21,7 @@ import packageRoutes from "./routes/packageRoutes.js";
 import { auditLogin } from "./middlewares/auditLogger.js";
 import { protect } from "./middlewares/authMiddleware.js";
 import { enforceAgencyIsolation } from "./middlewares/agencyIsolationMiddleware.js";
+import subscriptionRoutes from "./routes/subscriptionRoutes.js";
 // import auditLogRoutes from "./routes/auditLogRoutes.js";
 
 dotenv.config();
@@ -58,6 +59,7 @@ app.use("/api/superadmin", protect, superadminRoutes);
 app.use("/api/dashboard", protect, enforceAgencyIsolation, dashboardRoutes);
 app.use("/api/feedback", protect, enforceAgencyIsolation, feedbackRoutes);
 app.use("/api/packages", protect, enforceAgencyIsolation, packageRoutes);
+app.use("/api/subscribe", subscriptionRoutes);
 // app.use("/api/audit-logs", auditLogRoutes);
 
 app.get("/", (req, res) => {

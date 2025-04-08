@@ -29,10 +29,19 @@ dotenv.config();
 connectDB();
 
 const app = express();
+
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || "*",
+    methods: ["GET", "POST"],
+  })
+);
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 app.use(express.json());
-app.use(cors());
+// app.use(cors());
 app.use(helmet());
 app.use(morgan("dev"));
 
@@ -59,7 +68,7 @@ app.use("/api/superadmin", protect, superadminRoutes);
 app.use("/api/dashboard", protect, enforceAgencyIsolation, dashboardRoutes);
 app.use("/api/feedback", protect, enforceAgencyIsolation, feedbackRoutes);
 app.use("/api/packages", protect, enforceAgencyIsolation, packageRoutes);
-app.use("/api/subscribe", subscriptionRoutes);
+app.use('/api/subscribe', subscriptionRoutes);
 // app.use("/api/audit-logs", auditLogRoutes);
 
 app.get("/", (req, res) => {

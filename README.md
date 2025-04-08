@@ -6,7 +6,7 @@ TAMS (Transport Agencies Management System) is a comprehensive web platform desi
 ## Key Features
 
 ### Agency Management
-- User role management (Admin, Operations Manager, Fuel Manager)
+- User role management (Admin, Fleet Manager, Fuel Manager)
 - Vehicle information tracking and dashboard
 - Driver profiles and performance monitoring
 - Shift scheduling and management

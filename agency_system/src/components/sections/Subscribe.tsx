@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, FormEvent, ChangeEvent } from "react";
+import { useState, FormEvent, ChangeEvent, useEffect } from "react";
 import Image from "next/image";
 import Mail from "../../../public/testimonials/mail.svg";
 
@@ -11,6 +11,22 @@ export function Subscribe() {
     message: "",
   });
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+
+    if (status.type === "success" && status.message) {
+      timeoutId = setTimeout(() => {
+        setStatus({ type: "", message: "" });
+      }, 5000);
+    }
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [status]);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -27,7 +43,7 @@ export function Subscribe() {
     setStatus({ type: "", message: "" });
 
     try {
-      const response = await fetch("/api/subscribe", {
+      let response = await fetch("/api/subscribe", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -35,7 +51,39 @@ export function Subscribe() {
         body: JSON.stringify({ email }),
       });
 
-      const data = await response.json();
+      if (response.status === 503) {
+        setStatus({
+          type: "info",
+          message: "Our service is starting up. Please try again in a moment.",
+        });
+
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+
+        setStatus({ type: "", message: "" });
+
+        response = await fetch("/api/subscribe", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email }),
+        });
+      }
+
+      let data;
+
+      // Try to parse the response as JSON
+      try {
+        data = await response.json();
+      } catch (error) {
+        if (response.status === 502 || response.status === 503) {
+          throw new Error(
+            "Our service is starting up. Please try again in a minute."
+          );
+        } else {
+          throw new Error("Received an invalid response from the server.");
+        }
+      }
 
       if (!response.ok) {
         throw new Error(data.message || "Something went wrong");
@@ -52,7 +100,7 @@ export function Subscribe() {
         message:
           error instanceof Error
             ? error.message
-            : "Failed to subscribe. Please try again.",
+            : "Failed to subscribe. Please try again in a minute.",
       });
     } finally {
       setIsSubmitting(false);
@@ -104,8 +152,12 @@ export function Subscribe() {
           {status.message && (
             <div
               className={`mt-4 ${
-                status.type === "error" ? "text-red-500" : "text-green-600"
-              }`}
+                status.type === "error"
+                  ? "text-red-500"
+                  : status.type === "info"
+                  ? "text-blue-500"
+                  : "text-green-600"
+              } transition-opacity duration-300`}
             >
               {status.message}
             </div>

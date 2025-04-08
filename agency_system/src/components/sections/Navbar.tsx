@@ -164,7 +164,7 @@ const Navbar = () => {
             </Link>
 
             <Link href="/auth/sign-up">
-              <button className="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600 transition-colors duration-300">
+              <button className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors duration-300">
                 Sign Up
               </button>
             </Link>
